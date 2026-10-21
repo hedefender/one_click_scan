@@ -1,5 +1,10 @@
 # Data contract: JSON schema v1
 
+> **SUPERSEDED. Not implemented in Scan, kept for history only.**
+> Scan does not produce JSON (ADR-008): the Budget app reads the PDFs directly.
+> This also cancels `documentType`, `schemaVersion` and `documentId`, and the
+> planned `<documentId>.*` file names. Current naming is in ADR-005.
+
 Reference copy of the contract agreed with the Budget app. It replaces the
 formats in the original description (`version/created/ocr_text/...`) and in the
 original roadmap (`formatVersion/scanId/...`). Implemented in Phase 6.

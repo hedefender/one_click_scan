@@ -65,6 +65,18 @@ abstract class AppStrings {
   String get homeRecipientLabel;
   String get homeProviderLabel;
   String get homeNotSet;
+  String get homeFolderLostBanner;
+  String get homeOpenSettings;
+
+  // Settings
+  String get settingsTitle;
+  String get settingsSaveButton;
+  String get settingsSaved;
+  String get settingsFolderAccessLost;
+  String get settingsUnsavedTitle;
+  String get settingsUnsavedBody;
+  String get settingsDiscard;
+  String get settingsStay;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

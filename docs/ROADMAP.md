@@ -5,25 +5,35 @@ unit and integration tests → manual check by the user → wait for confirmatio
 Each phase leaves a runnable app. Claude Code implements and never commits or
 pushes; the user commits.
 
-Priority: the one-click "SCAN & SEND" by e-mail. JSON export and the Budget link
-come second. Scan must work standalone for plain documents. (This order
-replaces the original Phase 1–7 order of the project instructions.)
+Priority: the one-click "SCAN & SEND" by e-mail. Scan works standalone for plain
+documents. Scan produces **no JSON** (ADR-008): Budget reads the PDFs directly.
+(This order replaces the original Phase 1–7 order of the project instructions
+and the order of the first roadmap.)
 
 | Phase | Content | Notes |
 |---|---|---|
-| 0 | Skeleton, DI, routing, settings, wizard (incl. storage folder) | This repo seed |
-| 1 | Camera, local save, optional Gallery copy, single/multi page | Build for arm64 and test on a real phone |
-| 1.5 | OCR spike with real Greek documents, no production code | Time-boxed. Decides the engine. Real documents stay on the phone: never in repo, prompts or tests. |
-| 2 | `OcrEngine` interface + chosen engine, languages | Tests use synthetic documents |
-| 3 | PDF generation, single and multi page | |
+| 0 | Skeleton, DI, routing, settings, wizard (incl. storage folder) | Done |
+| 0.5 | Settings screen + storage folder health check | Language, folder, e-mail, Gallery switch. Banner on home when folder access is lost |
+| 1 | Camera, saving originals to `./pictures`, optional Gallery copy, Single/Multi page | Build for arm64 and test on a real phone |
+| 1.5 | OCR spike with real Greek documents, no production code | Time-boxed. Decides the engine. Real documents stay on the phone: never in repo, prompts or tests |
+| 2 | OCR: `OcrEngine` interface + chosen engine, languages | Tests use synthetic documents |
+| 3 | PDF generation (single and multi page) into `./pdf` | Decision on the text layer, see "Open decisions" |
 | 4 | Mail: `MailProvider` interface, direct sending, separate sender account | Auth approach (OAuth vs app password) decided at the start of this phase |
 | 5 | One-click SCAN & SEND | Empty OCR: still send the mail with the PDF and notify the user |
-| 6 | JSON contract v1, scan type (Receipt/Document), `documentType`, shared folder export | Receipt produces JSON; Document produces PDF only |
-| 7 | Soft filter (warning, never blocking) | Minimal check, no copy of Budget's rule engine |
-| 8 | Image enhancement: crop, edges, perspective, contrast | Likely Rust candidate |
-| 9 | Exposure for Budget (FileProvider, content URIs, package visibility) | No dependency between the apps |
+| 6 | Image enhancement: crop, edges, perspective, contrast | Likely Rust candidate |
+| 7 | Revisit the Budget integration (only if Scan needs to change something) | No dependency between the apps |
 | V1.5 | Batch processing, auto retry, better OCR | Budget limit: 50 files per import |
-| V2 | Deeper Budget integration | |
 
-Handwritten, multi-page bills are expected: Single/Multi Page and
-Receipt/Document are independent choices.
+Handwritten, multi-page bills are expected: Single/Multi Page is an independent
+choice.
+
+## Open decisions
+
+- **Searchable PDF vs Budget OCR (decided in Phase 3).** For Budget to read text
+  from a PDF, either the Scan PDF carries an invisible text layer (searchable
+  PDF), or Budget runs its own OCR. Not decided yet.
+- **Receipt/Document choice, soft filter, `documentType` (decided in the OCR
+  phase).** They existed for the JSON export. With no JSON (ADR-008) they are
+  suspended and not implemented. They come back only if the OCR phase finds a
+  use for them.
+- **Theme.** Always follows the device theme. No theme option is planned.

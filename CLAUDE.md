@@ -14,6 +14,8 @@
 
 - Για τα integration tests χρησιμοποιείς ΜΟΝΟ τον δικό σου, ξεχωριστό emulator. Ο emulator του χρήστη δεν αγγίζεται (ούτε install, ούτε `adb` εντολές πάνω του).
 - Αν δεν είναι σαφές ποιο device είναι δικό σου (`flutter devices`, `adb devices`), ρώτα πριν τρέξεις οτιδήποτε.
+- Ο emulator του χρήστη είναι το AVD `Test_Phone` (πορτ 5556 την τελευταία φορά). Δικός σου είναι ο άλλος (AVD `Testing_Phone`, πορτ 5554 την τελευταία φορά). Τα πορτ αλλάζουν: πριν από κάθε install ή test τρέξε `adb devices` και `flutter devices` και επιβεβαίωσε το όνομα AVD μόνο στον δικό σου (`adb -s <δικός σου> emu avd name`), ποτέ στον emulator του χρήστη.
+- Το Webcam0 ΔΕΝ χρησιμοποιείται στον δικό σου emulator. Μόνο virtual scene για την κάμερα.
 
 ## Αρχιτεκτονική (περίληψη, λεπτομέρειες στο docs/ARCHITECTURE.md)
 

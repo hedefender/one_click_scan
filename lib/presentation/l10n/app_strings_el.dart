@@ -119,4 +119,36 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get homeNotSet => 'Δεν έχει οριστεί';
+
+  @override
+  String get homeFolderLostBanner => 'Ο φάκελος δεν είναι πλέον προσβάσιμος';
+
+  @override
+  String get homeOpenSettings => 'Ρυθμίσεις';
+
+  @override
+  String get settingsTitle => 'Ρυθμίσεις';
+
+  @override
+  String get settingsSaveButton => 'Αποθήκευση';
+
+  @override
+  String get settingsSaved => 'Οι ρυθμίσεις αποθηκεύτηκαν.';
+
+  @override
+  String get settingsFolderAccessLost =>
+      'Η εφαρμογή δεν έχει πλέον πρόσβαση σε αυτόν τον φάκελο. Επίλεξε ξανά φάκελο.';
+
+  @override
+  String get settingsUnsavedTitle => 'Μη αποθηκευμένες αλλαγές';
+
+  @override
+  String get settingsUnsavedBody =>
+      'Έχεις αλλαγές στις ρυθμίσεις email που δεν έχουν αποθηκευτεί.';
+
+  @override
+  String get settingsDiscard => 'Απόρριψη';
+
+  @override
+  String get settingsStay => 'Μείνε';
 }

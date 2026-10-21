@@ -5,7 +5,7 @@ import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/entities/storage_folder.dart';
-import '../../shared/validators/email_validator.dart';
+import '../../domain/validation/mail_settings_validation.dart';
 
 enum FirstRunStep { welcome, folder, mail, gallery }
 
@@ -17,6 +17,15 @@ enum FirstRunError {
 }
 
 enum FolderPickStatus { idle, picking, failed }
+
+FirstRunError _fromMailError(MailSettingsError error) {
+  return switch (error) {
+    MailSettingsError.providerMissing => FirstRunError.providerMissing,
+    MailSettingsError.senderInvalid => FirstRunError.senderInvalid,
+    MailSettingsError.customDestinationInvalid =>
+      FirstRunError.customDestinationInvalid,
+  };
+}
 
 class FirstRunState extends Equatable {
   const FirstRunState({
@@ -70,13 +79,12 @@ class FirstRunState extends Equatable {
             ? const <FirstRunError>{FirstRunError.folderMissing}
             : const <FirstRunError>{};
       case FirstRunStep.mail:
-        return <FirstRunError>{
-          if (provider == null) FirstRunError.providerMissing,
-          if (!isValidEmail(senderAccount)) FirstRunError.senderInvalid,
-          if (destinationMode == DestinationMode.custom &&
-              !isValidEmail(customDestination))
-            FirstRunError.customDestinationInvalid,
-        };
+        return validateMailSettings(
+          provider: provider,
+          senderAccount: senderAccount,
+          destinationMode: destinationMode,
+          customDestination: customDestination,
+        ).map(_fromMailError).toSet();
     }
   }
 

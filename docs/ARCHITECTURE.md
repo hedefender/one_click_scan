@@ -1,15 +1,14 @@
-# Architecture (Phase 0)
+# Architecture (Phase 0.5)
 
-Status: Phase 0, seed code. Not yet compiled by the author (see
-`PHASE_0_VALIDATION.md`). Claude Code is expected to compile it and report
-every change it had to make.
+Status: Phase 0 skeleton compiled and committed; Phase 0.5 adds the settings
+screen (see `PHASE_0_VALIDATION.md` and `PHASE_0_5_VALIDATION.md`).
 
 ## 1. Principles
 
 - Privacy first, fully local (ADR-001). No developer cloud, no mandatory app
   account, no analytics. Logs never contain user content.
-- Independent from the Budget app (ADR-003). The only link is the JSON
-  contract (`DATA_CONTRACT_V1.md`).
+- Independent from the Budget app (ADR-003). Scan produces no JSON (ADR-008):
+  Budget reads the PDFs directly. `DATA_CONTRACT_V1.md` is superseded.
 - Maintainability and testability over feature completeness.
 - Every phase leaves a runnable app.
 - Android first, iOS later: platform code is isolated behind interfaces in
@@ -105,6 +104,22 @@ mail (provider, sending account, recipient), Gallery copies (explained).
 Answers are persisted per step, so an interrupted wizard resumes with
 earlier answers prefilled; `firstRunCompleted` is set only on Finish.
 
+## 7b. Settings screen (Phase 0.5)
+
+Feature `features/settings/`, route `/settings`, opened from the home app
+bar. `SettingsEditorCubit` owns the unsaved e-mail draft; language, folder and
+the Gallery switch are saved at once through `UpdateSettings`. The app-wide
+`SettingsCubit` is unchanged and keeps mirroring the stored settings. The
+e-mail rules live in `domain/validation/mail_settings_validation.dart` and are
+shared with the wizard (`FirstRunState`). Leaving with unsaved e-mail changes
+asks for confirmation. The theme always follows the device (no option).
+
+`HomeCubit` checks `StorageFolderPicker.hasAccess` when home opens, when the
+app resumes and when returning from settings; if access is lost, home shows a
+banner that leads to settings. The domain rule "imports only Dart and
+`equatable`" is read as packages: `domain/validation` may use the pure-Dart
+`shared/validators`.
+
 ## 8. Storage folder (SAF)
 
 `StorageFolderPicker` is the interface. On Android, `MainActivity.kt`
@@ -113,8 +128,12 @@ read/write permission and returns `{uri, name}`. `hasAccess` checks that the
 permission is still granted (it can be revoked by the user or the system);
 later phases use it before every write and re-prompt when missing.
 
-The same folder will hold all scan outputs (JSON, PDF, images) flat, so the
-JSON contract's file-name-only references resolve (see ADR-005).
+Inside the chosen folder (`./`) later phases write `./pictures/` (original
+JPEGs, always saved) and `./pdf/` (PDFs). Both outputs of one scan share a
+stem, the device time `YYYY-MM-DD_HH-MM-SS` (same as the e-mail subject, with a
+`-2`, `-3` suffix on collision): `pdf/<stem>.pdf`, `pictures/<stem>_<n>.jpg`
+with `n` from 1. The Gallery switch only adds one more copy there; it does not
+move the originals. The e-mail contains only the PDF (ADR-005).
 
 ## 9. Testing strategy
 
@@ -149,9 +168,10 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 
 | Phase | Adds | Plugs into |
 |---|---|---|
-| 1 | `CameraService` | `services/camera/` + feature `scan` |
+| 0.5 | Settings screen, folder health check | feature `settings`, `HomeCubit` |
+| 1 | `CameraService`, originals into `./pictures` | `services/camera/` + feature `scan` |
 | 1.5 / 2 | `OcrEngine` interface and engine(s) | `services/ocr/` |
-| 3 | `PdfGenerator` | `services/pdf/` |
+| 3 | `PdfGenerator` into `./pdf` (text layer decision) | `services/pdf/` |
 | 4 | `MailProvider` (+ implementations) | `services/mail/` |
 | 5 | One-click orchestration use case | `domain/usecases/`, feature `scan` |
-| 6 | JSON contract v1, scan type, shared-folder export | `domain/`, `data/` |
+| 6 | Image enhancement | `services/` (Rust candidate) |

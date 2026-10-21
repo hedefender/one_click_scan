@@ -20,10 +20,32 @@ go_router. Chosen for testability. Not required to match Budget.
 
 ## ADR-005 User-chosen storage folder
 The user picks a visible folder at first launch (Android SAF tree URI with
-persisted permission). All scan outputs go there, flat, so JSON file-name
-references resolve and the user can share files to other apps or to their own
-cloud storage. Gallery copies are optional and off by default, with an
-explanation of what sharing to the Gallery implies.
+persisted permission). Inside it (`./` below) Scan writes two sub-folders, so
+the user can share files to other apps or to their own cloud storage:
+
+- `./pictures/` holds the original JPEGs. They are always saved, so they can be
+  shared with tools that do not accept PDF.
+- `./pdf/` holds the PDFs.
+
+Naming: both outputs of a scan share one stem, the device time as
+`YYYY-MM-DD_HH-MM-SS` (the same text as the e-mail subject). PDF:
+`pdf/<stem>.pdf`. Images: `pictures/<stem>_<n>.jpg`, `n` starting at 1. If the
+stem already exists (two scans in the same second) it gets a suffix `-2`, `-3`,
+and so on, so the PDF and the images of one scan always match by name.
+
+Gallery copies are optional and off by default, with an explanation of what
+sharing to the Gallery implies. The switch only adds one extra copy in the
+Gallery; it does not change where the originals are stored. The e-mail contains
+only the PDF.
+
+## ADR-008 Scan without JSON
+Scan does not generate JSON. The Budget app reads the PDFs directly. The
+JSON contract (`DATA_CONTRACT_V1.md`) is kept as history only and is marked
+superseded: `schemaVersion`, `documentId` and `documentType` are cancelled. The
+Receipt/Document choice and the soft filter existed for the JSON export and are
+suspended (open, decided in the OCR phase). Open question, decided in the PDF
+phase: either the Scan PDF has an invisible text layer (searchable PDF) or
+Budget does its own OCR. ADR-003 is unchanged: the apps stay independent.
 
 ## ADR-006 Sending model
 Direct sending from the app (one click) with a configurable sending account that

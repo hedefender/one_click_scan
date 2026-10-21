@@ -3,13 +3,19 @@
 One-click document capture, local OCR, PDF and e-mail delivery. Privacy first,
 fully local. Android first, iOS later.
 
-Status: Phase 0 (skeleton). See `docs/`:
+Output layout (from Phase 1): inside the folder you choose, `pictures/` holds
+the original JPEGs and `pdf/` holds the PDFs, with matching names
+(`YYYY-MM-DD_HH-MM-SS`). Scan produces no JSON; the Budget app reads the PDFs
+directly. The app theme always follows the device theme.
+
+Status: Phase 0.5 (settings screen). See `docs/`:
 
 - `ARCHITECTURE.md`
 - `PHASE_0_PLAN.md`
 - `PHASE_0_VALIDATION.md`
+- `PHASE_0_5_VALIDATION.md`
 - `ROADMAP.md`
-- `DATA_CONTRACT_V1.md`
+- `DATA_CONTRACT_V1.md` (superseded: Scan produces no JSON, see ADR-008)
 - `DECISIONS.md`
 - `CLAUDE_CODE_PHASE_0.md` (instructions for Claude Code, in Greek)
 

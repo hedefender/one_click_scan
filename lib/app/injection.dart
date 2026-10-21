@@ -11,6 +11,7 @@ import '../domain/usecases/load_settings.dart';
 import '../domain/usecases/update_settings.dart';
 import '../features/first_run/first_run_module.dart';
 import '../features/home/home_module.dart';
+import '../features/settings/settings_module.dart';
 import '../presentation/state/settings_cubit.dart';
 import '../services/storage_folder/storage_folder_picker.dart';
 
@@ -57,6 +58,7 @@ Future<GetIt> buildContainer({
   // Feature modules.
   registerFirstRunModule(sl);
   registerHomeModule(sl);
+  registerSettingsModule(sl);
 
   // App-wide state, created after settings can be read.
   final initialSettings = await sl<LoadSettings>()();

@@ -118,4 +118,36 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get homeNotSet => 'Not set';
+
+  @override
+  String get homeFolderLostBanner => 'The folder is no longer accessible';
+
+  @override
+  String get homeOpenSettings => 'Settings';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsSaveButton => 'Save';
+
+  @override
+  String get settingsSaved => 'Settings saved.';
+
+  @override
+  String get settingsFolderAccessLost =>
+      'The app no longer has access to this folder. Choose a folder again.';
+
+  @override
+  String get settingsUnsavedTitle => 'Unsaved changes';
+
+  @override
+  String get settingsUnsavedBody =>
+      'You have changes to your email settings that are not saved.';
+
+  @override
+  String get settingsDiscard => 'Discard';
+
+  @override
+  String get settingsStay => 'Stay';
 }
