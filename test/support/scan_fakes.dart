@@ -150,10 +150,18 @@ class FakeGalleryService implements GalleryService {
   bool fail = false;
   final List<String> saved = <String>[];
 
+  /// The file names handed to the Gallery, in the same order as [saved].
+  final List<String> savedNames = <String>[];
+
+  /// Called after each saved image (lets a test move the clock).
+  void Function()? onSave;
+
   @override
-  Future<void> saveImage(String path) async {
+  Future<void> saveImage(String path, {required String fileName}) async {
     if (fail) throw const GalleryException('fake failure');
     saved.add(path);
+    savedNames.add(fileName);
+    onSave?.call();
   }
 }
 

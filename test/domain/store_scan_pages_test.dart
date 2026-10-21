@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:one_click_scan/core/errors/app_exceptions.dart';
+import 'package:one_click_scan/data/datasources/key_value_gallery_counter_store.dart';
 import 'package:one_click_scan/domain/entities/captured_page.dart';
 import 'package:one_click_scan/domain/entities/stored_scan.dart';
+import 'package:one_click_scan/domain/scan/gallery_naming.dart';
 import 'package:one_click_scan/domain/scan/scan_naming.dart';
 import 'package:one_click_scan/domain/usecases/store_scan_pages.dart';
 
@@ -27,6 +29,8 @@ void main() {
       fileStore: store,
       gallery: gallery,
       naming: ScanNaming(() => DateTime(2026, 10, 21, 19, 5, 12)),
+      galleryNaming: GalleryNaming(() => DateTime(2026, 10, 21, 19, 5, 12)),
+      galleryCounter: KeyValueGalleryCounterStore(InMemoryKeyValueStore()),
       logger: logger,
     );
   });
@@ -188,4 +192,120 @@ void main() {
 
     expect(logger.messages.join(), isNot(contains('.jpg')));
   });
+
+  group('Gallery names', () {
+    late InMemoryKeyValueStore values;
+    late DateTime now;
+
+    StoreScanPages build([InMemoryKeyValueStore? counterValues]) =>
+        StoreScanPages(
+          fileStore: store,
+          gallery: gallery,
+          naming: ScanNaming(() => now),
+          galleryNaming: GalleryNaming(() => now),
+          galleryCounter: KeyValueGalleryCounterStore(counterValues ?? values),
+          logger: logger,
+        );
+
+    setUp(() {
+      values = InMemoryKeyValueStore();
+      now = DateTime(2026, 10, 21, 19, 5, 12);
+      useCase = build();
+    });
+
+    test('one page gets scan_<date>_01.jpg', () async {
+      await run(gallery: true, input: [pages.first]);
+
+      expect(gallery.savedNames, ['scan_2026-10-21_01.jpg']);
+    });
+
+    test('several pages take consecutive numbers', () async {
+      await run(gallery: true);
+
+      expect(gallery.savedNames, [
+        'scan_2026-10-21_01.jpg',
+        'scan_2026-10-21_02.jpg',
+      ]);
+    });
+
+    test('the next scan of the day continues the numbering', () async {
+      await run(gallery: true, input: [pages.first]);
+      await run(gallery: true);
+
+      expect(gallery.savedNames, [
+        'scan_2026-10-21_01.jpg',
+        'scan_2026-10-21_02.jpg',
+        'scan_2026-10-21_03.jpg',
+      ]);
+    });
+
+    test('the numbering survives a new use case instance (restart)', () async {
+      await run(gallery: true, input: [pages.first]);
+      useCase = build();
+      await run(gallery: true, input: [pages.first]);
+
+      expect(gallery.savedNames.last, 'scan_2026-10-21_02.jpg');
+    });
+
+    test('a new day starts again at 01', () async {
+      await run(gallery: true);
+      now = DateTime(2026, 10, 22, 8, 0, 0);
+      await run(gallery: true, input: [pages.first]);
+
+      expect(gallery.savedNames.last, 'scan_2026-10-22_01.jpg');
+    });
+
+    test('the day can change in the middle of a scan', () async {
+      now = DateTime(2026, 10, 21, 23, 59, 59);
+      gallery.onSave = () => now = DateTime(2026, 10, 22, 0, 0, 1);
+      await run(gallery: true);
+
+      expect(gallery.savedNames, [
+        'scan_2026-10-21_01.jpg',
+        'scan_2026-10-22_01.jpg',
+      ]);
+    });
+
+    test('a failing copy does not use a number up', () async {
+      gallery.fail = true;
+      await run(gallery: true, input: [pages.first]);
+      expect(gallery.savedNames, isEmpty);
+
+      gallery.fail = false;
+      await run(gallery: true, input: [pages.first]);
+      expect(gallery.savedNames, ['scan_2026-10-21_01.jpg']);
+    });
+
+    test('with the switch off no number is used', () async {
+      await run(gallery: false);
+      await run(gallery: true, input: [pages.first]);
+
+      expect(gallery.savedNames, ['scan_2026-10-21_01.jpg']);
+    });
+
+    test('the originals in ./pictures keep their own names', () async {
+      final result = await run(gallery: true);
+
+      expect(result.pictures.map((p) => p.fileName), [
+        '2026-10-21_19-05-12_1.jpg',
+        '2026-10-21_19-05-12_2.jpg',
+      ]);
+    });
+
+    test('a counter that cannot be saved is logged, the copy stays', () async {
+      useCase = build(_FailingWriteStore());
+
+      final result = await run(gallery: true, input: [pages.first]);
+
+      expect(result.pictures.single.gallery, GalleryCopyStatus.saved);
+      expect(logger.messages, contains('Gallery counter not saved'));
+    });
+  });
+}
+
+class _FailingWriteStore extends InMemoryKeyValueStore {
+  @override
+  Future<void> setInt(String key, int value) async {
+    throw StateError('disk full');
+  }
 }

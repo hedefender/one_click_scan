@@ -40,10 +40,13 @@ Future<ScanServices> createPlatformScanServices() async {
   }
   final cache = await getTemporaryDirectory();
   final pages = Directory('${cache.path}${Platform.pathSeparator}scan_pages');
+  final galleryCopies = Directory(
+    '${cache.path}${Platform.pathSeparator}gallery_copies',
+  );
   return ScanServices(
     camera: PluginCameraService(cacheDirectory: pages),
     fileStore: AndroidScanFileStore(),
-    gallery: const GalGalleryService(),
-    tempStore: IoScanTempStore(pages),
+    gallery: GalGalleryService(workDirectory: galleryCopies),
+    tempStore: IoScanTempStore(pages, alsoPurge: [galleryCopies]),
   );
 }

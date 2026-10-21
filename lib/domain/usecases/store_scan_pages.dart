@@ -1,10 +1,12 @@
 import '../../core/errors/app_exceptions.dart';
 import '../../core/logging/app_logger.dart';
+import '../ports/gallery_counter_store.dart';
 import '../ports/gallery_service.dart';
 import '../ports/scan_file_store.dart';
 import '../entities/captured_page.dart';
 import '../entities/storage_folder.dart';
 import '../entities/stored_scan.dart';
+import '../scan/gallery_naming.dart';
 import '../scan/scan_naming.dart';
 
 /// Copies the captured pages into `./pictures` of the user's folder and,
@@ -19,6 +21,8 @@ class StoreScanPages {
     required this.fileStore,
     required this.gallery,
     required this.naming,
+    required this.galleryNaming,
+    required this.galleryCounter,
     required this.logger,
   });
 
@@ -28,6 +32,8 @@ class StoreScanPages {
   final ScanFileStore fileStore;
   final GalleryService gallery;
   final ScanNaming naming;
+  final GalleryNaming galleryNaming;
+  final GalleryCounterStore galleryCounter;
   final AppLogger logger;
 
   /// Throws `ScanStoreException` when the folder cannot be written.
@@ -87,14 +93,26 @@ class StoreScanPages {
     }
   }
 
+  /// Each copy takes the next daily number, but only a saved copy uses it up:
+  /// a failure leaves no gap, the next picture gets the same number.
   Future<StoredPicture> _copyToGallery(StoredPicture picture) async {
+    final date = galleryNaming.today();
+    final number = galleryCounter.nextNumber(date);
     try {
-      await gallery.saveImage(picture.sourcePath);
-      return picture.copyWith(gallery: GalleryCopyStatus.saved);
+      await gallery.saveImage(
+        picture.sourcePath,
+        fileName: galleryNaming.fileName(date, number),
+      );
     } catch (error, stackTrace) {
       logger.error('Gallery copy failed', error, stackTrace);
       return picture.copyWith(gallery: GalleryCopyStatus.failed);
     }
+    try {
+      await galleryCounter.markUsed(date, number);
+    } catch (error, stackTrace) {
+      logger.error('Gallery counter not saved', error, stackTrace);
+    }
+    return picture.copyWith(gallery: GalleryCopyStatus.saved);
   }
 
   Future<void> _rollback(StorageFolder folder, List<String> written) async {

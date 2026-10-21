@@ -2,12 +2,14 @@ import 'package:get_it/get_it.dart';
 
 import '../core/config/app_config.dart';
 import '../core/logging/app_logger.dart';
+import '../data/datasources/key_value_gallery_counter_store.dart';
 import '../data/datasources/key_value_store.dart';
 import '../data/datasources/settings_local_data_source.dart';
 import '../data/repositories/settings_repository_impl.dart';
 import '../domain/entities/app_language.dart';
 import '../domain/repositories/settings_repository.dart';
 import '../domain/usecases/load_settings.dart';
+import '../domain/scan/gallery_naming.dart';
 import '../domain/scan/scan_naming.dart';
 import '../domain/usecases/store_scan_pages.dart';
 import '../domain/usecases/update_settings.dart';
@@ -78,6 +80,8 @@ Future<GetIt> buildContainer({
       fileStore: sl<ScanFileStore>(),
       gallery: sl<GalleryService>(),
       naming: ScanNaming(clock),
+      galleryNaming: GalleryNaming(clock),
+      galleryCounter: KeyValueGalleryCounterStore(sl<KeyValueStore>()),
       logger: sl<AppLogger>(),
     ),
   );
