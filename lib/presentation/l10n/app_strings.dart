@@ -60,13 +60,34 @@ abstract class AppStrings {
 
   // Home
   String get homeScanAndSend;
-  String get homeComingSoon;
   String get homeFolderLabel;
   String get homeRecipientLabel;
   String get homeProviderLabel;
   String get homeNotSet;
   String get homeFolderLostBanner;
   String get homeOpenSettings;
+
+  // Scan
+  String get scanModeSingle;
+  String get scanModeMulti;
+  String get scanCaptureButton;
+  String get scanDone;
+  String get scanDeleteLast;
+  String scanPageCount(int count);
+  String get scanSaving;
+  String get scanRetry;
+  String get scanPermissionDenied;
+  String get scanOpenAppSettings;
+  String get scanCameraUnavailable;
+  String get scanCaptureFailed;
+  String get scanSaveFailed;
+  String get scanDiscardTitle;
+  String get scanDiscardBody;
+  String get scanResultTitle;
+  String scanResultSummary(int count, String folderName);
+  String get scanGallerySaved;
+  String get scanGalleryFailed;
+  String get scanBackHome;
 
   // Settings
   String get settingsTitle;

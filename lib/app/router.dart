@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/first_run/first_run_module.dart';
 import '../features/home/home_module.dart';
+import '../features/scan/scan_module.dart';
 import '../features/settings/settings_module.dart';
 
 /// Composes the routes exposed by every feature module.
@@ -16,6 +17,7 @@ GoRouter createRouter({
       ...firstRunRoutes(container),
       ...homeRoutes(container),
       ...settingsRoutes(container),
+      ...scanRoutes(container),
     ],
   );
 }

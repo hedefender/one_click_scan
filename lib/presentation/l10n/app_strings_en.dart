@@ -95,17 +95,81 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get galleryNote =>
-      'When enabled, photos of your documents appear in the phone Gallery. '
-      'Other apps with photo access can see them there, and they may be '
-      'copied to cloud services if automatic backup is on (for example '
-      'Google Photos). Leave it off if your documents contain sensitive '
-      'data.';
+      'When on, a copy of your photos appears in the phone Gallery. Other '
+      'apps with access to photos can see it there, and it may be copied to '
+      'cloud services if automatic backup is on (for example Google Photos). '
+      'When off, the photos stay only in the folder you chose and do not '
+      'appear in the Gallery. Leave it off if your documents contain '
+      'sensitive data.';
 
   @override
   String get homeScanAndSend => 'SCAN & SEND';
 
   @override
-  String get homeComingSoon => 'The camera arrives in the next phase.';
+  String get scanModeSingle => 'Single page';
+
+  @override
+  String get scanModeMulti => 'Multi page';
+
+  @override
+  String get scanCaptureButton => 'Take photo';
+
+  @override
+  String get scanDone => 'Done';
+
+  @override
+  String get scanDeleteLast => 'Delete last page';
+
+  @override
+  String scanPageCount(int count) => 'Pages: $count';
+
+  @override
+  String get scanSaving => 'Saving...';
+
+  @override
+  String get scanRetry => 'Try again';
+
+  @override
+  String get scanPermissionDenied =>
+      'Camera access is needed to scan documents. Allow it to continue.';
+
+  @override
+  String get scanOpenAppSettings => 'App settings';
+
+  @override
+  String get scanCameraUnavailable =>
+      'The camera is not available on this device.';
+
+  @override
+  String get scanCaptureFailed => 'The photo could not be taken. Try again.';
+
+  @override
+  String get scanSaveFailed =>
+      'The pages could not be saved to your folder. They are kept, so you can '
+      'try again.';
+
+  @override
+  String get scanDiscardTitle => 'Discard this scan?';
+
+  @override
+  String get scanDiscardBody => 'The pages you have taken will be deleted.';
+
+  @override
+  String get scanResultTitle => 'Scan saved';
+
+  @override
+  String scanResultSummary(int count, String folderName) => count == 1
+      ? '1 file saved in "$folderName/pictures"'
+      : '$count files saved in "$folderName/pictures"';
+
+  @override
+  String get scanGallerySaved => 'Copy saved to Gallery';
+
+  @override
+  String get scanGalleryFailed => 'Gallery copy failed';
+
+  @override
+  String get scanBackHome => 'Back to home';
 
   @override
   String get homeFolderLabel => 'Folder';

@@ -1,6 +1,17 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Camera is not mandatory for installing; the app explains when missing. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Only for the optional Gallery copy on Android 10 and older (gal plugin).
+         The camera plugin declares maxSdkVersion 28; gal needs 29, so we override. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"
+        tools:replace="android:maxSdkVersion" />
     <application
         android:label="One Click Scan"
+        android:requestLegacyExternalStorage="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

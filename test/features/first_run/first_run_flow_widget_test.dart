@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:one_click_scan/app/app.dart';
 import 'package:one_click_scan/domain/entities/app_settings.dart';
@@ -6,6 +5,7 @@ import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
 import 'package:one_click_scan/features/first_run/first_run_keys.dart';
 import 'package:one_click_scan/features/home/home_keys.dart';
+import 'package:one_click_scan/features/scan/scan_keys.dart';
 
 import '../../support/fakes.dart';
 
@@ -113,14 +113,13 @@ void main() {
     expect(find.text('Yahoo'), findsOneWidget);
   });
 
-  testWidgets('SCAN & SEND placeholder tells the user what is coming', (
-    tester,
-  ) async {
+  testWidgets('SCAN & SEND opens the camera screen', (tester) async {
     final store = InMemoryKeyValueStore();
     final seed = await buildTestContainer(store: store);
     await seed<SettingsRepository>().save(
       (await seed<SettingsRepository>().load()).copyWith(
         firstRunCompleted: true,
+        storageFolder: testFolder,
       ),
     );
 
@@ -129,9 +128,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(HomeKeys.scanAndSend));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text('The camera arrives in the next phase.'), findsOneWidget);
-    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.byKey(ScanKeys.capture), findsOneWidget);
   });
 }

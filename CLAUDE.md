@@ -14,8 +14,9 @@
 
 - Για τα integration tests χρησιμοποιείς ΜΟΝΟ τον δικό σου, ξεχωριστό emulator. Ο emulator του χρήστη δεν αγγίζεται (ούτε install, ούτε `adb` εντολές πάνω του).
 - Αν δεν είναι σαφές ποιο device είναι δικό σου (`flutter devices`, `adb devices`), ρώτα πριν τρέξεις οτιδήποτε.
-- Ο emulator του χρήστη είναι το AVD `Test_Phone` (πορτ 5556 την τελευταία φορά). Δικός σου είναι ο άλλος (AVD `Testing_Phone`, πορτ 5554 την τελευταία φορά). Τα πορτ αλλάζουν: πριν από κάθε install ή test τρέξε `adb devices` και `flutter devices` και επιβεβαίωσε το όνομα AVD μόνο στον δικό σου (`adb -s <δικός σου> emu avd name`), ποτέ στον emulator του χρήστη.
+- Ο emulator του χρήστη είναι το AVD `Test_Phone` (πορτ 5556 την τελευταία φορά). Δικός σου είναι ο άλλος (AVD `Claude_Code_Test`, πορτ 5554 την τελευταία φορά). Τα πορτ αλλάζουν: πριν από κάθε install ή test τρέξε `adb devices` και `flutter devices` και επιβεβαίωσε το όνομα AVD μόνο στον δικό σου (`adb -s <δικός σου> emu avd name`), ποτέ στον emulator του χρήστη.
 - Το Webcam0 ΔΕΝ χρησιμοποιείται στον δικό σου emulator. Μόνο virtual scene για την κάμερα.
+- Τα integration tests τρέχουν χωρίς ανθρώπινη παρέμβαση. Το `flutter test` εγκαθιστά την εφαρμογή από την αρχή σε κάθε εκτέλεση (και την αφαιρεί μετά), οπότε η άδεια CAMERA χάνεται κάθε φορά και ο διάλογος του συστήματος μένει στην οθόνη. Τρέχε τα ΠΑΝΤΑ μέσω `tool/run_integration_test.sh <δικός-σου-device> <test>`: ελέγχει ότι το device είναι το `Claude_Code_Test` και δίνει την άδεια με `adb shell pm grant com.example.one_click_scan android.permission.CAMERA` αμέσως μετά το install. Μετά από χειροκίνητο `adb install` ή uninstall δώσε πάλι την ίδια εντολή `pm grant`. Ποτέ δεν πατάς διαλόγους στον emulator με το χέρι. Αν ο διάλογος εμφανιστεί παρ' όλα αυτά, το `camera_smoke_test` αποτυγχάνει σε 20 δευτερόλεπτα με σαφές μήνυμα.
 
 ## Αρχιτεκτονική (περίληψη, λεπτομέρειες στο docs/ARCHITECTURE.md)
 

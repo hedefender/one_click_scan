@@ -28,6 +28,10 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // Phase 1: writing scans into the folder, and small system helpers.
+        ScanFilesHandler(this, flutterEngine.dartExecutor.binaryMessenger)
+        SystemHandler(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 
     private fun pickFolder(result: MethodChannel.Result) {

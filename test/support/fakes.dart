@@ -4,7 +4,13 @@ import 'package:one_click_scan/core/config/app_config.dart';
 import 'package:one_click_scan/core/logging/app_logger.dart';
 import 'package:one_click_scan/data/datasources/key_value_store.dart';
 import 'package:one_click_scan/domain/entities/storage_folder.dart';
+import 'package:one_click_scan/services/camera/camera_service.dart';
+import 'package:one_click_scan/domain/ports/gallery_service.dart';
+import 'package:one_click_scan/domain/ports/scan_file_store.dart';
+import 'package:one_click_scan/services/scan_files/scan_temp_store.dart';
 import 'package:one_click_scan/services/storage_folder/storage_folder_picker.dart';
+
+import 'scan_fakes.dart';
 
 /// English by default so widget tests can assert on English strings.
 const testConfig = AppConfig(
@@ -84,11 +90,21 @@ Future<GetIt> buildTestContainer({
   KeyValueStore? store,
   StorageFolderPicker? picker,
   AppLogger? logger,
+  CameraService? camera,
+  ScanFileStore? scanFileStore,
+  GalleryService? gallery,
+  ScanTempStore? scanTempStore,
+  DateTime Function()? clock,
 }) {
   return buildContainer(
     config: testConfig,
     keyValueStore: store ?? InMemoryKeyValueStore(),
     folderPicker: picker ?? FakeStorageFolderPicker(),
     logger: logger ?? RecordingLogger(),
+    camera: camera ?? FakeCameraService(),
+    scanFileStore: scanFileStore ?? FakeScanFileStore(),
+    gallery: gallery ?? FakeGalleryService(),
+    scanTempStore: scanTempStore ?? FakeScanTempStore(),
+    clock: clock ?? () => DateTime(2026, 10, 21, 19, 5, 12),
   );
 }

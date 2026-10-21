@@ -10,7 +10,8 @@ import '../../presentation/state/settings_cubit.dart';
 import 'home_cubit.dart';
 import 'home_keys.dart';
 
-/// Phase 0 placeholder. The SCAN & SEND button is wired up in later phases.
+/// Home screen. SCAN & SEND opens the camera (Phase 1); sending is wired up
+/// in later phases.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -89,11 +90,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(72),
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(strings.homeComingSoon)),
-                    );
-                  },
+                  onPressed: () => context.push<void>(RoutePaths.scan),
                   icon: const Icon(Icons.document_scanner_outlined),
                   label: Text(strings.homeScanAndSend),
                 ),

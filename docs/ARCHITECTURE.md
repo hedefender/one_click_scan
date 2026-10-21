@@ -1,7 +1,8 @@
-# Architecture (Phase 0.5)
+# Architecture (Phase 1.1)
 
-Status: Phase 0 skeleton compiled and committed; Phase 0.5 adds the settings
-screen (see `PHASE_0_VALIDATION.md` and `PHASE_0_5_VALIDATION.md`).
+Status: Phase 0 skeleton and Phase 0.5 settings screen are committed; Phase 1
+adds the camera and saving the originals (see `PHASE_1_VALIDATION.md`);
+Phase 1.1 fixes found in the manual check (see `PHASE_1_1_VALIDATION.md`).
 
 ## 1. Principles
 
@@ -25,7 +26,9 @@ lib/
 ├── app/                 composition root: DI container, router, root widget
 ├── core/                framework-light basics: config, errors, logging, route paths
 ├── shared/              small reusable helpers (validators, later formatters)
-├── domain/              entities, repository interfaces, use cases. Pure Dart.
+├── domain/              entities, repository interfaces, ports, use cases.
+│                        Pure Dart. `ports/` holds the interfaces of services
+│                        that use cases need (implemented in `services/`).
 ├── data/                repository implementations, data sources (key/value store)
 ├── services/            platform/IO integrations behind interfaces
 │                        (Phase 0: storage folder picker; later: camera, OCR,
@@ -57,6 +60,9 @@ core, shared ◄── used by all, depend on nothing of ours
   are confined to one adapter class.
 - `services/` expose interfaces; the Android implementation talks to native
   code over a MethodChannel.
+- `domain/` never imports `services/`. Interfaces that a use case needs are
+  ports in `domain/ports/` (Phase 1.1: `ScanFileStore`, `GalleryService`);
+  their implementations stay in `services/` and point inwards.
 - Features never import other features.
 
 ## 4. State management, DI, routing
@@ -135,13 +141,55 @@ stem, the device time `YYYY-MM-DD_HH-MM-SS` (same as the e-mail subject, with a
 with `n` from 1. The Gallery switch only adds one more copy there; it does not
 move the originals. The e-mail contains only the PDF (ADR-005).
 
+## 8b. Camera and saving the originals (Phase 1)
+
+Feature `features/scan/`, routes `/scan` and `/scan/result`.
+
+- `ScanCubit` is the state machine: check folder access, open the camera,
+  take one (Single) or many (Multi) pages, then store them. Shots are written
+  to the app cache first (`scan_pages/`); only Done (or the Single shot)
+  copies them into `./pictures`. Leaving, cancelling or closing the cubit
+  deletes unsaved shots; at start-up `main.dart` purges leftovers of a killed
+  scan. The cache files of a saved scan are deleted when the result screen is
+  left.
+- `CameraService` (`services/camera/`): `PluginCameraService` uses the
+  `camera` package, which on Android is the endorsed CameraX implementation
+  (`camera_android_camerax`). The plugin types stay in that one file. The
+  camera is released when the app is paused and reopened on resume.
+- `ScanFileStore` (port in `domain/ports/`, implementation in
+  `services/scan_files/`): Android implementation over the
+  MethodChannel `com.example.one_click_scan/scan_files`
+  (`ScanFilesHandler.kt`). Bytes never cross the channel: the copy runs
+  natively, from the cache file to the SAF folder, on a background thread.
+  `StoreScanPages` is all or nothing: if a file fails, the ones already
+  written are deleted and the pages stay in the cache for a retry.
+- The `./pictures` folder holds a `.nomedia` marker (created
+  before the first copy, idempotent, a failure is only logged). It keeps the
+  system media index (Gallery, Google Photos) away from the originals, so the
+  Gallery switch alone decides whether a copy appears there. The marker stays
+  whatever the switch says.
+- `GalleryService` (port in `domain/ports/`): `gal` package, which saves the
+  copy under `Pictures/` (no album) and names it after the source file. The permission is asked only when a copy is
+  requested; a failing copy is reported per picture and never fails the scan.
+- Naming (`ScanNaming`, pure, injected clock): see ADR-005.
+- `MainActivity.kt` only registers the two new handlers
+  (`ScanFilesHandler`, `SystemHandler` for "open app settings").
+- Screen layout (Phase 1.1): like a camera app, the preview fills the screen
+  (contain, no crop) and all controls float above it. Portrait: Single/Multi
+  in the app bar, thumbnails and buttons along the bottom. Landscape (width >
+  height): buttons and a vertical thumbnail strip on the right. The preview
+  rotation itself is the camera plugin's: it follows the device sensor.
+- Orientation: the camera writes the rotation as an EXIF tag (orientation 6 on
+  the emulator), the pixels are not rotated. Baking the rotation into the
+  pixels is left to the phases that decode the image anyway.
+
 ## 9. Testing strategy
 
 | Level | What | Where |
 |---|---|---|
 | Unit | entities, validators, data source, repository, use cases, cubits, strings | `test/` |
 | Widget | whole wizard flow through the real app widget with fakes | `test/features/first_run/` |
-| Integration | wizard + persistence across a simulated restart, real SharedPreferences, on an emulator | `integration_test/` |
+| Integration | wizard, settings and scan flows with real rendering on an emulator (fake folder picker, fake camera and folder store); `camera_smoke_test.dart` uses the real camera on the `virtualscene` | `integration_test/` |
 | Manual | real SAF picker, real device, visual check | `PHASE_0_VALIDATION.md` |
 
 Rules: no personal data in samples or tests (use `example.com` addresses and
@@ -169,7 +217,7 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 | Phase | Adds | Plugs into |
 |---|---|---|
 | 0.5 | Settings screen, folder health check | feature `settings`, `HomeCubit` |
-| 1 | `CameraService`, originals into `./pictures` | `services/camera/` + feature `scan` |
+| 1 | `CameraService`, originals into `./pictures` (done) | `services/camera/` + feature `scan` |
 | 1.5 / 2 | `OcrEngine` interface and engine(s) | `services/ocr/` |
 | 3 | `PdfGenerator` into `./pdf` (text layer decision) | `services/pdf/` |
 | 4 | `MailProvider` (+ implementations) | `services/mail/` |

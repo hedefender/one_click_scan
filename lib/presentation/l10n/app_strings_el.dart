@@ -96,17 +96,82 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get galleryNote =>
-      'Αν ενεργοποιηθεί, οι φωτογραφίες των εγγράφων θα εμφανίζονται στη '
-      'Gallery του κινητού. Εκεί τις βλέπουν άλλες εφαρμογές με πρόσβαση σε '
-      'φωτογραφίες και μπορεί να αντιγραφούν σε υπηρεσίες cloud, αν έχεις '
-      'ενεργό αυτόματο συγχρονισμό (π.χ. Google Photos). Αν τα έγγραφά σου '
-      'έχουν ευαίσθητα δεδομένα, άφησέ το απενεργοποιημένο.';
+      'Όταν είναι ενεργό, εμφανίζεται αντίγραφο των φωτογραφιών στη Gallery '
+      'του κινητού. Εκεί το βλέπουν άλλες εφαρμογές με πρόσβαση σε '
+      'φωτογραφίες και μπορεί να αντιγραφεί σε υπηρεσίες cloud, αν έχεις '
+      'ενεργό αυτόματο συγχρονισμό (π.χ. Google Photos). Όταν είναι '
+      'ανενεργό, οι φωτογραφίες μένουν μόνο στον φάκελο που διάλεξες και δεν '
+      'εμφανίζονται στη Gallery. Αν τα έγγραφά σου έχουν ευαίσθητα δεδομένα, '
+      'άφησέ το απενεργοποιημένο.';
 
   @override
   String get homeScanAndSend => 'ΣΑΡΩΣΗ & ΑΠΟΣΤΟΛΗ';
 
   @override
-  String get homeComingSoon => 'Η κάμερα έρχεται στην επόμενη φάση.';
+  String get scanModeSingle => 'Μία σελίδα';
+
+  @override
+  String get scanModeMulti => 'Πολλές σελίδες';
+
+  @override
+  String get scanCaptureButton => 'Λήψη';
+
+  @override
+  String get scanDone => 'Τέλος';
+
+  @override
+  String get scanDeleteLast => 'Διαγραφή τελευταίας σελίδας';
+
+  @override
+  String scanPageCount(int count) => 'Σελίδες: $count';
+
+  @override
+  String get scanSaving => 'Αποθήκευση...';
+
+  @override
+  String get scanRetry => 'Δοκίμασε ξανά';
+
+  @override
+  String get scanPermissionDenied =>
+      'Χρειάζεται πρόσβαση στην κάμερα για να σαρώσεις έγγραφα. Επίτρεψέ την για να συνεχίσεις.';
+
+  @override
+  String get scanOpenAppSettings => 'Ρυθμίσεις εφαρμογής';
+
+  @override
+  String get scanCameraUnavailable =>
+      'Η κάμερα δεν είναι διαθέσιμη σε αυτή τη συσκευή.';
+
+  @override
+  String get scanCaptureFailed => 'Η φωτογραφία δεν τραβήχτηκε. Δοκίμασε ξανά.';
+
+  @override
+  String get scanSaveFailed =>
+      'Οι σελίδες δεν αποθηκεύτηκαν στον φάκελό σου. Έχουν κρατηθεί, οπότε '
+      'μπορείς να δοκιμάσεις ξανά.';
+
+  @override
+  String get scanDiscardTitle => 'Να απορριφθεί η σάρωση;';
+
+  @override
+  String get scanDiscardBody => 'Οι σελίδες που τράβηξες θα διαγραφούν.';
+
+  @override
+  String get scanResultTitle => 'Η σάρωση αποθηκεύτηκε';
+
+  @override
+  String scanResultSummary(int count, String folderName) => count == 1
+      ? 'Αποθηκεύτηκε 1 αρχείο στο "$folderName/pictures"'
+      : 'Αποθηκεύτηκαν $count αρχεία στο "$folderName/pictures"';
+
+  @override
+  String get scanGallerySaved => 'Αντίγραφο αποθηκεύτηκε στη Gallery';
+
+  @override
+  String get scanGalleryFailed => 'Το αντίγραφο στη Gallery απέτυχε';
+
+  @override
+  String get scanBackHome => 'Επιστροφή στην αρχική';
 
   @override
   String get homeFolderLabel => 'Φάκελος';
