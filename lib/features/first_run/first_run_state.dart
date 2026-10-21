@@ -1,0 +1,125 @@
+import 'package:equatable/equatable.dart';
+
+import '../../domain/entities/app_language.dart';
+import '../../domain/entities/app_settings.dart';
+import '../../domain/entities/destination_mode.dart';
+import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/entities/storage_folder.dart';
+import '../../shared/validators/email_validator.dart';
+
+enum FirstRunStep { welcome, folder, mail, gallery }
+
+enum FirstRunError {
+  folderMissing,
+  providerMissing,
+  senderInvalid,
+  customDestinationInvalid,
+}
+
+enum FolderPickStatus { idle, picking, failed }
+
+class FirstRunState extends Equatable {
+  const FirstRunState({
+    required this.language,
+    this.step = FirstRunStep.welcome,
+    this.folder,
+    this.provider,
+    this.senderAccount = '',
+    this.destinationMode = DestinationMode.own,
+    this.customDestination = '',
+    this.saveToGallery = false,
+    this.showErrors = false,
+    this.folderStatus = FolderPickStatus.idle,
+    this.completed = false,
+  });
+
+  factory FirstRunState.fromSettings(AppSettings settings) {
+    return FirstRunState(
+      language: settings.language,
+      folder: settings.storageFolder,
+      provider: settings.mailProvider,
+      senderAccount: settings.senderAccount ?? '',
+      destinationMode: settings.destinationMode,
+      customDestination: settings.customDestination ?? '',
+      saveToGallery: settings.saveToGallery,
+    );
+  }
+
+  final AppLanguage language;
+  final FirstRunStep step;
+  final StorageFolder? folder;
+  final MailProviderId? provider;
+  final String senderAccount;
+  final DestinationMode destinationMode;
+  final String customDestination;
+  final bool saveToGallery;
+
+  /// Validation messages are only shown after the user tried to continue.
+  final bool showErrors;
+  final FolderPickStatus folderStatus;
+  final bool completed;
+
+  /// Validation rules for [forStep]. Empty set means the step can be left.
+  Set<FirstRunError> errorsFor(FirstRunStep forStep) {
+    switch (forStep) {
+      case FirstRunStep.welcome:
+      case FirstRunStep.gallery:
+        return const <FirstRunError>{};
+      case FirstRunStep.folder:
+        return folder == null
+            ? const <FirstRunError>{FirstRunError.folderMissing}
+            : const <FirstRunError>{};
+      case FirstRunStep.mail:
+        return <FirstRunError>{
+          if (provider == null) FirstRunError.providerMissing,
+          if (!isValidEmail(senderAccount)) FirstRunError.senderInvalid,
+          if (destinationMode == DestinationMode.custom &&
+              !isValidEmail(customDestination))
+            FirstRunError.customDestinationInvalid,
+        };
+    }
+  }
+
+  FirstRunState copyWith({
+    AppLanguage? language,
+    FirstRunStep? step,
+    StorageFolder? folder,
+    MailProviderId? provider,
+    String? senderAccount,
+    DestinationMode? destinationMode,
+    String? customDestination,
+    bool? saveToGallery,
+    bool? showErrors,
+    FolderPickStatus? folderStatus,
+    bool? completed,
+  }) {
+    return FirstRunState(
+      language: language ?? this.language,
+      step: step ?? this.step,
+      folder: folder ?? this.folder,
+      provider: provider ?? this.provider,
+      senderAccount: senderAccount ?? this.senderAccount,
+      destinationMode: destinationMode ?? this.destinationMode,
+      customDestination: customDestination ?? this.customDestination,
+      saveToGallery: saveToGallery ?? this.saveToGallery,
+      showErrors: showErrors ?? this.showErrors,
+      folderStatus: folderStatus ?? this.folderStatus,
+      completed: completed ?? this.completed,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    language,
+    step,
+    folder,
+    provider,
+    senderAccount,
+    destinationMode,
+    customDestination,
+    saveToGallery,
+    showErrors,
+    folderStatus,
+    completed,
+  ];
+}
