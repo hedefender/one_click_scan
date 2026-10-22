@@ -8,7 +8,7 @@ the original JPEGs and `pdf/` holds the PDFs, with matching names
 (`YYYY-MM-DD_HH-MM-SS`). Scan produces no JSON; the Budget app reads the PDFs
 directly. The app theme always follows the device theme.
 
-Status: Phase 1.2 (app icon, splash screen, Gallery copy names). See `docs/`:
+Status: Phase 1.5 (OCR spike, separate project in `spikes/ocr_spike/`; the app itself is unchanged since Phase 1.2). See `docs/`:
 
 - `ARCHITECTURE.md`
 - `PHASE_0_PLAN.md`
@@ -17,6 +17,8 @@ Status: Phase 1.2 (app icon, splash screen, Gallery copy names). See `docs/`:
 - `PHASE_1_VALIDATION.md`
 - `PHASE_1_1_VALIDATION.md`
 - `PHASE_1_2_VALIDATION.md`
+- `PHASE_1_5_VALIDATION.md`
+- `OCR_SPIKE_RESULTS.md`
 - `ROADMAP.md`
 - `DATA_CONTRACT_V1.md` (superseded: Scan produces no JSON, see ADR-008)
 - `DECISIONS.md`
