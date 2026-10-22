@@ -4,16 +4,54 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
+import 'bench/perf_lab.dart';
 import 'bench/render.dart';
 import 'bench/runner.dart';
 import 'bench/synthetic_docs.dart';
 import 'bench/text_metrics.dart';
 import 'engines/ocr_engine.dart';
+import 'perf_page.dart';
 
 /// `--dart-define=AUTORUN=full|quick|exif|one` starts the synthetic benchmark
 /// on launch and prints `OCRBENCH` lines (synthetic data only) for the host.
 const _autorun = String.fromEnvironment('AUTORUN');
+
+/// `AUTORUN=perf` runs the timing matrix, `AUTORUN=acc` the accuracy guard
+/// (synthetic benchmark through the experiment engines). `PERF=ort,det,...`
+/// picks experiment groups (default: all).
+const _perfSelect = String.fromEnvironment('PERF');
+
+/// `AUTORUN=file`: read `mode=...` and `perf=...` lines from `autorun.txt` in
+/// the app's external files directory (adb can push it), so one APK serves
+/// every run on the emulator.
+var _mode = _autorun;
+var _select = _perfSelect;
+var _spinner = true;
+
+Future<void> _readAutorunFile() async {
+  final dir = await getExternalStorageDirectory();
+  if (dir == null) return;
+  final file = File('${dir.path}/autorun.txt');
+  if (!file.existsSync()) return;
+  for (final line in file.readAsLinesSync()) {
+    final kv = line.split('=');
+    if (kv.length != 2) continue;
+    if (kv[0].trim() == 'mode') _mode = kv[1].trim();
+    if (kv[0].trim() == 'perf') _select = kv[1].trim();
+    if (kv[0].trim() == 'spin') _spinner = kv[1].trim() != '0';
+  }
+}
+
+List<PerfExperiment> get _autoExperiments {
+  final wanted = _select.isEmpty ? null : _select.split(',').toSet();
+  return [
+    for (final e in perfExperiments)
+      if (wanted == null || wanted.contains(e.group) || wanted.contains(e.id))
+        e,
+  ];
+}
 
 void main() {
   runApp(const SpikeApp());
@@ -57,9 +95,14 @@ class _SpikePageState extends State<SpikePage> {
   void initState() {
     super.initState();
     if (_autorun.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _runSynthetic(auto: _autorun),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (_autorun == 'file') await _readAutorunFile();
+        if (_mode == 'perf') {
+          await _runPerfAuto();
+        } else if (_mode.isNotEmpty && _mode != 'file') {
+          await _runSynthetic(auto: _mode);
+        }
+      });
     }
   }
 
@@ -142,6 +185,18 @@ class _SpikePageState extends State<SpikePage> {
     return b.toString();
   }
 
+  Future<void> _runPerfAuto() async {
+    setState(() => _busy = true);
+    await runPerfMatrix(
+      experiments: _autoExperiments,
+      progress: (m) => setState(() => _status = m),
+    );
+    setState(() {
+      _busy = false;
+      _status = 'perf done';
+    });
+  }
+
   Future<void> _runSynthetic({String auto = ''}) async {
     setState(() {
       _busy = true;
@@ -150,9 +205,9 @@ class _SpikePageState extends State<SpikePage> {
     final conditions = switch (auto) {
       'quick' => [Condition.clean, Condition.rot90Exif],
       'one' => [Condition.clean],
-      'exif' => [Condition.rot90Exif, Condition.rot90Raw],
+      'exif' || 'accexif' => [Condition.rot90Exif, Condition.rot90Raw],
       'big' => [Condition.big],
-      'tune' => [
+      'tune' || 'acc' => [
         Condition.clean,
         Condition.rot3,
         Condition.blur,
@@ -166,6 +221,10 @@ class _SpikePageState extends State<SpikePage> {
     final engines = switch (auto) {
       'exif' => exifConfigs,
       'tune' => tuningConfigs,
+      'acc' || 'accexif' => [
+        for (final e in _autoExperiments)
+          EngineConfig('paddle_${e.id}', (l) => e.build(paddleKeyFor(l))),
+      ],
       _ => engineConfigs,
     };
     final started = DateTime.now();
@@ -186,7 +245,19 @@ class _SpikePageState extends State<SpikePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('OCR spike (synthetic + real)')),
+      appBar: AppBar(
+        title: const Text('OCR spike (synthetic + real)'),
+        actions: [
+          TextButton(
+            onPressed: _busy
+                ? null
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const PerfPage()),
+                  ),
+            child: const Text('Perf'),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -234,7 +305,18 @@ class _SpikePageState extends State<SpikePage> {
           if (_busy)
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text('working: $_status'),
+              child: Row(
+                children: [
+                  if (_spinner)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 3),
+                    ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('working: $_status')),
+                ],
+              ),
             ),
           for (final r in _real) _realTile(r),
           if (_real.isNotEmpty)

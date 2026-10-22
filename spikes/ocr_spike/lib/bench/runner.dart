@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../engines/mlkit_engine.dart';
 import '../engines/ocr_engine.dart';
+import '../engines/paddle/paddle_config.dart';
 import '../engines/paddle_engine.dart';
 import '../engines/tesseract_engine.dart';
 import 'render.dart';
@@ -30,6 +31,9 @@ String _paddle(String lang) => switch (lang) {
   'ru' => 'eslav',
   _ => 'greek',
 };
+
+/// Paddle recognition model for a document language (`el`, `es`, `ru`).
+String paddleKeyFor(String lang) => _paddle(lang);
 
 final List<EngineConfig> engineConfigs = [
   EngineConfig('mlkit', (_) => MlKitEngine()),
@@ -72,7 +76,7 @@ final List<EngineConfig> tuningConfigs = [
   ),
   EngineConfig(
     'paddle_det1280',
-    (l) => PaddleEngine(_paddle(l), detSideLimit: 1280),
+    (l) => PaddleEngine(_paddle(l), config: const PaddleConfig(detSide: 1280)),
   ),
 ];
 
@@ -130,7 +134,6 @@ class BenchRecord {
     'muMicro': muMicro,
     'conf': confidence,
     'error': error,
-    'breakdown': breakdown,
   };
 }
 
@@ -219,6 +222,8 @@ Future<List<BenchRecord>> runSynthetic({
       }
       await engine.dispose();
     }
+    // One config's sessions are not needed by the next one.
+    await PaddleEngine.releaseAll();
   }
   // ignore: avoid_print
   if (emit) print('OCRBENCH_DONE ${records.length}');

@@ -124,6 +124,14 @@ List<int> applyCondition(img.Image clean, Condition condition, int seed) {
   return img.encodeJpg(out, quality: 90);
 }
 
+/// "Bad capture" for the timing scenarios: slight tilt, blur and low contrast
+/// with noise together.
+img.Image degradePoor(img.Image clean, int seed) {
+  var out = _rotateOnWhite(clean.clone(), 2);
+  out = img.gaussianBlur(out, radius: 2);
+  return _lowContrastNoise(out, seed);
+}
+
 img.Image _rotateOnWhite(img.Image src, num angle) {
   final rgba = src.convert(numChannels: 4);
   final rotated = img.copyRotate(

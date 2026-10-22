@@ -1,9 +1,11 @@
-# OCR spike results (Phase 1.5)
+# OCR spike results (Phase 1.5, performance in Phase 1.6)
 
 Status: measured on synthetic documents on the Claude Code emulator (x86_64,
 release build). **Not yet measured:** real phone times, real documents (the
 user does that, see `PHASE_1_5_VALIDATION.md`). The recommendation below is
-therefore conditional on those two checks.
+therefore conditional on those two checks. Section 9 (Phase 1.6) adds the
+timing breakdown of the Paddle pipeline; its phone columns are filled in from
+the user's numbers (`PHASE_1_6_VALIDATION.md`).
 
 Code: `spikes/ocr_spike/` (separate Flutter project, not part of Scan; its
 models are downloaded by `tool/fetch_assets.sh` and are not committed).
@@ -292,3 +294,234 @@ What the spike showed is needed:
    Differences of one or two points in the tables are not significant;
    differences of ten points or more (and the failures: ML Kit on Greek,
    Tesseract on sideways pixels) are.
+
+## 9. Performance (Phase 1.6)
+
+Question: on the user's phone (Xiaomi Note 14 Pro 5G, arm64) Paddle took
+**4999 ms** for one dense page (51 boxes, about 2000 characters). Where does the
+time go, and how far do cheap measures get us? Target on the phone, warm run:
+a typical receipt (20 to 40 lines) at most 2 s, a dense page at most 4 s.
+
+**How to read the numbers.** Every figure below was measured on the Claude Code
+emulator (x86_64, release build, no animation running, host CPU shared). They
+are good for the **share per stage** and for **correctness**; they are **not**
+phone speed (the emulator also moves by about ±15% between identical runs).
+The cells marked `pending` are filled in from the user's "Copy summary".
+Code: `spikes/ocr_spike/lib/engines/paddle*`, `lib/bench/perf_*`.
+
+### 9.1 What was measured
+
+The Paddle engine now times every stage (microseconds, charged to consecutive
+laps so nothing is lost), and a "lab" runs each experiment on three invented
+scenarios generated at run time from a fixed seed: **receipt** (about 30
+lines, 800 px wide), **dense** (3 columns x 17 lines, 51 boxes, about 2000
+characters, 1654 px wide) and **poor** (the receipt with tilt, blur, low
+contrast and noise). Each also exists as a **camera-size** image (scaled to
+about 12 MP, JPEG), which is what the decoder really sees in Scan. A cell is:
+sessions closed and loaded again, one **cold** run, then three **warm** runs
+(mean). Each cell also records the CER and the key values found, and the UI
+health during the cell: the longest stall of the UI isolate (8 ms timer), the
+longest round trip of a trivial platform-channel call, and frame times.
+
+Stages: `decode` (file read, JPEG decode, RGBA/RGB), `detPre` (resize and
+normalise into the tensor), `detXfer` (tensor to the plugin, result back, copy
+to `Float32List`), `detRun` (ONNX Runtime on the detector), `detPost`
+(threshold, connected components, boxes, unclip, reading order), `recCrop`
+(rotated crop and resize per line), `recXfer` (tensor in, result out, dispose),
+`recRun` (ONNX Runtime on the recogniser), `ctc` (greedy decoding, lines).
+
+### 9.2 Baseline (the Phase 1.5 pipeline) and what dominates
+
+Warm ms and share of the total, emulator, native size (as drawn) and camera size:
+
+| Scenario | Total | decode | detPre | detXfer | detRun | detPost | recCrop | recXfer | **recRun** | ctc | phone |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| receipt | 1780 | 55 (3%) | 42 (2%) | 79 (4%) | 205 (12%) | 9 (1%) | 69 (4%) | 398 (22%) | **913 (51%)** | 9 | pending |
+| dense | 2958 | 53 (2%) | 26 (1%) | 46 (2%) | 85 (3%) | 6 (0%) | 265 (9%) | 582 (20%) | **1875 (63%)** | 20 | pending (4999 ms before) |
+| poor | 1580 | 73 (5%) | 40 (3%) | 74 (5%) | 165 (10%) | 6 (0%) | 45 (3%) | 384 (24%) | **784 (50%)** | 8 | pending |
+| receipt, 12 MP | 2228 | **551 (25%)** | 42 | 70 | 176 (8%) | 6 | 63 | 394 (18%) | 913 (41%) | 11 | pending |
+| dense, 12 MP | 3036 | **502 (17%)** | 28 | 48 | 98 (3%) | 9 | 151 (5%) | 489 (16%) | 1693 (56%) | 17 | pending |
+| poor, 12 MP | 2041 | **569 (28%)** | 35 | 78 | 158 (8%) | 12 | 46 | 332 (16%) | 800 (39%) | 9 | pending |
+
+Cold runs (models loaded from scratch plus the first run) are only 4% to 12%
+above warm on the emulator (1985 / 3078 / 1724 ms); loading the sessions takes
+about 0.2 s once the model files exist in the cache (0.47 s the first time of
+a run). The phone's cold run may differ more (page cache).
+
+What dominates:
+
+1. **The recognition network (`recRun`) is 39% to 63%** of the total: one run
+   per text line, about 19 ms (receipt) to 37 ms (dense) each. This is ONNX
+   Runtime compute; Dart code does not touch it.
+2. **The plugin channel (`detXfer` + `recXfer`) is 18% to 29%.** It is mostly
+   a per-call cost: every line costs five channel calls (create tensor, run,
+   read result, dispose x2); outside `recRun` that is about 11 ms per line on
+   the dense page, including the copy of the `[T, 356]` probability matrix.
+3. **Decoding a 12 MP JPEG in pure Dart is 17% to 28%** and happens on the UI
+   isolate (stall 0.5 to 0.65 s). Scan's photos are of that size.
+4. The Dart pixel work (`detPre`, `detPost`, `recCrop`, `ctc`) is 7% to 11% in
+   the Phase 1.5 form (the crop of the dense page, 265 ms, is the largest
+   single piece) and 3% to 4% once it is written with typed lists.
+5. Detection (`detRun`) is small (3% to 14%).
+
+Caution for the phone: the share of Dart code can be larger there (Dart on an
+Arm core) or smaller than on the host. The phone numbers decide this; the
+instrumentation reports the same stages.
+
+### 9.3 Experiments (one change at a time against the baseline)
+
+Warm ms on the emulator, native-size images; camera size in brackets where it
+was run. CER and keys come from the accuracy guard (the synthetic benchmark of
+Phase 1.5: 10 documents x 4 conditions, clean, +3 degrees, blur, low contrast;
+baseline **CER 1.8%, 156/160 key values**). The guard limit is about 1 point.
+
+| Experiment | receipt | dense | poor | CER / keys | Reading |
+|---|---|---|---|---|---|
+| base (4 threads, detection 960, one line per run, pure-Dart decode) | 1780 (2228) | 2959 (3036) | 1580 (2041) | 1.8% / 156 | |
+| 1 thread | 1738 | 3258 | 1649 | 1.8% / 156 | |
+| 2 threads | 1422 | 2508 | 1382 | 1.8% / 156 | emulator has few cores |
+| 6 threads | 2488 | 4393 | 2189 | 1.8% / 156 | more threads slower here |
+| 8 threads | 3082 | 5907 | 2658 | 1.8% / 156 | |
+| XNNPACK + CPU | 2755 | 4000 | 2736 | 1.8% / 156 | works (session created); slower on x86 |
+| NNAPI + CPU | 1923 | 2627 | 1573 | 1.8% / 156 | works; the emulator has no accelerator |
+| no thread spinning | 1816 | 3074 | 1652 | 1.8% / 156 | no gain |
+| detection 640 | 1290 | 2340 | 1195 | 2.0% / 154 | poor image: 3 of 4 keys; not safe |
+| detection 800 | 1406 | 2400 | 1353 | 1.8% / 155 | -21% on receipt; one key lost |
+| detection 1280 | 1924 | 2965 | 1773 | 1.8% / 156 | no gain, slower |
+| recognition batch 4 | 1446 | 2846 | 1315 | 2.0% / 156 | -4% to -19%, CER +0.2 |
+| recognition batch 8 | 1700 | 3426 | 1434 | 2.1% / 156 | slower than batch 4 (padding) |
+| typed-list pixel loops | 1416 | 2439 | 1326 | 1.8% / 156 | **-16% to -20%**, identical text |
+| ArgMax inside the recognition model | 1532 | 2569 | 1474 | 1.8% / 156 | -7% to -14% (noise level), identical text |
+| native decode, full size | 1408 (1707) | 2590 (2601) | 1398 (1564) | 1.8% / 156 | 12 MP: decode 550 to 260 ms |
+| native decode, max side 2560 | 1584 (1517) | 2595 (2577) | 1371 (1511) | 1.8% / 156 | 12 MP: decode 550 to 100-170 ms |
+| native decode, max side 1600 | 1492 (1493) | 2664 (2525) | 1435 (1454) | 1.8% / 156 | one key lost on a poor 12 MP image in the lab |
+| background isolate | 1356 | 2471 | 1272 | 1.8% / 156 | UI stall 520 ms to 25 ms |
+| isolate + typed-list loops | 1389 | 2462 | 1207 | 1.8% / 156 | |
+| **final** (typed loops, ArgMax model, native decode max 2560, batch 4, isolate, 4 threads) | 1318 (1318) | 2671 (2650) | 1127 (1211) | 2.1% / 156 | **-26% / -10% / -29%**; 12 MP: -41% / -13% / -41% |
+| final without batching (`final_b1`) | pending | pending | pending | 1.8% / 156 | to compare on the phone |
+
+(The emulator moves by about ±15% between identical runs: the reading column
+only calls out differences clearly larger than that, or exact shares.)
+
+Notes on the experiments:
+
+- **Threads, XNNPACK, NNAPI** cannot be decided here: the emulator is a host
+  process with few cores, so more threads were slower. On the phone these are
+  the experiments that matter most (the Dimensity 7300 has 4 big and 4 little
+  cores; 4 or 6 threads are the candidates). What the plugin exposes:
+  `intraOpNumThreads`, `interOpNumThreads`, the provider list (CPU, XNNPACK,
+  NNAPI are built into its ONNX Runtime 1.28.0) and free-form session config
+  entries. XNNPACK is added with an empty options map, so its own thread count
+  cannot be set. **The graph optimisation level is not exposed** (ONNX
+  Runtime's default, "enable all", applies). The plugin serialises all calls
+  (one lock, one task queue), so two sessions cannot run at the same time.
+- **Detection size** barely changes the total (the detector is 3% to 14%).
+  640 loses key values on the poor image, 800 loses one. Keep 960.
+- **Batching** trades fewer channel calls (13 instead of 51 on the dense page:
+  `recXfer` 582 to 240 ms) for padded compute (`recRun` about +20% there).
+  The net result is within the noise of the emulator and costs 0.2 to 0.3
+  points of CER (padding changes the activations). Needs the phone to decide;
+  the safe default is batch 1.
+- **Typed-list loops** are the largest pure-Dart win: the same arithmetic
+  without a list allocated per pixel. The detection tensor goes from 26-42 ms
+  to 10-15 ms, the crops of the dense page from 265 ms to 66 ms. Text and
+  accuracy are identical to the baseline.
+- **ArgMax inside the model:** the recogniser's last node is a Softmax over
+  356 classes; adding ArgMax and ReduceMax to the graph returns `[B, T]`
+  indices and probabilities instead of `[B, T, 356]`. Same weights, verified to
+  give the same indices (`tool/make_rec_variants.py`; a derived file built from
+  the downloaded model, not committed). Alone it removes only the CTC scan and
+  the copy (the channel round trips remain); together with batching `recXfer`
+  falls from 584 to about 160 ms on the dense page.
+- **Native decode** (Flutter's own codec, scaled while decoding): a 12 MP
+  JPEG goes from 0.5 s in Dart to 0.26 s at full size and 0.1 to 0.17 s with a maximum
+  side of 2560, and it runs on a native thread, not on the UI isolate. It
+  applies the EXIF orientation like `package:image` (checked: the sideways image
+  with the tag reads at CER 1.8%; without the tag 60%, as for every engine). A
+  cap of 1600 px lost a key value on a poor 12 MP image; **2560 is the safe
+  cap.** The codec is available only in the root isolate, so with the
+  background isolate the decode stays in the root isolate and the pixels are
+  handed over.
+- **int8 quantisation** was tried and dropped: dynamic quantisation of the 13
+  `MatMul` nodes does not change the model size (the weights are mostly in
+  `Conv`), and quantising `Conv` needs calibration data and was not attempted.
+
+### 9.4 UI smoothness (experiment 6)
+
+Longest stall of the UI isolate during a cell (ms), emulator, with a spinner
+animating on screen:
+
+| | receipt | dense | poor | 12 MP |
+|---|---|---|---|---|
+| baseline (all on the UI isolate) | 519 | 98 | 123 | **534 to 627** |
+| native decode only | 68 | 55 | 67 | 52 to 71 |
+| background isolate | 31 | 43 | 25 | n/a (decode stays in the root isolate) |
+| final | 43 | 25 | 50 | 32 to 54 |
+
+The baseline stalls the UI isolate for half a second (the JPEG decode in Dart,
+the pixel loops, the first detection tensor); the final configuration keeps it
+under about 50 ms. The plugin runs ONNX Runtime on its own background task
+queue, so the platform thread is not blocked either. Frame counts and "slow
+frames" in the logs come from the emulator's software renderer and are not
+meaningful; the stall figure is. **The phone must confirm this** (step 6 of
+`PHASE_1_6_VALIDATION.md`).
+
+### 9.5 Recommendation for Phase 2
+
+- **Implementation language: Dart, no native or Rust code now.** The
+  measurements say the Dart pixel work is 3% to 4% of the time once typed
+  lists are used, and the part that cannot be moved into Dart (ONNX Runtime
+  compute and the plugin channel) is not helped by Rust pre/post-processing.
+  ADR-002 and the cargo-ndk / flutter_rust_bridge / multi-ABI cost therefore
+  stay out of Phase 2. **If the phone shows otherwise** (Dart stages above
+  25% of the warm time on the dense page), the order of attack is: move only
+  crop + detection tensor + post-processing to native; ask first.
+- **A thin own plugin instead of `flutter_onnxruntime` is the better native
+  investment**, if the channel cost proves large on the phone: one call per
+  page (image in, boxes and text out, with detection, crops and recognition
+  inside) would remove the `detXfer`/`recXfer` shares (18% to 29% here) and
+  could overlap recognition runs. It is a bigger step than Rust
+  pre/post-processing and also needs the user's go-ahead.
+- **Defaults to start from** (the starred ones are settled by the phone
+  numbers): typed-list loops; ArgMax recognition model; native decode with a
+  maximum side of 2560; detection 960; everything but the decode in a
+  background isolate; **threads 4 \***; **provider CPU \*** (XNNPACK/NNAPI only
+  with a clear gain); **recognition batch 1 \*** (4 if the phone gains 10% or
+  more, accepting about 0.3 points of CER).
+- **Expected effect** on the emulator: the final configuration is 10% to 41%
+  faster than the Phase 1.5 pipeline (the camera-size images gain most) at the
+  same accuracy within the guard. On the phone the 4999 ms of the dense page
+  will come down by at least the decode and Dart shares; whether it reaches
+  4 s depends on `recRun`, which only the thread/provider/batch choices (and
+  the model itself) influence.
+
+### 9.6 UX recommendation: hide the latency
+
+- **Preload the models** when the camera screen opens (create the sessions in
+  the background isolate). Loading takes about 0.2 s here and removes the
+  cold-run penalty from the first page.
+- **Pipeline the pages:** run OCR of page N in the background isolate while
+  page N+1 is being photographed, and keep the extracted text with the page.
+  With two or three pages the user waits only for the last one.
+- **Show progress, not a spinner of unknown length:** the number of boxes is
+  known after detection (about 0.1 to 0.3 s), so "line 12 of 51" is possible.
+- **Never decode on the UI isolate** (the baseline stalls it for half a second
+  per 12 MP photo); OCR must not delay the shutter or the next capture.
+- If the phone shows that the camera preview and OCR compete for the CPU,
+  start OCR of page N only when the shutter has finished, not during focusing.
+
+### 9.7 Open questions (Phase 1.6)
+
+1. The phone's warm times per scenario and per experiment (threads 1, 2, 4, 6,
+   8; XNNPACK; NNAPI; no spinning; detection size; batch; native decode;
+   isolate; `final` against `final_b1`).
+2. If the dense page stays at 4 to 5 s on the phone, is it `recRun`? Then only
+   a smaller or faster recogniser, another provider or fewer lines (merging
+   boxes, skipping empty ones) can help; none is proposed yet.
+3. Is a thin own plugin worth it (9.5), or is the plugin's per-call cost small
+   enough on the phone?
+4. Quantisation of the convolution layers (needs calibration images and a
+   repeat of the accuracy guard) belongs to the same model-provenance decision
+   as open question 5 above (official-model conversion).
+5. The user's own hard sample runs through `baseline` and `final`; only numbers
+   come back (no accuracy, by design).

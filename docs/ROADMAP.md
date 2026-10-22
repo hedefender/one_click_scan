@@ -16,6 +16,7 @@ and the order of the first roadmap.)
 | 0.5 | Settings screen + storage folder health check | Language, folder, e-mail, Gallery switch. Banner on home when folder access is lost |
 | 1 | Camera, saving originals to `./pictures`, optional Gallery copy, Single/Multi page | Build for arm64 and test on a real phone |
 | 1.5 | OCR spike with real Greek documents, no production code | **Done (synthetic part); real-phone check by the user pending.** Result: `OCR_SPIKE_RESULTS.md`. Recommends PaddleOCR PP-OCRv5 (ONNX Runtime), Tesseract as fallback. Real documents stay on the phone: never in repo, prompts or tests |
+| 1.6 | OCR timing profile and Paddle optimisation, spike only | **Done on the emulator (stage shares, accuracy guard, UI stalls); phone numbers by the user pending** (`PHASE_1_6_VALIDATION.md`). Result: `OCR_SPIKE_RESULTS.md` section 9. Dart stays (no Rust or native code needed on current evidence) |
 | 2 | OCR: `OcrEngine` interface + chosen engine, languages | Tests use synthetic documents. Proposed engine: PaddleOCR (detection + per-language recognition on ONNX Runtime), behind `OcrEngine` so Tesseract stays a cheap fallback; interface sketch in `OCR_SPIKE_RESULTS.md` §7. Upright pixels in, EXIF baked by the caller. Confirm with the user's phone numbers first |
 | 3 | PDF generation (single and multi page) into `./pdf` | Decision on the text layer, see "Open decisions" |
 | 4 | Mail: `MailProvider` interface, direct sending, separate sender account | Auth approach (OAuth vs app password) decided at the start of this phase |
