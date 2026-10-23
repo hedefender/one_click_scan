@@ -30,6 +30,11 @@ var _mode = _autorun;
 var _select = _perfSelect;
 var _spinner = true;
 
+/// Phase 1.6b studies (`mode=study|grid|prov|best|all`) run on the Perf page;
+/// `pause=<s>` shortens the rest between UI states on the emulator.
+var _pauseSec = 30;
+const _studyModes = {'study', 'grid', 'prov', 'best', 'all'};
+
 Future<void> _readAutorunFile() async {
   final dir = await getExternalStorageDirectory();
   if (dir == null) return;
@@ -41,6 +46,7 @@ Future<void> _readAutorunFile() async {
     if (kv[0].trim() == 'mode') _mode = kv[1].trim();
     if (kv[0].trim() == 'perf') _select = kv[1].trim();
     if (kv[0].trim() == 'spin') _spinner = kv[1].trim() != '0';
+    if (kv[0].trim() == 'pause') _pauseSec = int.tryParse(kv[1].trim()) ?? 30;
   }
 }
 
@@ -99,6 +105,13 @@ class _SpikePageState extends State<SpikePage> {
         if (_autorun == 'file') await _readAutorunFile();
         if (_mode == 'perf') {
           await _runPerfAuto();
+        } else if (_studyModes.contains(_mode)) {
+          if (!mounted) return;
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => PerfPage(auto: _mode, pauseSec: _pauseSec),
+            ),
+          );
         } else if (_mode.isNotEmpty && _mode != 'file') {
           await _runSynthetic(auto: _mode);
         }

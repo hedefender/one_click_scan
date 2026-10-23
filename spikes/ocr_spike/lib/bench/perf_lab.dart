@@ -219,6 +219,11 @@ class JankStats {
 /// 8 ms timer ticks of the UI isolate, and the longest round trip of a
 /// trivial platform-channel call (platform thread responsiveness).
 class JankMonitor {
+  /// [light] only counts frames: no timers and no channel pings, so the
+  /// monitor itself adds no load (used where the load is the thing studied).
+  JankMonitor({this.light = false});
+
+  final bool light;
   final _sw = Stopwatch();
   var _frames = 0, _slow = 0;
   var _worstFrame = 0.0, _stall = 0.0, _ping = 0.0;
@@ -239,6 +244,7 @@ class JankMonitor {
     SchedulerBinding.instance.addTimingsCallback(_onTimings);
     _sw.start();
     _lastTick = _sw.elapsedMicroseconds;
+    if (light) return;
     _tick = Timer.periodic(const Duration(milliseconds: 8), (_) {
       final now = _sw.elapsedMicroseconds;
       _stall = math.max(_stall, (now - _lastTick) / 1000);
@@ -386,10 +392,11 @@ Future<PerfCell> runPerfCell({
   PerfScenario? scenario,
   String recKey = 'greek',
   int warmRuns = 3,
+  bool lightJank = false,
 }) async {
   await PaddleEngine.releaseAll();
   final engine = exp.build(recKey);
-  final monitor = JankMonitor()..start();
+  final monitor = JankMonitor(light: lightJank)..start();
   OcrResult? last;
   final runs = <OcrResult>[];
   Map<String, int> loadUs = const {};
@@ -472,6 +479,7 @@ Future<List<PerfCell>> runPerfMatrix({
   required PerfProgress progress,
   void Function(PerfCell cell)? onCell,
   bool emit = true,
+  bool lightJank = false,
 }) async {
   final dir = await perfImageDir();
   final cells = <PerfCell>[];
@@ -487,6 +495,7 @@ Future<List<PerfCell>> runPerfMatrix({
           size: size,
           image: file,
           scenario: scn,
+          lightJank: lightJank,
         );
         cells.add(cell);
         onCell?.call(cell);

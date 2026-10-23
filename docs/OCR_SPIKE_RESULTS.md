@@ -525,3 +525,131 @@ meaningful; the stall figure is. **The phone must confirm this** (step 6 of
    as open question 5 above (official-model conversion).
 5. The user's own hard sample runs through `baseline` and `final`; only numbers
    come back (no accuracy, by design).
+
+## 10. Phase 1.6b: controlled measurements (UI load, providers, accuracy)
+
+Labels: **[phone]** = numbers the user sent from the Xiaomi Note 14 Pro 5G;
+**[emulator]** = x86 emulator `Claude_Code_Test`, only good for correctness and
+for checking that the tooling works. Phone measurements for A, B, C and D are
+**pending** (`PHASE_1_6_VALIDATION.md`).
+
+### 10.1 What the phone showed [phone]
+
+One real receipt (3060x4080, 26 boxes), cold surface, no charger, one run of
+the matrix in the order of `perfExperiments`. Warm `recRun`, ms:
+
+| Experiment(s) | `recRun` | UI frames during the cell |
+|---|---|---|
+| base | 1536 | about 700 to 1200 per 10 s |
+| th1 / th2 / th6 / th8 | 1776 / 1359 / 1639 / 2135 | same |
+| xnnpack / nnapi / nospin | 1209 / 1161 / 1287 | same |
+| batch4 / batch8 | 1478 / 1288 | same |
+| fast, nat, nat2560, nat1600, am, iso | **733 to 772** | **1 frame per 9 s** |
+| iso_fast / final / final_b1 | 1100 / 1820 / 1174 | same as the first rows |
+
+(det640: total 1983 ms against 2865 for base, detRun 161 against 438, same 26
+boxes.) The `recRun` splits into two clusters, about 740 ms and 1100 to 1800 ms.
+
+### 10.2 What differs between the clusters (from the code)
+
+The fast cluster is the contiguous run of experiments `fast, nat, nat2560,
+nat1600, am, iso`. They do not share a setting: typed loops (`fast`), native
+decode (`nat*`), the ArgMax model (`am`) and the isolate (`iso`) are four
+different changes, all with the same threads (4), provider (CPU default), batch
+(1) and the same recognition code path. Combinations of them are **not** fast:
+`iso_fast` (isolate + typed loops) and `final` (all of them) fall back into the
+slow cluster, so no configuration feature explains the split. What does separate
+the clusters is the **UI frame count**: in the fast cluster the screen produced
+about one frame per 9 s, in the others 70 to 120 frames per second (the always
+spinning indicator). Two things differ at the same time there and are
+confounded in this data: (1) the UI drawing at the full frame rate, (2) the
+position in time (a contiguous stretch of the run, so heat, battery state and
+background activity also changed together with it). The near-zero frame count
+also means the screen was probably off or the app was not in the foreground
+during that stretch, because the spinner was running as usual before and after
+it; the app does not hold a wake lock, so a short screen timeout is a likely
+cause. Nothing in the data separates "UI load" from "screen off" or from
+temperature.
+
+### 10.3 What was added to test it (spike only)
+
+- **UI load switch** on the Perf page: `max` (spinner at the display refresh
+  rate; the rate is printed), `still` (nothing animates) and `1 fr/s`. The
+  default is `1 fr/s`, what a processing screen would do.
+- **A: UI-load A/B.** One fixed setting (native decode 2560, ArgMax model,
+  typed loops, batch 1, isolate, 4 threads, CPU), one image, the isolate engine
+  kept loaded, 2 unrecorded warm-up runs, then 5 warm runs per state in the
+  order max, still, low, low, still, max with a pause (30 s on the phone) at
+  `still` between the blocks. Per run: total, `recRun`, `detRun`, frames, and
+  the battery temperature when readable. The summary prints block means,
+  pooled means and medians per state, the effect (max against still, low
+  against still) and the drift between the first and the last visit of the same
+  state. The frame monitor is the light one (frame callbacks only, no timers or
+  channel pings), so that the instrument adds no load of its own.
+- **B: provider x threads.** Threads {2, 3, 4} x provider {CPU, XNNPACK,
+  NNAPI}, spinning off, same fixed setting, 3 scenarios, cold run plus 3 warm
+  runs per cell, two repeated cells at the end (`_ctl`) as a noise and drift
+  estimate. It uses the UI load selected on the page.
+- **C: provider accuracy.** The CPU result is the reference; a second CPU run
+  gives the noise floor; XNNPACK and NNAPI are compared line by line (boxes
+  matched by overlap of at least 0.5): boxes, share of identical lines, mean
+  character distance per line, unmatched and extra boxes, mean confidence
+  change. Then the synthetic set (10 documents x 4 conditions) runs through all
+  three settings (CER, key tokens). Images: the three synthetic scenarios plus
+  the user's receipt and hard sample if picked (numbers only). The result is
+  also used to exclude a provider from "best" if its results differ.
+- **D: best.** Runs the best setting (the fastest grid cell that beats CPU/4
+  threads by more than the measured noise, at least 5%, and is not excluded by
+  C; before B and C have run, the provisional th4/CPU/spinning off) on the three
+  scenarios at native and 12 MP size and on the picked samples.
+- The plugin does not report which provider a session really used (an
+  unsupported operator falls back to CPU), so the available providers are
+  printed and timing plus result differences are the only evidence.
+
+### 10.4 Tooling check [emulator]
+
+- A, with the spinner at full frame rate against `still`/`1 fr/s`, on the
+  emulator (software rendering, host CPU shared): pooled `recRun` max 1954 ms,
+  still 747 ms, low 752 ms (+161% and +0.7%); total 2999 / 1389 / 1372 ms.
+  The first and last visit of `max` were 2156 and 1751 ms, of `still` 742 and
+  752, of `low` 727 and 777 (drift of the quiet states within 7%). This
+  reproduces the two clusters of 10.1 (about 740 ms against 1.8 to 2.0 s), but
+  on the emulator the UI is drawn by the CPU that also runs the model, so it
+  shows the tool works and that the effect can be large, **not** that the phone
+  behaves the same (the phone draws on the GPU).
+- B finished (11 cells; the repeated cells differ from the first ones by 3% to
+  5%, so differences between cells below that are noise on the emulator); C
+  reported XNNPACK and NNAPI identical to CPU (147/147 lines on 3 images,
+  CER 1.8%, keys 156/160 on the synthetic set). On the emulator this says
+  nothing about the phone: the providers may not have been active.
+- The battery temperature is **not readable** by the app on the emulator
+  (`/sys/class/power_supply/battery/temp` is readable by `adb shell`, not by
+  the app) and may be unreadable on the phone too; then it prints `n/a`.
+  A few lines of Kotlin (BatteryManager through a method channel) would give
+  it; that is native code, so it is not done without approval.
+
+### 10.5 Provisional guidance for Phase 2 (to be confirmed on the phone)
+
+- **Do not show a continuously animating spinner while OCR runs.** Use a static
+  or very slow indicator and text progress ("line 12 of 51"). This costs
+  nothing, and the emulator and the phone's cluster pattern both point to
+  animation competing with recognition. The size of the effect on the phone is
+  what A measures.
+- Threads, provider (CPU, XNNPACK, NNAPI) and batching stay open until B and C
+  have phone numbers. In the phone data of 10.1 the differences between the
+  slow-cluster values (th2 1359, xnnpack 1209, nnapi 1161, nospin 1287 against
+  base 1536) are within the spread caused by the UI-load confound, so they are
+  not conclusions.
+- A provider is adopted only if C shows results identical to CPU (or a
+  difference that the accuracy guard accepts).
+
+### 10.6 Open questions (Phase 1.6b)
+
+1. Phone A: does the UI load change `recRun`, by how much, and does the quiet
+   state also drift with time (heat)?
+2. Phone B and C: is any provider or thread count faster by more than the
+   noise, and does it change the results?
+3. Is a tiny Kotlin channel for battery temperature (and a wake lock to keep
+   the screen on during a study) acceptable? Without it the user sets the
+   screen timeout by hand (`PHASE_1_6_VALIDATION.md`).
+4. Language packs: `OCR_LANGUAGE_PACKS.md`.

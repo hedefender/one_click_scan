@@ -10,7 +10,7 @@ them, only the "Copy summary" numbers.
    - Build: `cd spikes\ocr_spike`, then
      `flutter build apk --release --target-platform android-arm64 --dart-define=DEVICE=phone`
    - APK: `spikes\ocr_spike\build\app\outputs\flutter-apk\app-release.apk`
-     (about 225 MB).
+     (about 247 MB).
 2. Open the app and tap **Perf** (top right). The page shows a spinner that
    never stops: a stutter in it while OCR runs is the UI jank we want to rule
    out. Keep the phone awake, on the charger or with enough battery, and close
@@ -42,6 +42,51 @@ them, only the "Copy summary" numbers.
 7. **Send me only the numbers** (the "Copy summary" text), plus the one-line
    verdict from step 6. No photos, no document text.
 
+## Phase 1.6b: controlled phone measurements (performed by the user)
+
+Why: in your first numbers the recognition time fell into two groups (about
+740 ms and 1100 to 1800 ms) and the UI frame counter showed the screen drawing
+almost nothing during the fast group. These steps separate the UI load, heat
+and screen state from the settings. Same spike app, new APK (arm64); the main
+Scan app is not touched. Send only numbers.
+
+Preparation (important):
+- Phone **cold and at rest** (not used for a few minutes), **off the charger**,
+  battery above 50%, other apps closed.
+- **Settings, Display, Screen timeout: 10 minutes or more** (a run takes
+  several minutes and you must not touch the screen). If the screen turns off
+  during a run, the frame count in the lines drops to about 0 and the run is
+  not valid; repeat it.
+- Open the app, tap **Perf**. Do not use the other buttons while a step runs.
+- Optional but useful: tap **Pick your receipt** (the real receipt you used
+  before) and **Pick your hard sample** (the leaflet). Step A uses your
+  receipt if picked, otherwise a generated 12 MP receipt.
+
+Steps, in this order, with 3 to 5 minutes of rest between the steps (put the
+phone down, screen on, nothing running):
+
+1. **A: UI load A/B** (about 4 minutes: 6 blocks of 5 runs with 30 s pauses).
+   Do not touch the screen. When it finishes tap **Copy summary** and send the
+   text. Then tap **Clear**.
+2. **B: provider x threads** (about 6 to 10 minutes). Before tapping, set the
+   UI load switch to the state that A showed to be best (if A is not clear,
+   leave `1 fr/s`). Send the summary, then **Clear**.
+3. **C: provider accuracy** (about 5 to 8 minutes). Send the summary, then
+   **Clear**.
+4. **D: best** (about 3 to 6 minutes, longer with the picked samples). It runs
+   the setting chosen from B and C (the line "best = ..." under the buttons
+   shows which). Send the summary.
+5. Tell me in one line: was the screen on all the time, was the phone warm to
+   the touch at the end, and the battery temperature before and after if you
+   know it.
+
+Notes:
+- If you restart the app between steps, B/C/D forget each other's results (the
+  "best" falls back to th4 on CPU).
+- The lines show the battery temperature as `n/a` if Android does not let the
+  app read it. That is expected on many phones.
+- Nothing from your images is shown or copied: only counts and distances.
+
 ## For Claude Code
 
 - The spike runs only on `Claude_Code_Test` (never on the user's emulator).
@@ -51,6 +96,8 @@ them, only the "Copy summary" numbers.
   `mode=acc` and `perf=<groups or experiment ids>`; the app prints
   `PERFBENCH <id> <i>/<n> <json chunk>` lines (timing, synthetic data only) or
   `OCRBENCH {json}` lines (accuracy guard) to logcat.
+- Phase 1.6b on the emulator: `mode=study|grid|prov|best|all` (+ `pause=3`) in
+  `autorun.txt`; output lines are `PERFSTUDY ...` and `PERFSTUDY_DONE`.
 - Emulator (x86) timings are only good for the shares per stage and for
   correctness. Never use them as phone speed.
 - Never log or store anything from a real image.
