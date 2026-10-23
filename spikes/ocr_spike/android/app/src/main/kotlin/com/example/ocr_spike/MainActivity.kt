@@ -1,5 +1,12 @@
 package com.example.ocr_spike
 
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import com.googlecode.tesseract.android.TessBaseAPI
@@ -23,6 +30,43 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Phase 1.6c: battery temperature and why the previous process died
+        // (numbers and system reason names only).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "spike/device")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "batteryTemp" -> {
+                        val intent = registerReceiver(
+                            null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+                        )
+                        val tenths = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+                        result.success(
+                            if (tenths == null || tenths == Int.MIN_VALUE) null else tenths / 10.0
+                        )
+                    }
+                    "exitReasons" -> {
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                            result.success(emptyList<Any>())
+                        } else {
+                            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                            val list = am.getHistoricalProcessExitReasons(packageName, 0, 5).map {
+                                mapOf(
+                                    "reason" to it.reason,
+                                    "name" to exitName(it.reason),
+                                    "ts" to it.timestamp,
+                                    "importance" to it.importance,
+                                    "status" to it.status,
+                                    "description" to it.description,
+                                    "pssKb" to it.pss,
+                                    "rssKb" to it.rss,
+                                )
+                            }
+                            result.success(list)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "spike/tesseract")
             .setMethodCallHandler { call, result ->
                 if (call.method != "recognize") {
@@ -66,6 +110,24 @@ class MainActivity : FlutterActivity() {
                 }
             }
     }
+
+    private fun exitName(reason: Int): String =
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) "unknown" else when (reason) {
+            ApplicationExitInfo.REASON_ANR -> "ANR"
+            ApplicationExitInfo.REASON_CRASH -> "CRASH (Java)"
+            ApplicationExitInfo.REASON_CRASH_NATIVE -> "CRASH_NATIVE"
+            ApplicationExitInfo.REASON_LOW_MEMORY -> "LOW_MEMORY (killed by the system)"
+            ApplicationExitInfo.REASON_SIGNALED -> "SIGNALED"
+            ApplicationExitInfo.REASON_EXIT_SELF -> "EXIT_SELF"
+            ApplicationExitInfo.REASON_USER_REQUESTED -> "USER_REQUESTED"
+            ApplicationExitInfo.REASON_USER_STOPPED -> "USER_STOPPED"
+            ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "DEPENDENCY_DIED"
+            ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "EXCESSIVE_RESOURCE_USAGE"
+            ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "INITIALIZATION_FAILURE"
+            ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "PERMISSION_CHANGE"
+            ApplicationExitInfo.REASON_OTHER -> "OTHER"
+            else -> "UNKNOWN($reason)"
+        }
 
     override fun onDestroy() {
         api?.recycle()

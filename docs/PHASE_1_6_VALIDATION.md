@@ -87,6 +87,54 @@ Notes:
   app read it. That is expected on many phones.
 - Nothing from your images is shown or copied: only counts and distances.
 
+## Phase 1.6c: safe harness and repeat of A to D (performed by the user)
+
+What changed since 1.6b: the spike no longer freezes or dies on a huge photo
+(your 200 MP leaflet), every cell is saved before and after it runs, the
+screen is kept on while a step runs, the battery temperature and the reason
+why a previous run died are read from Android. Install the new APK (arm64);
+it replaces the previous spike APK. Send only numbers.
+
+Preparation:
+- Phone **cold and at rest** (a few minutes without use), **off the charger**,
+  battery above 50%, other apps closed. The screen is now kept on by the app
+  while a step runs; you still must not touch it during a step.
+- Open **Perf**. Pick **your receipt** and **your hard sample** once
+  (Pick buttons). The app skips, with a clear message, any full-size decode of
+  an image above 50 MP, and runs its other settings only through the safe path
+  (native decode capped at 2560 px), so the 200 MP leaflet is allowed in D and
+  in the "Run on them" step.
+- "Rest between groups": leave it at 20 s.
+
+If the app is cut or closed by the system anyway:
+- Open it again and Perf: a red box says in which cell the run was cut, which
+  reason Android recorded for the previous process (for example ANR or
+  LOW_MEMORY), and keeps every result saved before it. Tap **Resume** to carry
+  on from the next cell (the pick buttons must be used again first if the plan
+  used your images; "Copy summary" always includes everything saved).
+- Please send me that red box text (it has no personal data), even if you
+  resume.
+
+Order (3 to 5 minutes of rest between the steps, screen on, nothing running):
+
+1. **A: UI load A/B** (about 4 minutes). Send the summary, then **Clear**.
+2. **F: paired A/B** (about 8 minutes, six comparisons): compares settings alternately
+   (A B, B A, ...) to check whether the order of the runs, the batch size, the
+   ArgMax model or the background isolate explain the differences. Send the summary, then **Clear**.
+3. **B: provider x threads** (two passes, about 12 to 20 minutes). Before
+   tapping, set the UI load switch to `1 fr/s`. Send the summary, then
+   **Clear**.
+4. **C: provider accuracy**. Send the summary, then **Clear**.
+5. **D: best**, with both samples picked (runs the 200 MP leaflet through the
+   safe path). Send the summary.
+6. **G: language packs** (about 3 to 5 minutes, invented documents only).
+   Send the summary.
+7. One line from you: was the phone warm to the touch at the end?
+
+The summary now also shows `mem rss ... peak ... MB` per cell, the battery
+temperature per plan and per group (`n/a` if Android does not give it), and
+the reason of the previous process exit.
+
 ## For Claude Code
 
 - The spike runs only on `Claude_Code_Test` (never on the user's emulator).
@@ -97,7 +145,11 @@ Notes:
   `PERFBENCH <id> <i>/<n> <json chunk>` lines (timing, synthetic data only) or
   `OCRBENCH {json}` lines (accuracy guard) to logcat.
 - Phase 1.6b on the emulator: `mode=study|grid|prov|best|all` (+ `pause=3`) in
-  `autorun.txt`; output lines are `PERFSTUDY ...` and `PERFSTUDY_DONE`.
+  `autorun.txt` (also `paired`, `langs`, and `sample` with `sample=<file>` and
+  `perf=<ids>`); output lines are `PERFSTUDY ...` and `PERFSTUDY_DONE`.
+- The emulator has 2 GB of RAM: never run the unguarded harness
+  (`--dart-define=UNSAFE=true`, reproduction only) on a 200 MP image there; it
+  makes the whole emulator unresponsive.
 - Emulator (x86) timings are only good for the shares per stage and for
   correctness. Never use them as phone speed.
 - Never log or store anything from a real image.

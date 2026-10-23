@@ -9,8 +9,11 @@ import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import '../engines/ocr_engine.dart';
 import '../engines/paddle/paddle_config.dart';
 import '../engines/paddle_engine.dart';
+import '../engines/paddle_isolate.dart';
+import 'device_info.dart';
 import 'perf_lab.dart';
 import 'render.dart';
+import 'sample_guard.dart';
 import 'runner.dart';
 import 'text_metrics.dart';
 
@@ -45,28 +48,9 @@ double? displayRefreshRate() {
   }
 }
 
-/// Battery temperature in °C if the system lets an app read it (sysfs,
-/// tenths of a degree). Null when not readable: then no temperature is
-/// reported rather than guessed.
-double? batteryTempC() {
-  for (final path in const [
-    '/sys/class/power_supply/battery/temp',
-    '/sys/class/power_supply/Battery/temp',
-  ]) {
-    try {
-      final raw = File(path).readAsStringSync().trim();
-      final v = int.tryParse(raw);
-      if (v != null) return v / 10;
-    } catch (_) {}
-  }
-  return null;
-}
-
-String _t(double? c) => c == null ? 'n/a' : c.toStringAsFixed(1);
-
-String envLine() =>
+Future<String> envLine() async =>
     'device $deviceTag, display ${displayRefreshRate()?.toStringAsFixed(0) ?? 'n/a'} Hz, '
-    'battery ${_t(batteryTempC())} C';
+    'battery ${tempText(await batteryTempC())} C';
 
 /// Providers this ONNX Runtime build offers. The plugin does not say which
 /// one a session really ran on (an unsupported operator falls back to CPU),
@@ -85,8 +69,6 @@ Future<String> providersLine() async {
 typedef LineSink = void Function(String line);
 
 void _emit(LineSink sink, String line) {
-  // ignore: avoid_print
-  print('PERFSTUDY $line');
   sink(line);
 }
 
@@ -102,12 +84,12 @@ String describeConfig(PaddleConfig c) =>
     'decode ${c.decode.name}/${c.maxSide} iso ${c.isolate} fast ${c.fastPixels} '
     'argmax ${c.recArgmax}';
 
-double _mean(List<num> v) =>
-    v.isEmpty ? 0 : v.reduce((a, b) => a + b) / v.length;
+double _mean(Iterable<num> v) =>
+    v.isEmpty ? 0 : v.fold<num>(0, (a, b) => a + b) / v.length;
 
-double _median(List<num> v) {
+double _median(Iterable<num> v) {
   if (v.isEmpty) return 0;
-  final s = [...v]..sort();
+  final s = <num>[...v]..sort();
   final m = s.length ~/ 2;
   return s.length.isOdd ? s[m].toDouble() : (s[m - 1] + s[m]) / 2;
 }
@@ -156,7 +138,7 @@ Future<void> runUiLoadStudy({
   required LineSink out,
   int runsPerState = 5,
 }) async {
-  _emit(out, 'A: UI load study. ${envLine()}; ${await providersLine()}');
+  _emit(out, 'A: UI load study. ${await envLine()}; ${await providersLine()}');
   _emit(
     out,
     'A: image $imageLabel; setting ${describeConfig(studyConfig)}; '
@@ -186,11 +168,11 @@ Future<void> runUiLoadStudy({
         progress(
           'A: block ${b + 1}/${uiStudyOrder.length} ${state.name} run $i',
         );
-        final t0 = batteryTempC();
+        final t0 = await batteryTempC();
         final monitor = JankMonitor(light: true)..start();
         final r = await engine.recognize(image.path);
         final jank = monitor.stop();
-        final t1 = batteryTempC();
+        final t1 = await batteryTempC();
         if (r.error != null) {
           _emit(out, 'A: ERROR ${r.error}');
           return;
@@ -213,7 +195,7 @@ Future<void> runUiLoadStudy({
           'A b${run.block} ${state.name} r$i: total ${run.totalMs} ms, '
           'recRun ${run.recMs}, detRun ${run.detMs}, '
           'ui ${run.frames} fr/${run.secs.toStringAsFixed(1)} s, '
-          'temp ${_t(t0)}->${_t(t1)} C',
+          'temp ${tempText(t0)}->${tempText(t1)} C',
         );
       }
       uiLoad.value = UiLoad.still;
@@ -244,7 +226,7 @@ void _studySummary(List<_StudyRun> runs, LineSink out) {
       '(${_f(rs.map((r) => r.recMs).reduce(math.min))}..${_f(rs.map((r) => r.recMs).reduce(math.max))}), '
       'total mean ${_f(_mean([for (final r in rs) r.totalMs]))}, '
       'ui ${fps.toStringAsFixed(1)} fr/s, '
-      'temp ${_t(rs.first.tempBefore)}->${_t(rs.last.tempAfter)} C',
+      'temp ${tempText(rs.first.tempBefore)}->${tempText(rs.last.tempAfter)} C',
     );
   }
   double recOf(UiLoad s) => _mean([
@@ -307,8 +289,9 @@ const _gridProviders = <String, List<OrtProvider>?>{
   'nnapi': [OrtProvider.NNAPI, OrtProvider.CPU],
 };
 
-/// Threads {2,3,4} x provider {CPU, XNNPACK, NNAPI}, spinning off, plus two
-/// repeats of the first cell at the end (`_ctl`) to show drift.
+/// Threads {2,3,4} x provider {CPU, XNNPACK, NNAPI}, spinning off. The page
+/// runs the list forward and then backwards (pass 1 and 2): the difference
+/// between the passes of the same cell is the noise and drift estimate.
 List<PerfExperiment> buildGridExperiments() {
   final base = studyConfig.copyWith(allowSpinning: false);
   PerfExperiment cell(String id, String p, int t) => PerfExperiment(
@@ -320,57 +303,91 @@ List<PerfExperiment> buildGridExperiments() {
   return [
     for (final t in [2, 3, 4])
       for (final p in _gridProviders.keys) cell('g_${p}_t$t', p, t),
-    cell('g_cpu_t2_ctl', 'cpu', 2),
-    cell('g_cpu_t4_ctl', 'cpu', 4),
   ];
 }
 
 String providerOf(PaddleConfig c) =>
     (c.providers == null ? 'cpu' : c.providers!.first.name).toLowerCase();
 
-/// Mean warm total per experiment over its scenarios (errors drop the
-/// experiment).
-Map<String, double> gridMeans(List<PerfCell> cells) {
-  final byExp = <String, List<PerfCell>>{};
-  for (final c in cells) {
-    byExp.putIfAbsent(c.exp.id, () => []).add(c);
+/// One finished grid cell, from a live run or from the saved log.
+class GridPoint {
+  GridPoint(this.expId, this.pass, this.warmMs, this.ok);
+  final String expId, pass;
+  final double warmMs;
+  final bool ok;
+
+  factory GridPoint.fromCell(PerfCell c, String pass) => GridPoint(
+    c.exp.id,
+    pass,
+    c.warmMean.toDouble(),
+    c.error == null && c.skipped == null,
+  );
+
+  factory GridPoint.fromJson(Map<String, Object?> j, String pass) => GridPoint(
+    j['exp'] as String,
+    pass,
+    ((j['warmMean'] as num?) ?? 0).toDouble(),
+    j['error'] == null && j['skipped'] == null,
+  );
+}
+
+/// Mean warm total per experiment over scenarios and passes (an experiment
+/// with an error anywhere is dropped).
+Map<String, double> gridMeans(List<GridPoint> points) {
+  final byExp = <String, List<GridPoint>>{};
+  for (final p in points) {
+    byExp.putIfAbsent(p.expId, () => []).add(p);
   }
   return {
     for (final e in byExp.entries)
-      if (e.value.every((c) => c.error == null))
-        e.key: _mean([for (final c in e.value) c.warmMean]),
+      if (e.value.every((p) => p.ok))
+        e.key: _mean([for (final p in e.value) p.warmMs]),
   };
 }
 
-/// Run-to-run noise seen in the repeated cells (`_ctl`), at least 5%: a
-/// setting must beat the CPU/4-thread cell by more than this to be chosen.
-double gridMargin(Map<String, double> means) {
-  var noise = 0.05;
-  for (final id in ['g_cpu_t2', 'g_cpu_t4']) {
-    final a = means[id], b = means['${id}_ctl'];
-    if (a != null && b != null) noise = math.max(noise, (a - b).abs() / a);
+/// Run-to-run noise: the median relative difference between pass 1 and pass 2
+/// of the same experiment (0 when there is only one pass).
+double gridNoise(List<GridPoint> points) {
+  final diffs = <double>[];
+  final ids = {for (final p in points) p.expId};
+  for (final id in ids) {
+    double? m(String pass) {
+      final v = [
+        for (final p in points)
+          if (p.expId == id && p.pass == pass && p.ok) p.warmMs,
+      ];
+      return v.isEmpty ? null : _mean(v);
+    }
+
+    final a = m('p1'), b = m('p2');
+    if (a != null && b != null) diffs.add((a - b).abs() / ((a + b) / 2));
   }
-  return noise;
+  return diffs.isEmpty ? 0 : _median(diffs);
 }
 
+/// A setting must beat the CPU/4-thread cell by more than this share: twice
+/// the noise seen between the passes, at least 5%.
+double gridMargin(List<GridPoint> points) =>
+    math.max(0.05, 2 * gridNoise(points));
+
 /// Fastest grid setting among the providers that are not excluded, but only
-/// when it beats the CPU/4-thread cell by more than 5% (otherwise that cell).
+/// when it beats the CPU/4-thread cell by more than [gridMargin] (otherwise
+/// that cell).
 ({PaddleConfig config, String label}) chooseBest(
-  List<PerfCell> grid,
+  List<GridPoint> points,
   Set<String> excludedProviders,
 ) {
-  final means = gridMeans(grid);
-  final exps = {for (final c in grid) c.exp.id: c.exp};
+  final means = gridMeans(points);
+  final exps = {for (final e in buildGridExperiments()) e.id: e};
   String? best;
   for (final id in means.keys) {
-    if (id.endsWith('_ctl')) continue;
     if (excludedProviders.contains(providerOf(exps[id]!.config))) continue;
     if (best == null || means[id]! < means[best]!) best = id;
   }
   const baseId = 'g_cpu_t4';
   if (best == null || !means.containsKey(baseId)) return provisionalBest;
   if (best != baseId &&
-      means[best]! > (1 - gridMargin(means)) * means[baseId]!) {
+      means[best]! > (1 - gridMargin(points)) * means[baseId]!) {
     best = baseId;
   }
   return (
@@ -473,7 +490,7 @@ Future<ProviderAccuracyOutcome> runProviderAccuracy({
 }) async {
   _emit(
     out,
-    'C: provider accuracy. ${envLine()}; ${await providersLine()}; '
+    'C: provider accuracy. ${await envLine()}; ${await providersLine()}; '
     'threads $threads, spin off',
   );
   final base = studyConfig.copyWith(allowSpinning: false, threads: threads);
@@ -560,4 +577,139 @@ Future<ProviderAccuracyOutcome> runProviderAccuracy({
     }
   }
   return ProviderAccuracyOutcome(excluded);
+}
+
+// ------------------------------------------------------------ F: paired A/B
+
+class _Pair {
+  _Pair(this.which, this.round, this.pos, this.totalMs, this.recMs);
+  final String which; // 'A' or 'B'
+  final int round, pos; // pos: 0 = first in the round, 1 = second
+  final int totalMs, recMs;
+}
+
+/// Two arms measured alternately (A B | B A | A B ...) on one image, so that
+/// heat, the order and the time of the measurement hit both the same way.
+/// Prints the means per arm, per position in the round (first or second) and
+/// the drift from the first to the last third. Without [configB] the arms are
+/// two recognition batch sizes ([batchA], [batchB]) of one engine with the
+/// same loaded sessions; with [configB] they are two complete pipelines
+/// ([config] against [configB], each in its own engine). With identical arms
+/// it is the control: any difference between A and B (or between first and
+/// second) is order or noise.
+Future<void> runPairedAB({
+  required String name,
+  required PaddleConfig config,
+  PaddleConfig? configB,
+  int batchA = 1,
+  int batchB = 1,
+  required File image,
+  required PerfProgress progress,
+  required LineSink out,
+  int rounds = 6,
+}) async {
+  final dims = imageSize(image);
+  final mp = dims == null ? null : dims.w * dims.h / 1e6;
+  final va = guardRun(
+    configB == null ? config.copyWith(isolate: true) : config,
+    mp,
+  );
+  final vb = configB == null ? va : guardRun(configB, mp);
+  if (va.skipped || vb.skipped) {
+    out('F $name: ${va.skipReason ?? vb.skipReason}');
+    return;
+  }
+  await PaddleEngine.releaseAll();
+  final SpikeOcrEngine engineA;
+  SpikeOcrEngine? engineB;
+  if (configB == null) {
+    engineA = IsolatePaddleEngine(
+      'greek',
+      va.config.copyWith(recBatch: batchA),
+    );
+  } else {
+    engineA = PerfExperiment('pair_a', 'pair', name, va.config).build('greek');
+    engineB = PerfExperiment('pair_b', 'pair', name, vb.config).build('greek');
+  }
+  final runs = <_Pair>[];
+  Future<OcrResult> one(String which) async {
+    if (engineB != null) {
+      return (which == 'A' ? engineA : engineB).recognize(image.path);
+    }
+    await (engineA as IsolatePaddleEngine).setRecBatch(
+      which == 'A' ? batchA : batchB,
+    );
+    return engineA.recognize(image.path);
+  }
+
+  try {
+    progress('F: $name loading');
+    await engineA.prepare();
+    await engineB?.prepare();
+    for (var i = 0; i < 2; i++) {
+      await one('A');
+      await one('B');
+    }
+    for (var r = 0; r < rounds; r++) {
+      final order = r.isEven ? ['A', 'B'] : ['B', 'A'];
+      for (var pos = 0; pos < 2; pos++) {
+        final which = order[pos];
+        progress('F: $name round ${r + 1}/$rounds $which');
+        final res = await one(which);
+        if (res.error != null) {
+          out('F $name: ERROR ${res.error}');
+          return;
+        }
+        runs.add(
+          _Pair(
+            which,
+            r,
+            pos,
+            res.elapsedMs,
+            ((res.breakdown['us_recInfer'] ?? 0) / 1000).round(),
+          ),
+        );
+      }
+    }
+  } finally {
+    await engineA.dispose();
+    await engineB?.dispose();
+    await PaddleEngine.releaseAll();
+  }
+  String stat(Iterable<_Pair> v, String what) {
+    final t = [for (final x in v) x.totalMs];
+    final r = [for (final x in v) x.recMs];
+    return '$what n=${t.length}: total mean ${_f(_mean(t))} median ${_f(_median(t))}, '
+        'recRun mean ${_f(_mean(r))} median ${_f(_median(r))} '
+        '(${_f(r.reduce(math.min))}..${_f(r.reduce(math.max))})';
+  }
+
+  if (configB == null) {
+    out(
+      'F $name: ${describeConfig(va.config)}; A = batch $batchA, B = batch $batchB',
+    );
+  } else {
+    out('F $name: A = ${describeConfig(va.config)}');
+    out('F $name: B = ${describeConfig(vb.config)}');
+  }
+  out('F $name ${stat(runs.where((x) => x.which == 'A'), 'A')}');
+  out('F $name ${stat(runs.where((x) => x.which == 'B'), 'B')}');
+  out('F $name ${stat(runs.where((x) => x.pos == 0), 'first of round')}');
+  out('F $name ${stat(runs.where((x) => x.pos == 1), 'second of round')}');
+  final third = runs.length ~/ 3;
+  final early = _mean([for (final x in runs.take(third)) x.recMs]);
+  final late = _mean([for (final x in runs.skip(runs.length - third)) x.recMs]);
+  final ra = _mean([
+    for (final x in runs)
+      if (x.which == 'A') x.recMs,
+  ]);
+  final rb = _mean([
+    for (final x in runs)
+      if (x.which == 'B') x.recMs,
+  ]);
+  out(
+    'F $name drift: recRun first third ${_f(early)} -> last third ${_f(late)} '
+    '(${(100 * (late - early) / early).toStringAsFixed(1)}%); '
+    'B vs A recRun ${(100 * (rb - ra) / ra).toStringAsFixed(1)}%',
+  );
 }

@@ -12,7 +12,9 @@ import '../engines/ocr_engine.dart';
 import '../engines/paddle/paddle_config.dart';
 import '../engines/paddle_engine.dart';
 import '../engines/paddle_isolate.dart';
+import 'device_info.dart';
 import 'perf_scenarios.dart';
+import 'sample_guard.dart';
 import 'text_metrics.dart';
 
 /// `--dart-define=DEVICE=emulator|phone` labels the printed lines.
@@ -293,6 +295,10 @@ class PerfCell {
     this.keysTotal,
     this.chars = 0,
     this.error,
+    this.skipped,
+    this.note,
+    this.rssMb,
+    this.hwmMb,
   });
 
   final PerfExperiment exp;
@@ -311,6 +317,15 @@ class PerfCell {
   final int? keysFound, keysTotal;
   final int chars;
   final String? error;
+
+  /// Why the cell was not run (memory budget), null when it ran.
+  final String? skipped;
+
+  /// What the sample guard changed for this cell, if anything.
+  final String? note;
+
+  /// Process memory after the cell and the peak since it began (MB).
+  final int? rssMb, hwmMb;
 
   int get coldMs => ((cold['us_total'] ?? 0) / 1000).round();
   int get warmMean => ((warm['us_total'] ?? 0) / 1000).round();
@@ -331,6 +346,11 @@ class PerfCell {
     'chars': chars,
     'jank': jank.toJson(),
     'error': error,
+    'skipped': skipped,
+    'note': note,
+    'rssMb': rssMb,
+    'hwmMb': hwmMb,
+    'line': line,
   };
 
   /// One line, numbers only (safe to paste).
@@ -343,6 +363,9 @@ class PerfCell {
         ms('us_toRgba') +
         ms('us_handover') +
         ms('us_materialize');
+    if (skipped != null) {
+      return '${exp.id} $scenario ${size.name}: $skipped';
+    }
     if (error != null) {
       return '${exp.id} $scenario ${size.name}: ERROR $error';
     }
@@ -361,7 +384,9 @@ class PerfCell {
         '${cer == null ? '' : 'CER ${(100 * cer!).toStringAsFixed(1)}% keys $keysFound/$keysTotal; '}'
         'ui ${jank.frames} fr/${jank.seconds.toStringAsFixed(0)} s '
         'slow ${jank.slow} worst ${jank.worstFrameMs.round()} ms '
-        'stall ${jank.stallMs.round()} ms ping ${jank.pingMs.round()} ms';
+        'stall ${jank.stallMs.round()} ms ping ${jank.pingMs.round()} ms'
+        '${rssMb == null ? '' : '; mem rss $rssMb MB peak $hwmMb MB'}'
+        '${note == null ? '' : '; $note'}';
   }
 }
 
@@ -392,20 +417,59 @@ Future<PerfCell> runPerfCell({
   PerfScenario? scenario,
   String recKey = 'greek',
   int warmRuns = 3,
+
+  /// Unrecorded runs between the cold run and the warm ones (the first runs
+  /// after loading are slower: allocator, thread pool, CPU frequency).
+  int settleRuns = 1,
   bool lightJank = false,
 }) async {
+  final dims = imageSize(image);
+  final mp = dims == null ? null : dims.w * dims.h / 1e6;
+  final verdict = guardRun(exp.config, mp);
+  JankStats noJank() => const JankStats(
+    frames: 0,
+    seconds: 0,
+    slow: 0,
+    worstFrameMs: 0,
+    stallMs: 0,
+    pingMs: 0,
+  );
+  if (verdict.skipped) {
+    return PerfCell(
+      exp: exp,
+      scenario: scenarioId,
+      size: size,
+      loadUs: const {},
+      cold: const {},
+      warm: const {},
+      warmMs: const [],
+      jank: noJank(),
+      skipped: verdict.skipReason,
+    );
+  }
+  final run = identical(verdict.config, exp.config)
+      ? exp
+      : PerfExperiment(
+          exp.id,
+          exp.group,
+          exp.title,
+          verdict.config,
+          sizes: exp.sizes,
+        );
   await PaddleEngine.releaseAll();
-  final engine = exp.build(recKey);
+  resetPeakMemory();
+  final engine = run.build(recKey);
   final monitor = JankMonitor(light: lightJank)..start();
   OcrResult? last;
   final runs = <OcrResult>[];
   Map<String, int> loadUs = const {};
+  final total = 1 + settleRuns + warmRuns;
   try {
     await engine.prepare();
     loadUs = engine is PaddleEngine
         ? engine.lastLoadUs
         : (engine as IsolatePaddleEngine).lastLoadUs;
-    for (var i = 0; i < 1 + warmRuns; i++) {
+    for (var i = 0; i < total; i++) {
       last = await engine.recognize(image.path);
       if (last.error != null) break;
       runs.add(last);
@@ -416,7 +480,8 @@ Future<PerfCell> runPerfCell({
   final jank = monitor.stop();
   await engine.dispose();
   await PaddleEngine.releaseAll();
-  if (runs.length < 1 + warmRuns) {
+  final mem = memoryMb();
+  if (runs.length < total) {
     return PerfCell(
       exp: exp,
       scenario: scenarioId,
@@ -427,16 +492,19 @@ Future<PerfCell> runPerfCell({
       warmMs: const [],
       jank: jank,
       error: last?.error ?? 'incomplete',
+      note: verdict.note,
+      rssMb: mem?.rssMb,
+      hwmMb: mem?.hwmMb,
     );
   }
-  final warm = runs.skip(1).toList();
+  final warm = runs.skip(1 + settleRuns).toList();
   double? cer;
-  int? found, total;
+  int? found, keyTotal;
   if (scenario != null) {
     final s = score(scenario.spec.groundTruth, warm.last.text);
     cer = s.cer;
     final keys = scenario.spec.keys;
-    total = keys.length;
+    keyTotal = keys.length;
     found = keys.values.where((v) => containsValue(warm.last.text, v)).length;
   }
   return PerfCell(
@@ -450,8 +518,11 @@ Future<PerfCell> runPerfCell({
     jank: jank,
     cer: cer,
     keysFound: found,
-    keysTotal: total,
+    keysTotal: keyTotal,
     chars: warm.last.text.length,
+    note: verdict.note,
+    rssMb: mem?.rssMb,
+    hwmMb: mem?.hwmMb,
   );
 }
 
@@ -472,23 +543,83 @@ void _emitChunked(String json) {
   }
 }
 
+/// Called around every cell so that a run cut by the system can be reported
+/// and resumed (see `run_log.dart`).
+class CellHooks {
+  const CellHooks({
+    this.done = const {},
+    this.begin,
+    this.end,
+    this.note,
+    this.cooldownSec = 0,
+  });
+
+  /// Ids of cells that already have a saved result (skipped when resuming).
+  final Set<String> done;
+  final Future<void> Function(String id)? begin;
+  final Future<void> Function(String id, PerfCell cell)? end;
+
+  /// Lines about the group boundaries (temperature, pause).
+  final void Function(String line)? note;
+
+  /// Rest between two experiment groups.
+  final int cooldownSec;
+}
+
+String cellId(
+  PerfExperiment e,
+  String scenarioId,
+  PhotoSize size, [
+  String tag = '',
+]) => '${e.id}/$scenarioId/${size.name}${tag.isEmpty ? '' : '/$tag'}';
+
+/// Rest between groups, with the battery temperature before and after.
+Future<void> groupBoundary(
+  CellHooks hooks,
+  String? previousGroup,
+  String nextGroup,
+  PerfProgress progress,
+) async {
+  if (previousGroup == null || previousGroup == nextGroup) return;
+  final before = await batteryTempC();
+  if (hooks.cooldownSec > 0) {
+    for (var s = hooks.cooldownSec; s > 0; s--) {
+      progress('cooling down $s s before $nextGroup');
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+  }
+  final after = await batteryTempC();
+  hooks.note?.call(
+    'T group $previousGroup -> $nextGroup: battery ${tempText(before)} -> '
+    '${tempText(after)} C after ${hooks.cooldownSec} s rest',
+  );
+}
+
 /// Runs [experiments] on the three scenarios. Prints one `PERFBENCH {json}`
-/// line per cell (synthetic data only) and returns the cells.
+/// line per cell (synthetic data only) and returns the cells run now.
 Future<List<PerfCell>> runPerfMatrix({
   required List<PerfExperiment> experiments,
   required PerfProgress progress,
   void Function(PerfCell cell)? onCell,
   bool emit = true,
   bool lightJank = false,
+  CellHooks hooks = const CellHooks(),
+  String tag = '',
 }) async {
   final dir = await perfImageDir();
   final cells = <PerfCell>[];
+  String? previousGroup;
   for (final exp in experiments) {
     for (final scn in perfScenarios) {
       for (final size in exp.sizes) {
+        final id = cellId(exp, scn.id, size, tag);
+        if (hooks.done.contains(id)) continue;
+        await groupBoundary(hooks, previousGroup, exp.group, progress);
+        previousGroup = exp.group;
         progress('${exp.id} ${scn.id} ${size.name}: image');
         final file = await buildScenarioImage(scn, size, dir);
         progress('${exp.id} ${scn.id} ${size.name}');
+        await hooks.begin?.call(id);
         final cell = await runPerfCell(
           exp: exp,
           scenarioId: scn.id,
@@ -498,6 +629,7 @@ Future<List<PerfCell>> runPerfMatrix({
           lightJank: lightJank,
         );
         cells.add(cell);
+        await hooks.end?.call(id, cell);
         onCell?.call(cell);
         if (emit) _emitChunked(jsonEncode(cell.toJson()));
       }

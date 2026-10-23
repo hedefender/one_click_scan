@@ -63,10 +63,26 @@ its own pack. So the packs the user would download are about 8 MB each:
 - Latin: S1 does **not** list English among the languages, but the dictionary
   (L) has all of A-Z, a-z, 0-9, the euro sign and 129 accented Latin letters,
   so English words are inside its character set.
-- **How well** is not confirmed. The spike's synthetic documents (Phase 1.5)
-  are in one language each (el, es, ru, with numbers, dates and codes) and
-  scored CER 1.8% overall; mixed-language pages were not measured. Do not claim
-  "el+en" quality until a mixed test set exists.
+- **How well: measured in Phase 1.6c** on invented documents (8 English /
+  mixed documents and 5 documents of accented lines, 4 conditions each: clean,
+  +3 degrees, blur, low contrast with noise; `lang_bench.dart`, run through the
+  same ONNX pipeline; accuracy does not depend on the device):
+
+  | Documents | Greek pack | Latin pack | East Slavic pack |
+  |---|---|---|---|
+  | English (invoice, letter), 8 images | CER 0.2%, key tokens 32/32 | CER 0.1%, 32/32 | CER 0.2%, 32/32 |
+  | Mixed Greek + English (shop receipt, router notice), 8 images | **CER 2.9%**, 22/32 (30/32 when Greek and Latin look-alike letters are not told apart) | CER 26.0%, 20/32 | CER 32.2%, 27/32 |
+  | Accented Latin lines (de, fr, es, it, pt), 20 images | CER 11.6%, **0/80**, accented letters kept 0/284 | **CER 0.0%, 80/80, 284/284** | CER 7.5%, 21/80, 99/284 |
+
+  Reading: (1) all three read plain English; (2) on mixed Greek and English
+  pages only the Greek pack reads the Greek words, but it confuses Greek and
+  Latin look-alike letters inside Latin codes (serial numbers, network names,
+  URLs): of the 16 key-token checks of the router notice it got 6 exact and 14
+  when look-alikes are ignored (the 8 that differ are consistent with
+  look-alike confusion, not individually inspected), and on the shop receipt (e-mail, SKU, amounts,
+  date) 16/16; (3) the Latin pack keeps every accented letter of de, fr, es,
+  it and pt on these documents, the Greek pack none. This is a small invented
+  set (fonts: Noto Sans), not real scans.
 
 **Is the 4.8 MB detection model the same for all languages?** The sources do
 not state that the detector is language-specific: the official detection cards
@@ -94,9 +110,9 @@ for the weights beyond the repository; the cards do.
 
 | Scan pack | Model | Confirmed | Not confirmed |
 |---|---|---|---|
-| el+en | greek rec 7.8 MB + dict | official name and 89.28 on Greek data; used in the spike | English quality on mixed pages |
-| de/fr/it/es/pt (+en) | latin rec 7.9 MB + dict | official language list (47); spike scored es synthetic docs | per-language accuracy for de, fr, it, pt (only es was tested); English quality; ß/accents on real scans |
-| ru (+en, uk, be) | eslav rec 7.9 MB + dict | official language list; spike scored ru synthetic docs | English quality; Bulgarian/Serbian need `cyrillic` (no ONNX mirror) |
+| el+en | greek rec 7.8 MB + dict | official name and 89.28 on Greek data; measured: plain English CER 0.2%, mixed Greek + English CER 2.9% | Latin codes inside Greek text (serials, URLs) lose characters (6/16 exact tokens on one invented notice); real scans |
+| de/fr/it/es/pt (+en) | latin rec 7.9 MB + dict | official language list (47); measured on invented lines: de, fr, es, it, pt accents 284/284 kept, CER 0.0%; plain English CER 0.1% | real scans; languages other than these five; mixed Greek + English (CER 26%: it cannot read Greek) |
+| ru (+en, uk, be) | eslav rec 7.9 MB + dict | official language list; spike scored ru synthetic docs; plain English CER 0.2% | Accented Latin letters (99/284 kept: do not use it for de/fr/es/it/pt); Bulgarian/Serbian need `cyrillic` (no ONNX mirror) |
 | bg, sr, kk, ... | `cyrillic` | official model exists (80.27) | no ONNX; would need our own paddle2onnx conversion |
 | Arabic, Hindi, ... | v3 only in mirror | official v5 models exist | v5 ONNX not available; v3 quality unknown here |
 | zh, ja, ko, th | chinese/korean/thai in S4 | files exist | out of scope for now; the `chinese` file is 84 MB |
@@ -141,15 +157,29 @@ the providers' current terms in this session; check before deciding):
 
 ## 6. Recommendation for the pack catalogue (for the user to decide)
 
-Start with the three packs the spike has measured: **greek**, **latin** (es
-measured; de/fr/it/pt are covered by the vendor's list but untested) and
-**eslav** (ru measured), all hosted by us with pinned SHA-256, plus the shared
-detector. Add other packs only after a conversion and a measurement.
+Built-in: **el+en = the Greek pack** (it also reads plain English, 32/32 key
+tokens, and is the only one of the three that reads mixed Greek and English
+pages). For the second built-in pack the **Latin pack** is a better choice
+than an "English only" model on our measurements: it reads English at 0.1% CER
+and keeps every accent of de, fr, es, it and pt, so one 7.9 MB pack serves
+English and the main Western European languages. The official English-only
+model (`en_PP-OCRv5_mobile_rec`, S1, 85.25 on its own dataset; mirror
+`languages/english/`, 7,830,888 B, SHA-256
+`4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7`, S4) exists
+but was **not measured by us**, so there is no evidence that it beats the
+Latin pack. Downloadable: **eslav** (ru measured) and later packs, hosted by us
+with pinned SHA-256, plus the shared detector. Add other packs only after a
+conversion and a measurement. Pack selection by the user must be explicit: a
+Greek document read with the Latin pack, or a French one with the Greek pack,
+fails badly (tables above), so the app should not guess the pack silently.
 
 ## 7. Not confirmed (do not promise)
 
-- Any language other than el, es, ru has **no measurement of ours**.
-- English quality of any model on mixed-language pages.
+- Any language other than el, es, ru, en, de, fr, it, pt has **no measurement of ours**, and
+  de, fr, it, pt were measured only on a few invented lines, not on real documents.
+- The official English-only model (not measured).
+- Mixed pages other than Greek + English (for example Russian + English).
+- Real scans of any kind (all measurements here are invented, rendered documents).
 - Which official detector (mobile or server) is in `monkt/.../detection/v5/det.onnx`,
   and why the `chinese/rec.onnx` there is 84 MB.
 - Whether paddle2onnx conversion of `cyrillic`, `devanagari`, `ta`, `te` works

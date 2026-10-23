@@ -25,3 +25,15 @@ app and not production code. Results: `docs/OCR_SPIKE_RESULTS.md`.
   `spin=0|1`) to `/sdcard/Android/data/com.example.ocr_spike/files/` (chmod 666);
   output lines are `PERFBENCH <id> <i>/<n> <json chunk>` and `OCRBENCH {json}`.
 - Phone: `flutter build apk --release --target-platform android-arm64 --dart-define=DEVICE=phone`.
+
+## Phase 1.6b/c (phone studies, safe harness)
+
+- Perf page buttons: A (UI load A/B), B (provider x threads, two passes), C
+  (provider accuracy), D (best), F (paired A/B), G (language packs). Each cell
+  is saved to a log before and after it runs; after a crash the page shows the
+  cell where it stopped and the Android exit reason, and Resume continues.
+- `lib/bench/sample_guard.dart` skips a full-size decode above 50 MP (header read
+  only); `--dart-define=UNSAFE=true` switches the guard off (reproduction only,
+  never on a 200 MP image on the 2 GB emulator).
+- Emulator modes in `autorun.txt`: `study`, `grid`, `prov`, `best`, `paired`,
+  `langs`, `sample` (with `sample=<file>` and `perf=<ids>`), `pause=<s>`.

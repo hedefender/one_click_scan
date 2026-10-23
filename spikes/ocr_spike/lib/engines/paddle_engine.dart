@@ -29,7 +29,10 @@ class PaddleEngine implements SpikeOcrEngine {
 
   /// `greek`, `latin` or `eslav` (asset names `rec_<key>.onnx`).
   final String recKey;
-  final PaddleConfig config;
+
+  /// Not final only so that the paired A/B study can switch [PaddleConfig.recBatch]
+  /// between two runs without reloading the sessions.
+  PaddleConfig config;
 
   /// Bake the EXIF orientation into the pixels before detection. The default
   /// mimics a plain decoder, which ignores the tag.

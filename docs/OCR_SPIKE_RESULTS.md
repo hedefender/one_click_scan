@@ -653,3 +653,153 @@ temperature.
    the screen on during a study) acceptable? Without it the user sets the
    screen timeout by hand (`PHASE_1_6_VALIDATION.md`).
 4. Language packs: `OCR_LANGUAGE_PACKS.md`.
+
+## 11. Phase 1.6c: the crash on the phone, a safe harness, order effects, language packs
+
+Labels as in section 10: **[phone]** = numbers from the user's phone,
+**[emulator]** = x86 emulator `Claude_Code_Test` (2 GB RAM, software
+rendering). Phone numbers for the repeated A to D are still pending.
+
+### 11.1 Why the spike was closed by the system
+
+What the phone showed [phone]: during the user's 200 MP sample (12240x16320) the
+cells `base` and `th*` had `dec` about 8 s and a UI-isolate stall of about 8 s,
+then Android showed repeated "not responding" dialogs and closed the app; the
+last copied line was `th1 your_hard_sample`.
+
+What the code does: every experiment of the groups `baseline`, `ort`, `det`,
+`batch` and `pre` decodes the JPEG in pure Dart **on the UI isolate**
+(`config.isolate == false`), and a cell decodes the image four times (one cold
+and three warm runs). For this sample that is about 4 x 8 s of a frozen UI per
+cell, one cell after the other. The group `decode` experiment `nat` (native
+decode at full size) needs 12240 x 16320 x 4 bytes = about 800 MB for the
+bitmap alone.
+
+Reproduction attempt [emulator, 2 GB]: the harness with the guard switched off
+(`--dart-define=UNSAFE=true`, kept only for this) on a generated 200 MP JPEG
+(synthetic text, 9 MB file):
+- the UI isolate stayed blocked: `Choreographer: Skipped 3664 frames` in one
+  report, no finished cell after more than 6 minutes (in a first attempt more
+  than 30 minutes; at the end `adb shell` no longer answered and the emulator
+  had to be killed and restarted);
+- the system ran out of memory: within 30 s of the start the low-memory killer
+  killed about ten other processes (`reason: low watermark is breached`) and the
+  swap filled;
+- **not reproduced:** an ANR record for the app, or a kill of the app itself. The
+  app's own memory when I looked was small (RSS 69 MB, peak 226 MB, 76 MB in
+  swap), so the "0.8 to 1.6 GB" estimate for the Dart decode is **not
+  confirmed** by this run; what was seen is that the system as a whole was
+  starved while the decode ran. A 2 GB emulator is not a 12 GB phone, so this
+  says nothing about which of the two (ANR or memory kill) closed the app.
+
+Verdict: **confirmed** that the old harness blocks the UI isolate for the length
+of every Dart decode (8 s per run on the phone, above the 5 s that Android
+allows for a pending input event) and that a full-size decode of such an image
+is very expensive in memory; **not confirmed** which one ended the process. The
+new APK asks Android for the exit reason of the previous process
+(`ApplicationExitInfo`: ANR, LOW_MEMORY, CRASH, ...) and prints it at the next
+start, so the next crash will be classified by the system.
+
+### 11.2 The safe harness (spike only)
+
+- **Size guard from the file header** (`sample_guard.dart`, JPEG/PNG header,
+  nothing decoded): a full-size decode (Dart decode, or native decode without
+  a cap) of an image above 50 MP is skipped with the line `skipped (would
+  exceed memory budget: 200 MP, limit 50 MP for a full-size decode)`; a Dart
+  decode above 20 MP is moved to the background isolate. Native decode capped
+  at 2560 px is always allowed.
+- **Result** [emulator, 200 MP]: `base`, `th1`, `fast`, `nat` skipped;
+  `nat2560` ran: decode 326 ms, 48 boxes, UI stall 109 ms, process memory 224 MB
+  after and 511 MB peak.
+- **Breadcrumb** (`run_log.dart`): before every cell its id is written to a file
+  in the app's own directory, after it the result line; only ids, timings and
+  counts. At the next start a red box says in which cell the run was cut and
+  what Android recorded for the previous process, the saved lines are listed
+  and included in "Copy summary", and **Resume** continues with the next cell
+  (matrix, picked samples, grid, best).
+- **Screen kept on** with `wakelock_plus` while a step runs; **battery
+  temperature** through a small Kotlin method (`BatteryManager`), printed per
+  plan and between groups (`25.0 C` on the emulator; `n/a` where the system
+  gives none); **memory** (`mem rss .. peak ..` from `/proc/self/status`) in
+  every cell line; **rest** of 20 or 30 s between groups; one unrecorded
+  **settling run** between the cold run and the warm runs (the warm figure is
+  now the mean of the three runs after it; older figures had no settling run).
+- Everything the studies print also goes to the log file, so nothing is lost if
+  the app is closed.
+
+### 11.3 The two clusters, again
+
+Phone numbers sent after 1.6b [phone], `recRun` in ms, UI load `1 fr/s`:
+`base` 1029 (with UI load `max` it was 1536); the groups `fast`, `nat*`, `am`,
+`iso_fast`, `final_b1`, `det*` 740 to 810; batch 4 and 8 1092 to 1325; `final`
+(batch 4) 1103 against 773 for `final_b1`; XNNPACK 898 and NNAPI 829.
+
+What can and cannot be said:
+- **UI load** matters on the phone too: the same `base` cell fell from 1536 to
+  1029 ms (-33%) by lowering the UI load (not controlled for heat).
+- **Batch** now explains the slow cells of `batch` and `final`: batch 4 or 8
+  is 40% to 70% slower than batch 1 on the phone (padding: a batch is as wide as its
+  widest line). Use batch 1.
+- **Providers:** XNNPACK (898) and NNAPI (829) do not beat the 740 to 810 of the
+  fast cells; the earlier apparent gain came from the slow `base` cell they
+  were compared with. No evidence for either; keep CPU.
+- **The first group looking slow (`base` 1029 against about 770):** not an order
+  effect on the emulator and probably not on the phone. The paired test (A B,
+  B A, ... in one run, `runPairedAB`) on the emulator gave:
+
+  | Comparison (6 rounds each) | `recRun` of B against A |
+  |---|---|
+  | control: the same setting twice | +2.2%, -2.7%, +6.0% in three runs (noise about 6%) |
+  | engine in the **root isolate** (A) against background isolate (B) | **-29.3%** (1347 against 953 ms) |
+  | Phase 1.5 pipeline (A) against the study setting (B) | -25.3%, -20.0% in two runs |
+  | ArgMax model off (A) against on (B) | +13.9% (B slower, within what the control shows) |
+  | batch 1 against batch 4 | +5.8%, +7.1%, +28.8% (emulator, not consistent) |
+  | batch 1 against batch 2 | -10.0%, +3.3%, -7.0% |
+
+  The drift inside a run (first third against last third) was +-5% to +-20%
+  even for the control, so a single run of one setting after another cannot
+  show differences below that. The slowdown follows **where the engine runs**
+  (root isolate against background isolate), not the model variant and not the
+  position in the sequence. A possible mechanism (not tested): `recRun` is the
+  wall time of an awaited plugin call, and in the root isolate the reply has to
+  wait for the same event loop that also draws frames and runs the Dart pixel
+  loops. If true, it is a measurement and a scheduling effect of the root
+  isolate, not slower inference. The phone must repeat the paired test (step F
+  of `PHASE_1_6_VALIDATION.md`).
+
+### 11.4 Re-run of B, C and D on the emulator (tooling only)
+
+Grid with two passes (forward, backwards): the cells differ by 2.8% between the
+passes (margin to leave CPU/4 threads: 5.6%); XNNPACK and NNAPI results were
+identical to CPU on 147 lines and on the synthetic set (CER 1.8%, keys
+156/160). The available providers were `CPU, NNAPI, XNNPACK`. None of this
+says anything about the phone: the grid's "best" on the emulator was an
+NNAPI/2-thread cell inside the noise, which is exactly what the margin rule
+exists to prevent on the phone.
+
+### 11.5 Language packs
+
+Measured on invented documents (accuracy does not depend on the device); full
+table in `OCR_LANGUAGE_PACKS.md`: plain English CER 0.1% to 0.2% with all three
+packs; mixed Greek + English only readable with the Greek pack (CER 2.9%, the
+Latin pack 26.0%), with Latin-code confusions; accented Latin letters of de,
+fr, es, it, pt kept 284/284 with the Latin pack (CER 0.0%), 0/284 with the Greek
+pack, 99/284 with the East Slavic pack.
+
+### 11.6 Provisional recommendation for Phase 2 (to be confirmed on the phone)
+
+- Run the engine in a **background isolate**, decode natively capped at 2560 px,
+  recognition **batch 1**, **CPU** provider, no continuously animating spinner
+  during processing, progress as text.
+- Threads (2, 3 or 4) stay open until B on the phone has two passes of data.
+- Never decode a full-size photo of unknown size in Dart: read the header,
+  cap the decode.
+
+### 11.7 Open questions (Phase 1.6c)
+
+1. The exit reason Android gives for the phone crash (if it recurs).
+2. Phone paired test: is the root isolate slower there too (about 40% in
+   `recRun`), and is batch 1 always better?
+3. Phone grid with two passes and the provider accuracy check.
+4. Whether to measure the official English-only recogniser against the Latin
+   pack, and real (not invented) mixed Greek + English scans.

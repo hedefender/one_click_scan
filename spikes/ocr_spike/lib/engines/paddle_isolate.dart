@@ -139,6 +139,11 @@ class IsolatePaddleEngine implements SpikeOcrEngine {
     );
   }
 
+  /// Changes the recognition batch size for the next runs (sessions stay).
+  Future<void> setRecBatch(int n) async {
+    await _call('batch', n);
+  }
+
   /// Closes the sessions inside the worker (next [prepare] loads again).
   Future<void> release() async {
     if (_worker == null) return;
@@ -179,6 +184,9 @@ Future<void> _entry(List<Object?> args) async {
           await engine.prepare();
           reply.send([id, Map<String, int>.of(engine.lastLoadUs)]);
           engine.lastLoadUs = const {};
+        case 'batch':
+          engine.config = engine.config.copyWith(recBatch: m[2] as int);
+          reply.send([id, null]);
         case 'release':
           await PaddleEngine.releaseAll();
           reply.send([id, null]);

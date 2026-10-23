@@ -33,7 +33,17 @@ var _spinner = true;
 /// Phase 1.6b studies (`mode=study|grid|prov|best|all`) run on the Perf page;
 /// `pause=<s>` shortens the rest between UI states on the emulator.
 var _pauseSec = 30;
-const _studyModes = {'study', 'grid', 'prov', 'best', 'all'};
+const _studyModes = {
+  'study',
+  'grid',
+  'prov',
+  'best',
+  'paired',
+  'langs',
+  'sample',
+  'all',
+};
+String? _samplePath;
 
 Future<void> _readAutorunFile() async {
   final dir = await getExternalStorageDirectory();
@@ -47,6 +57,7 @@ Future<void> _readAutorunFile() async {
     if (kv[0].trim() == 'perf') _select = kv[1].trim();
     if (kv[0].trim() == 'spin') _spinner = kv[1].trim() != '0';
     if (kv[0].trim() == 'pause') _pauseSec = int.tryParse(kv[1].trim()) ?? 30;
+    if (kv[0].trim() == 'sample') _samplePath = kv[1].trim();
   }
 }
 
@@ -109,7 +120,13 @@ class _SpikePageState extends State<SpikePage> {
           if (!mounted) return;
           await Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => PerfPage(auto: _mode, pauseSec: _pauseSec),
+              builder: (_) => PerfPage(
+                auto: _mode,
+                pauseSec: _pauseSec,
+                samplePath: _samplePath,
+                select: _select.isEmpty ? null : _select.split(',').toSet(),
+                cooldownSec: 0,
+              ),
             ),
           );
         } else if (_mode.isNotEmpty && _mode != 'file') {
