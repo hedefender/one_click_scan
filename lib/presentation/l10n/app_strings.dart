@@ -98,6 +98,38 @@ abstract class AppStrings {
   String get settingsUnsavedBody;
   String get settingsDiscard;
   String get settingsStay;
+
+  // OCR (check screen and settings)
+  String get ocrOpenResult;
+  String get ocrResultTitle;
+  String ocrPageOf(int page, int total);
+  String get ocrStatusQueued;
+  String get ocrStatusLoadingModels;
+  String get ocrStatusPreparing;
+  String get ocrStatusDetecting;
+  String ocrStatusRecognizing(int done, int total);
+  String ocrSummaryPack(String name);
+  String ocrSummaryDuration(String seconds);
+  String ocrSummaryWorkImage(int width, int height);
+  String ocrSummaryCapture(int width, int height, String megapixels);
+  String ocrSummaryBoxes(int boxes, int filtered);
+  String get ocrFilteredLabel;
+  String get ocrNoText;
+  String get ocrCopy;
+  String get ocrCopied;
+  String get ocrShowBoxes;
+  String get ocrTimedOut;
+  String get ocrCancelled;
+  String get ocrFailedModel;
+  String get ocrFailedImage;
+  String get ocrFailedTooLarge;
+  String get ocrFailedUnsupported;
+  String get ocrFailedEngine;
+  String get ocrSettingsTitle;
+  String get ocrSettingsNote;
+  String ocrPackName(String packId);
+  String ocrPackDescription(String packId);
+  String get licensesOpen;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

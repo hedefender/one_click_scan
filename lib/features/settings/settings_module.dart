@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/logging/app_logger.dart';
 import '../../core/navigation/route_paths.dart';
+import '../../domain/ocr/ocr_language_pack_registry.dart';
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/update_settings.dart';
 import '../../services/storage_folder/storage_folder_picker.dart';
@@ -26,10 +27,14 @@ List<RouteBase> settingsRoutes(GetIt sl) {
   return [
     GoRoute(
       path: RoutePaths.settings,
-      builder: (context, state) => BlocProvider<SettingsEditorCubit>(
-        create: (_) => sl<SettingsEditorCubit>()..start(),
-        child: const SettingsPage(),
-      ),
+      builder: (context, state) =>
+          RepositoryProvider<OcrLanguagePackRegistry>.value(
+            value: sl<OcrLanguagePackRegistry>(),
+            child: BlocProvider<SettingsEditorCubit>(
+              create: (_) => sl<SettingsEditorCubit>()..start(),
+              child: const SettingsPage(),
+            ),
+          ),
     ),
   ];
 }

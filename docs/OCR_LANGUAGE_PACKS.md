@@ -191,3 +191,24 @@ fails badly (tables above), so the app should not guess the pack silently.
   reasoning).
 - The app's download size claims per pack: only the sizes above (file sizes
   from the API) are verified, not compressed transfer sizes.
+
+## 8. What the app ships (Phase 2)
+
+- Bundled: `greek` (`rec_greek.onnx` 7,791,200 B + `dict_greek.txt`) and
+  `latin` (`rec_latin.onnx` 7,862,832 B + `dict_latin.txt`), plus the shared
+  detector `det_mobile.onnx` (4,826,518 B). The hashes of section 5 are pinned
+  in `assets/ocr/manifest.json` and in `OcrLanguagePackRegistry`; a test keeps
+  them equal, the Gradle task `verifyOcrModels` and `tool/fetch_ocr_models.sh`
+  verify the files, and the engine verifies them again every time it loads
+  them. The dictionaries' SHA-256 (`31defc62...` greek, `3c0a8a79...` latin) are
+  new in Phase 2 (computed from the files the spike used).
+- The user chooses the pack in Settings; the default is `greek` for a Greek
+  device and `latin` otherwise (section 6: the app never guesses).
+- `eslav` and the official `en_PP-OCRv5_mobile_rec` are not bundled and not
+  measured by us; the registry can describe packs that are not in the APK
+  (availability `downloadable`) but nothing downloads yet.
+- **Open item before any public release:** rebuild the ONNX files from the
+  official PaddlePaddle weights with `paddle2onnx`, check them with the accuracy
+  guard of Phase 1.6, host them on GitHub Releases of this project, and change
+  the URLs and hashes in the manifest. Until then the mirrors of section 1 (S4,
+  S5), pinned by commit, are the provenance.

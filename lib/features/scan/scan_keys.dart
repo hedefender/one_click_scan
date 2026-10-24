@@ -18,6 +18,7 @@ abstract final class ScanKeys {
   static const dialogStay = Key('scan.dialog.stay');
   static const resultList = Key('scan.result.list');
   static const resultBack = Key('scan.result.back');
+  static const resultOcr = Key('scan.result.ocr');
 
   static Key resultFile(String fileName) => Key('scan.result.file.$fileName');
 }

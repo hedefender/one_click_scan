@@ -700,6 +700,15 @@ new APK asks Android for the exit reason of the previous process
 (`ApplicationExitInfo`: ANR, LOW_MEMORY, CRASH, ...) and prints it at the next
 start, so the next crash will be classified by the system.
 
+Follow-up (start of Phase 2): the user ran the safe harness on the phone and
+reported that the phone tests **confirmed the hypothesis about very large
+photos** (the whole-image Dart decode of a huge photo is what brought the old
+harness down). No numbers or exit reasons were sent with that message, so the
+split between "not responding" and "killed for memory" is still not recorded
+here. Phase 2 therefore applies a ceiling to the photo input (ADR-014: header
+read first, nothing decoded above 50 MP, native decode with `inSampleSize`
+above 8 MP, never on the UI isolate).
+
 ### 11.2 The safe harness (spike only)
 
 - **Size guard from the file header** (`sample_guard.dart`, JPEG/PNG header,

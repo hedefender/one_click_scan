@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 import 'app_language.dart';
 import 'destination_mode.dart';
+import '../ocr/ocr_language_pack_registry.dart';
 import 'mail_provider_id.dart';
 import 'storage_folder.dart';
 
@@ -17,6 +18,7 @@ class AppSettings extends Equatable {
     this.destinationMode = DestinationMode.own,
     this.customDestination,
     this.saveToGallery = false,
+    this.ocrPackId = OcrPackIds.latin,
   });
 
   final AppLanguage language;
@@ -32,6 +34,11 @@ class AppSettings extends Equatable {
 
   /// Copy original photos to the phone Gallery. Off by default (privacy).
   final bool saveToGallery;
+
+  /// Id of the OCR language pack the user chose (`greek`, `latin`). The
+  /// scanner never guesses the language: a Greek page read with the Latin
+  /// pack, or the other way round, comes out wrong.
+  final String ocrPackId;
 
   /// Address documents are delivered to, according to [destinationMode].
   String? get effectiveDestination {
@@ -51,6 +58,7 @@ class AppSettings extends Equatable {
     DestinationMode? destinationMode,
     Object? customDestination = _unset,
     bool? saveToGallery,
+    String? ocrPackId,
   }) {
     return AppSettings(
       language: language ?? this.language,
@@ -69,6 +77,7 @@ class AppSettings extends Equatable {
           ? this.customDestination
           : customDestination as String?,
       saveToGallery: saveToGallery ?? this.saveToGallery,
+      ocrPackId: ocrPackId ?? this.ocrPackId,
     );
   }
 
@@ -82,5 +91,6 @@ class AppSettings extends Equatable {
     destinationMode,
     customDestination,
     saveToGallery,
+    ocrPackId,
   ];
 }

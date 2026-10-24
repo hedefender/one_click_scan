@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/first_run/first_run_module.dart';
 import '../features/home/home_module.dart';
+import '../features/ocr/ocr_module.dart';
 import '../features/scan/scan_module.dart';
 import '../features/settings/settings_module.dart';
 
@@ -18,6 +19,7 @@ GoRouter createRouter({
       ...homeRoutes(container),
       ...settingsRoutes(container),
       ...scanRoutes(container),
+      ...ocrRoutes(container),
     ],
   );
 }

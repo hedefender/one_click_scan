@@ -3,6 +3,7 @@ import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/entities/storage_folder.dart';
+import '../../domain/ocr/ocr_language_pack_registry.dart';
 import 'key_value_store.dart';
 
 /// Maps [AppSettings] to flat key/value pairs.
@@ -14,7 +15,8 @@ class SettingsLocalDataSource {
     required this._store,
     required this.schemaVersion,
     required this.defaultLanguage,
-  });
+    OcrLanguagePackRegistry? packRegistry,
+  }) : _packs = packRegistry ?? OcrLanguagePackRegistry.standard;
 
   static const keySchemaVersion = 'settings.schemaVersion';
   static const keyLanguage = 'settings.language';
@@ -26,10 +28,12 @@ class SettingsLocalDataSource {
   static const keyDestinationMode = 'settings.mail.destinationMode';
   static const keyCustomDestination = 'settings.mail.customDestination';
   static const keySaveToGallery = 'settings.gallery.save';
+  static const keyOcrPack = 'settings.ocr.pack';
 
   final KeyValueStore _store;
   final int schemaVersion;
   final AppLanguage defaultLanguage;
+  final OcrLanguagePackRegistry _packs;
 
   AppSettings read() {
     final folderUri = _store.getString(keyStorageUri);
@@ -61,6 +65,11 @@ class SettingsLocalDataSource {
           DestinationMode.own,
       customDestination: _store.getString(keyCustomDestination),
       saveToGallery: _store.getBool(keySaveToGallery) ?? false,
+      // No stored choice (first run) or an unknown id: Greek for a Greek
+      // device, Latin otherwise.
+      ocrPackId: _packs
+          .resolve(_store.getString(keyOcrPack), defaultLanguage.code)
+          .id,
     );
   }
 
@@ -75,6 +84,7 @@ class SettingsLocalDataSource {
     await _store.setString(keyDestinationMode, settings.destinationMode.name);
     await _setOrRemove(keyCustomDestination, settings.customDestination);
     await _store.setBool(keySaveToGallery, settings.saveToGallery);
+    await _store.setString(keyOcrPack, settings.ocrPackId);
   }
 
   Future<void> _setOrRemove(String key, String? value) {

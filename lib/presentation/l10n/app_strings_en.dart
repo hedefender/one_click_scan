@@ -214,4 +214,114 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get settingsStay => 'Stay';
+
+  @override
+  String get ocrOpenResult => 'OCR text (check)';
+
+  @override
+  String get ocrResultTitle => 'OCR text';
+
+  @override
+  String ocrPageOf(int page, int total) => 'Page $page of $total';
+
+  @override
+  String get ocrStatusQueued => 'Waiting for the previous page';
+
+  @override
+  String get ocrStatusLoadingModels => 'Loading the language models';
+
+  @override
+  String get ocrStatusPreparing => 'Preparing the image';
+
+  @override
+  String get ocrStatusDetecting => 'Looking for text';
+
+  @override
+  String ocrStatusRecognizing(int done, int total) =>
+      total == 0 ? 'Reading text' : 'Reading line $done of $total';
+
+  @override
+  String ocrSummaryPack(String name) => 'Language pack: $name';
+
+  @override
+  String ocrSummaryDuration(String seconds) => 'Time: $seconds s';
+
+  @override
+  String ocrSummaryWorkImage(int width, int height) =>
+      'Working image: $width x $height px';
+
+  @override
+  String ocrSummaryCapture(int width, int height, String megapixels) =>
+      'Capture: $width x $height px ($megapixels MP)';
+
+  @override
+  String ocrSummaryBoxes(int boxes, int filtered) =>
+      'Boxes: $boxes (filtered: $filtered)';
+
+  @override
+  String get ocrFilteredLabel => 'filtered, low confidence';
+
+  @override
+  String get ocrNoText => 'No text was found on this page.';
+
+  @override
+  String get ocrCopy => 'Copy text';
+
+  @override
+  String get ocrCopied => 'Text copied.';
+
+  @override
+  String get ocrShowBoxes => 'Show boxes on the image';
+
+  @override
+  String get ocrTimedOut => 'Reading this page took too long and was stopped.';
+
+  @override
+  String get ocrCancelled => 'Reading was cancelled.';
+
+  @override
+  String get ocrFailedModel =>
+      'The language model is missing or damaged. Reinstall the app.';
+
+  @override
+  String get ocrFailedImage => 'The picture could not be read.';
+
+  @override
+  String get ocrFailedTooLarge =>
+      'The picture is too large to read (over 50 megapixels).';
+
+  @override
+  String get ocrFailedUnsupported => 'Text reading is not available here.';
+
+  @override
+  String get ocrFailedEngine => 'Reading this page failed.';
+
+  @override
+  String get ocrSettingsTitle => 'Text reading language (OCR)';
+
+  @override
+  String get ocrSettingsNote =>
+      'Choose the pack that matches your documents. The app does not guess '
+      'the language: a Greek page read with the Latin pack, or a French page '
+      'read with the Greek pack, comes out wrong. Everything is read on this '
+      'phone, nothing is sent anywhere.';
+
+  @override
+  String ocrPackName(String packId) => switch (packId) {
+    'greek' => 'Greek + English',
+    'latin' => 'Latin script',
+    _ => packId,
+  };
+
+  @override
+  String ocrPackDescription(String packId) => switch (packId) {
+    'greek' => 'Greek and English text.',
+    'latin' =>
+      'English and languages with Latin letters and accents: German, French, '
+          'Spanish, Italian, Portuguese and more. Does not read Greek.',
+    _ => '',
+  };
+
+  @override
+  String get licensesOpen => 'Open-source licences';
 }

@@ -32,6 +32,9 @@ class MainActivity : FlutterActivity() {
         // Phase 1: writing scans into the folder, and small system helpers.
         ScanFilesHandler(this, flutterEngine.dartExecutor.binaryMessenger)
         SystemHandler(this, flutterEngine.dartExecutor.binaryMessenger)
+
+        // Phase 2: upright working copy of large photos for the OCR.
+        ImageDecodeHandler(flutterEngine.dartExecutor.binaryMessenger)
     }
 
     private fun pickFolder(result: MethodChannel.Result) {

@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../domain/entities/captured_page.dart';
 import '../../domain/entities/scan_mode.dart';
 import '../../domain/entities/stored_scan.dart';
+import '../../domain/usecases/recognize_pages.dart';
 
 enum ScanPhase {
   /// Checking the folder and starting the camera.
@@ -31,6 +32,7 @@ class ScanState extends Equatable {
     this.pages = const <CapturedPage>[],
     this.result,
     this.captureFailed = false,
+    this.ocr,
   });
 
   final ScanPhase phase;
@@ -42,6 +44,10 @@ class ScanState extends Equatable {
 
   /// The last shot failed (shown as a message, the user can shoot again).
   final bool captureFailed;
+
+  /// The background reading of the pages, set when [phase] is
+  /// [ScanPhase.saved]. The result screen owns it from then on.
+  final OcrSession? ocr;
 
   bool get hasPages => pages.isNotEmpty;
 
@@ -63,6 +69,7 @@ class ScanState extends Equatable {
     List<CapturedPage>? pages,
     StoredScan? result,
     bool? captureFailed,
+    OcrSession? ocr,
   }) {
     return ScanState(
       phase: phase ?? this.phase,
@@ -70,9 +77,10 @@ class ScanState extends Equatable {
       pages: pages ?? this.pages,
       result: result ?? this.result,
       captureFailed: captureFailed ?? this.captureFailed,
+      ocr: ocr ?? this.ocr,
     );
   }
 
   @override
-  List<Object?> get props => [phase, mode, pages, result, captureFailed];
+  List<Object?> get props => [phase, mode, pages, result, captureFailed, ocr];
 }

@@ -8,7 +8,12 @@ import '../data/datasources/settings_local_data_source.dart';
 import '../data/repositories/settings_repository_impl.dart';
 import '../domain/entities/app_language.dart';
 import '../domain/repositories/settings_repository.dart';
+import '../domain/ocr/ocr_language_pack_registry.dart';
+import '../domain/ports/ocr_engine.dart';
 import '../domain/usecases/load_settings.dart';
+import '../domain/usecases/prepare_image_for_ocr.dart';
+import '../domain/usecases/recognize_pages.dart';
+import '../services/ocr/ocr_services.dart';
 import '../domain/scan/gallery_naming.dart';
 import '../domain/scan/scan_naming.dart';
 import '../domain/usecases/store_scan_pages.dart';
@@ -39,9 +44,12 @@ Future<GetIt> buildContainer({
   ScanFileStore scanFileStore = const UnsupportedScanFileStore(),
   GalleryService gallery = const UnsupportedGalleryService(),
   ScanTempStore scanTempStore = const NoopScanTempStore(),
+  OcrServices ocr = const OcrServices.unsupported(),
+  OcrLanguagePackRegistry? ocrPackRegistry,
   DateTime Function() clock = DateTime.now,
 }) async {
   final sl = GetIt.asNewInstance();
+  final packRegistry = ocrPackRegistry ?? OcrLanguagePackRegistry.standard;
 
   // Core and platform adapters.
   sl.registerSingleton<AppConfig>(config);
@@ -52,6 +60,8 @@ Future<GetIt> buildContainer({
   sl.registerSingleton<ScanFileStore>(scanFileStore);
   sl.registerSingleton<GalleryService>(gallery);
   sl.registerSingleton<ScanTempStore>(scanTempStore);
+  sl.registerSingleton<OcrLanguagePackRegistry>(packRegistry);
+  sl.registerSingleton<OcrEngine>(ocr.engine);
 
   // Data.
   sl.registerLazySingleton<SettingsLocalDataSource>(
@@ -61,6 +71,7 @@ Future<GetIt> buildContainer({
       defaultLanguage:
           AppLanguage.fromCode(sl<AppConfig>().defaultLanguageCode) ??
           AppLanguage.en,
+      packRegistry: packRegistry,
     ),
   );
   sl.registerLazySingleton<SettingsRepository>(
@@ -83,6 +94,19 @@ Future<GetIt> buildContainer({
       galleryNaming: GalleryNaming(clock),
       galleryCounter: KeyValueGalleryCounterStore(sl<KeyValueStore>()),
       logger: sl<AppLogger>(),
+    ),
+  );
+
+  sl.registerLazySingleton<RecognizePages>(
+    () => RecognizePages(
+      engine: sl<OcrEngine>(),
+      workStore: ocr.workStore,
+      prepare: PrepareImageForOcr(
+        headerReader: ocr.headerReader,
+        dartMaker: ocr.dartMaker,
+        nativeMaker: ocr.nativeMaker,
+        workStore: ocr.workStore,
+      ),
     ),
   );
 

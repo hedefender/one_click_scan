@@ -45,6 +45,11 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
     );
   }
 
+  /// The OCR language pack. Saved at once, like the language.
+  Future<void> selectOcrPack(String packId) {
+    return _applyImmediately((current) => current.copyWith(ocrPackId: packId));
+  }
+
   Future<void> changeFolder() async {
     if (state.folderStatus == SettingsFolderStatus.picking) return;
     emit(state.copyWith(folderStatus: SettingsFolderStatus.picking));

@@ -4,18 +4,24 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/navigation/route_paths.dart';
 import '../../domain/entities/stored_scan.dart';
+import '../../domain/usecases/recognize_pages.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../presentation/state/settings_cubit.dart';
 import '../../services/scan_files/scan_temp_store.dart';
 import 'scan_keys.dart';
 import 'scan_page.dart' show PageThumbnail;
+import 'scan_result_args.dart';
 
 /// Shows what was stored. The cached shots are kept only to draw the
-/// thumbnails and are deleted when this screen is left.
+/// thumbnails and are deleted when this screen is left; the background
+/// reading of the pages (OCR) ends with it too.
 class ScanResultPage extends StatefulWidget {
-  const ScanResultPage({super.key, required this.result});
+  const ScanResultPage({super.key, required this.args});
 
-  final StoredScan result;
+  final ScanResultArgs args;
+
+  StoredScan get result => args.result;
+  OcrSession? get ocr => args.ocr;
 
   @override
   State<ScanResultPage> createState() => _ScanResultPageState();
@@ -32,6 +38,7 @@ class _ScanResultPageState extends State<ScanResultPage> {
 
   @override
   void dispose() {
+    widget.ocr?.dispose();
     _tempStore.delete([
       for (final picture in widget.result.pictures) picture.sourcePath,
     ]);
@@ -79,6 +86,19 @@ class _ScanResultPageState extends State<ScanResultPage> {
                 ],
               ),
             ),
+            if (widget.ocr != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    key: ScanKeys.resultOcr,
+                    onPressed: () =>
+                        context.push(RoutePaths.ocrResult, extra: widget.ocr),
+                    child: Text(strings.ocrOpenResult),
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(24),
               child: SizedBox(

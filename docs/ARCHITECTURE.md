@@ -1,10 +1,11 @@
-# Architecture (Phase 1.2)
+# Architecture (Phase 2)
 
 Status: Phase 0 skeleton and Phase 0.5 settings screen are committed; Phase 1
 adds the camera and saving the originals (see `PHASE_1_VALIDATION.md`);
 Phase 1.1 fixes found in the manual check (see `PHASE_1_1_VALIDATION.md`);
 Phase 1.2 adds the app icon, the splash screen and the Gallery copy names
-(see `PHASE_1_2_VALIDATION.md`, ADR-009).
+(see `PHASE_1_2_VALIDATION.md`, ADR-009); Phase 2 adds the OCR layer
+(section 8d, ADR-010 to ADR-014, `PHASE_2_VALIDATION.md`).
 
 ## 1. Principles
 
@@ -101,6 +102,7 @@ core, shared ◄── used by all, depend on nothing of ours
 | `senderAccount` | Account the app sends from. May differ from the device account so the user's main Sent folder does not fill up. |
 | `destinationMode` / `customDestination` | Send to the sender's own address, or to another address. |
 | `saveToGallery` | Copy originals to the Gallery. Off by default; the wizard explains what sharing to the Gallery means. |
+| `ocrPackId` | OCR language pack (`greek` or `latin`), chosen in Settings (Phase 2). Default `greek` for a Greek device, `latin` otherwise; the wizard does not ask. |
 
 No passwords or tokens are stored in Phase 0. Credentials/OAuth tokens arrive
 with the e-mail phase and will use the platform secure storage, not
@@ -214,14 +216,133 @@ the generated PNGs and checks alpha, transparent corners and the safe zone.
   (`windowSplashScreenBackground`, `windowSplashScreenAnimatedIcon`). Before
   Android 12: `drawable/launch_background.xml` centres the same image.
 
+## 8d. OCR (Phase 2)
+
+Decisions: ADR-010 to ADR-014. Numbers behind them: `OCR_SPIKE_RESULTS.md`
+sections 9 to 11 and `OCR_LANGUAGE_PACKS.md`. The OCR code is new; nothing was
+imported from `spikes/ocr_spike/` (it stays as the reference).
+
+### Layers
+
+```
+domain/
+  entities/   OcrLine (text, confidence, quad of 4 points 0..1, row, filtered,
+              charBoxes = null), OcrResult, OcrOutcome (sealed: OcrSuccess,
+              OcrTimedOut, OcrFailed(reason), OcrCancelled), OcrProgress,
+              UprightImage
+  ocr/        OcrConfig (every tunable), OcrLanguagePack(+Registry),
+              planImageDecode (8 and 50 MP), applyConfidenceFilter,
+              OcrCancellation
+  ports/      OcrEngine, ImageHeaderReader, UprightImageMaker, OcrWorkStore
+  usecases/   PrepareImageForOcr, RecognizePages (+ OcrSession)
+services/
+  image/      header and EXIF parser (pure), DartUprightImageMaker (isolate),
+              NativeUprightImageMaker (MethodChannel .../image_decode),
+              IoOcrWorkStore
+  ocr/        PaddleOcrEngine (root side), paddle_worker.dart (the isolate),
+              paddle/ (pre- and post-processing, CTC), OcrModelStore,
+              model_verification (SHA-256), UnsupportedOcrEngine, OcrServices
+features/ocr/ OcrResultCubit, OcrResultPage (check screen), route /scan/ocr
+```
+
+`domain/` imports only Dart and `equatable`; the engine, the image makers and
+the work store are ports implemented in `services/`. The scan feature knows the
+OCR only through `RecognizePages` and the `OcrSession` it returns; the OCR
+feature only through the session passed as the route's `extra`.
+
+### Data flow of one page
+
+```
+camera shot (cache JPEG)
+   -> OcrSession.add            (returns at once; one page is processed at a time)
+   -> PrepareImageForOcr        header (size, EXIF) -> plan:
+         <= 8 MP   DartUprightImageMaker   (Isolate.run, package:image)
+         <= 50 MP  NativeUprightImageMaker (Kotlin: inSampleSize, rotate, scale)
+         >  50 MP  refused: OcrFailed(imageTooLarge), nothing decoded
+   -> upright working copy (cache/ocr_work, long side <= 2560, JPEG 95)
+   -> PaddleOcrEngine.recognize (root isolate: timeout 45 s, cancel, outcome)
+   -> worker isolate: verify SHA-256 of the model files, load sessions once,
+      decode copy -> detection (960) -> DB boxes -> crops -> recognition
+      (batch 1, CPU) -> CTC -> lines with quads normalised to 0..1,
+      progress events ("line N of M")
+   -> applyConfidenceFilter     (flags lines below 0.5, edits nothing)
+   -> OcrSessionSnapshot stream -> OcrResultCubit -> OcrResultPage
+```
+
+Sizes are the pixels of the decoded image, never the EXIF size tags. The
+header reader returns the SOF size of the stored image and the orientation
+(invalid values mean no rotation).
+
+### The isolate
+
+One long-lived worker isolate per engine. It is spawned on the first
+`preload` or `recognize`, loads the detector and the recogniser of the chosen
+pack once and keeps them. Messages are plain lists. Operations (`load`,
+`recognize`, `release`) run one after the other in a queue, so a cancelled page
+is finished before the next one starts and two pages never share the memory;
+`cancel` is handled at once, between two crops. The root side starts a timer for
+the page and listens to the cancellation token; the first of reply, timeout and
+cancel decides the outcome. Models are extracted from the APK to
+`ocr_models/` in the app support folder by the root isolate (a background
+isolate has no `rootBundle`) and verified by the worker (size and SHA-256)
+every time they are loaded; a file that fails is deleted so the next run
+extracts it again. `release` closes the sessions; `RecognizePages` calls it when
+the result screen is left.
+
+### Pipelining (Multi Page)
+
+`ScanCubit` creates an `OcrSession` with the first shot and adds every shot as
+soon as the camera has written it. The session reads the pages in capture order
+while the next one is photographed; deleting the last shot removes it from the
+queue (or cancels it). Done hands the session to the result screen with
+`ScanState.ocr`; leaving the scan unsaved disposes it. Opening the camera calls
+`preload`, so the first page does not pay for loading the models. A failing or
+refused reading never fails the scan: the pictures are stored as before.
+
+### Language pack
+
+`AppSettings.ocrPackId` (key `settings.ocr.pack`), default `greek` for a Greek
+device and `latin` otherwise, saved at once from Settings
+(`SettingsEditorCubit.selectOcrPack`). The registry holds the SHA-256 and size
+of every file; `assets/ocr/manifest.json` holds the same plus the download URLs
+and a test keeps the two in step.
+
+### Models and build
+
+The models (about 28 MB for the two packs and the detector) are not in git.
+`tool/fetch_ocr_models.sh` downloads them from the pinned URLs of the manifest
+and verifies the SHA-256; the Gradle task `verifyOcrModels` is a dependency of
+`preBuild`, so a build without them, or with a wrong file, fails with a message
+that names the file and the script. `test/services/ocr/ocr_assets_test.dart`
+does the same check in `flutter test`.
+
+Release builds run R8 (`isMinifyEnabled`, `isShrinkResources`) with
+`android/app/proguard-rules.pro` keeping `ai.onnxruntime.**`. The OCR code uses
+no network: a test reads the sources for HTTP clients and sockets, and the
+manifest has no `INTERNET` permission.
+
+### Check screen
+
+`/scan/ocr` (button "OCR text (check)" on the scan result): progress as text
+and a determinate bar, per line the text, confidence and the position of its
+first corner, filtered lines in the error colour with a label, a switch that
+draws the quads over the working image, a summary (pack, time, working image,
+capture resolution, boxes and filtered), page navigation for Multi Page, and a
+button that copies the visible text. Nothing on it animates continuously.
+
 ## 9. Testing strategy
 
 | Level | What | Where |
 |---|---|---|
-| Unit | entities, validators, data source, repository, use cases, cubits, strings | `test/` |
+| Unit | entities, validators, data source, repository, use cases, cubits, strings, OCR maths (pre/post-processing, CTC), image header and EXIF, model verification | `test/` |
 | Widget | whole wizard flow through the real app widget with fakes | `test/features/first_run/` |
 | Integration | wizard, settings and scan flows with real rendering on an emulator (fake folder picker, fake camera and folder store); `camera_smoke_test.dart` uses the real camera on the `virtualscene` | `integration_test/` |
 | Manual | real SAF picker, real device, visual check | `PHASE_0_VALIDATION.md` |
+
+`integration_test/ocr_engine_test.dart` runs the real models on the emulator
+(invented pages: key tokens, coordinates, EXIF, 12 MP, 200 MP header, cancel,
+timeout, Multi Page); `integration_test/ocr_release_smoke_test.dart` is the same
+engine in a release build.
 
 `integration_test/gallery_copy_test.dart` saves a synthetic picture through the
 real `gal` plugin (Gallery file name).
@@ -252,8 +373,9 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 |---|---|---|
 | 0.5 | Settings screen, folder health check | feature `settings`, `HomeCubit` |
 | 1 | `CameraService`, originals into `./pictures` (done) | `services/camera/` + feature `scan` |
-| 1.5 / 2 | `OcrEngine` interface and engine(s) | `services/ocr/` |
-| 3 | `PdfGenerator` into `./pdf` (text layer decision) | `services/pdf/` |
+| 2 | `OcrEngine` + Paddle PP-OCRv5, upright working copy, language packs (done, 8d) | `services/ocr/`, `services/image/` |
+| 1.7 | Spike: searchable PDF, select and copy a code on the phone | spike only |
+| 3 | `PdfGenerator` into `./pdf` (text layer; uses the upright working copy and the line quads) | `services/pdf/` |
 | 4 | `MailProvider` (+ implementations) | `services/mail/` |
 | 5 | One-click orchestration use case | `domain/usecases/`, feature `scan` |
 | 6 | Image enhancement | `services/` (Rust candidate) |

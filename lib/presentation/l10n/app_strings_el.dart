@@ -216,4 +216,116 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get settingsStay => 'Μείνε';
+
+  @override
+  String get ocrOpenResult => 'Κείμενο OCR (έλεγχος)';
+
+  @override
+  String get ocrResultTitle => 'Κείμενο OCR';
+
+  @override
+  String ocrPageOf(int page, int total) => 'Σελίδα $page από $total';
+
+  @override
+  String get ocrStatusQueued => 'Αναμονή για την προηγούμενη σελίδα';
+
+  @override
+  String get ocrStatusLoadingModels => 'Φόρτωση των γλωσσικών μοντέλων';
+
+  @override
+  String get ocrStatusPreparing => 'Προετοιμασία της εικόνας';
+
+  @override
+  String get ocrStatusDetecting => 'Αναζήτηση κειμένου';
+
+  @override
+  String ocrStatusRecognizing(int done, int total) =>
+      total == 0 ? 'Ανάγνωση κειμένου' : 'Ανάγνωση γραμμής $done από $total';
+
+  @override
+  String ocrSummaryPack(String name) => 'Πακέτο γλώσσας: $name';
+
+  @override
+  String ocrSummaryDuration(String seconds) => 'Χρόνος: $seconds s';
+
+  @override
+  String ocrSummaryWorkImage(int width, int height) =>
+      'Εικόνα εργασίας: $width x $height px';
+
+  @override
+  String ocrSummaryCapture(int width, int height, String megapixels) =>
+      'Λήψη: $width x $height px ($megapixels MP)';
+
+  @override
+  String ocrSummaryBoxes(int boxes, int filtered) =>
+      'Κουτιά: $boxes (φιλτραρισμένα: $filtered)';
+
+  @override
+  String get ocrFilteredLabel => 'φιλτραρισμένη, χαμηλή βεβαιότητα';
+
+  @override
+  String get ocrNoText => 'Δεν βρέθηκε κείμενο σε αυτή τη σελίδα.';
+
+  @override
+  String get ocrCopy => 'Αντιγραφή κειμένου';
+
+  @override
+  String get ocrCopied => 'Το κείμενο αντιγράφηκε.';
+
+  @override
+  String get ocrShowBoxes => 'Εμφάνιση κουτιών πάνω στην εικόνα';
+
+  @override
+  String get ocrTimedOut =>
+      'Η ανάγνωση της σελίδας κράτησε πολύ και σταμάτησε.';
+
+  @override
+  String get ocrCancelled => 'Η ανάγνωση ακυρώθηκε.';
+
+  @override
+  String get ocrFailedModel =>
+      'Το γλωσσικό μοντέλο λείπει ή είναι κατεστραμμένο. Ξαναεγκατάστησε την εφαρμογή.';
+
+  @override
+  String get ocrFailedImage => 'Η εικόνα δεν μπόρεσε να διαβαστεί.';
+
+  @override
+  String get ocrFailedTooLarge =>
+      'Η εικόνα είναι πολύ μεγάλη για ανάγνωση (πάνω από 50 megapixels).';
+
+  @override
+  String get ocrFailedUnsupported =>
+      'Η ανάγνωση κειμένου δεν είναι διαθέσιμη εδώ.';
+
+  @override
+  String get ocrFailedEngine => 'Η ανάγνωση αυτής της σελίδας απέτυχε.';
+
+  @override
+  String get ocrSettingsTitle => 'Γλώσσα ανάγνωσης κειμένου (OCR)';
+
+  @override
+  String get ocrSettingsNote =>
+      'Επίλεξε το πακέτο που ταιριάζει στα έγγραφά σου. Η εφαρμογή δεν '
+      'μαντεύει τη γλώσσα: μια ελληνική σελίδα που διαβάζεται με το λατινικό '
+      'πακέτο, ή μια γαλλική με το ελληνικό, βγαίνει λάθος. Όλα διαβάζονται '
+      'πάνω στο κινητό, τίποτα δεν στέλνεται κάπου.';
+
+  @override
+  String ocrPackName(String packId) => switch (packId) {
+    'greek' => 'Ελληνικά + Αγγλικά',
+    'latin' => 'Λατινική γραφή',
+    _ => packId,
+  };
+
+  @override
+  String ocrPackDescription(String packId) => switch (packId) {
+    'greek' => 'Ελληνικό και αγγλικό κείμενο.',
+    'latin' =>
+      'Αγγλικά και γλώσσες με λατινικά γράμματα και τόνους: γερμανικά, '
+          'γαλλικά, ισπανικά, ιταλικά, πορτογαλικά κ.ά. Δεν διαβάζει ελληνικά.',
+    _ => '',
+  };
+
+  @override
+  String get licensesOpen => 'Άδειες ανοιχτού λογισμικού';
 }

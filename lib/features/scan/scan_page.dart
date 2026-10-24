@@ -11,6 +11,7 @@ import '../../presentation/l10n/app_strings.dart';
 import '../../services/camera/camera_service.dart';
 import 'scan_cubit.dart';
 import 'scan_keys.dart';
+import 'scan_result_args.dart';
 import 'scan_state.dart';
 
 class ScanPage extends StatefulWidget {
@@ -85,7 +86,10 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
       listenWhen: (previous, current) =>
           previous.phase != ScanPhase.saved && current.phase == ScanPhase.saved,
       listener: (context, state) {
-        context.pushReplacement(RoutePaths.scanResult, extra: state.result);
+        context.pushReplacement(
+          RoutePaths.scanResult,
+          extra: ScanResultArgs(result: state.result!, ocr: state.ocr),
+        );
       },
       builder: (context, state) {
         final saving = state.phase == ScanPhase.saving;

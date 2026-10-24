@@ -36,7 +36,8 @@ void main() {
     );
     expect(
       await makeRepository(AppLanguage.el).load(),
-      const AppSettings(language: AppLanguage.el),
+      // A Greek device starts with the Greek OCR pack, every other with Latin.
+      const AppSettings(language: AppLanguage.el, ocrPackId: 'greek'),
     );
   });
 
@@ -49,6 +50,7 @@ void main() {
       destinationMode: DestinationMode.custom,
       customDestination: 'other@example.com',
       saveToGallery: true,
+      ocrPackId: 'greek',
     );
 
     await repository.save(settings);

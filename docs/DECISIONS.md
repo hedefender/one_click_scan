@@ -97,3 +97,89 @@ generated files are committed:
   image is centred by `launch_background`. No splash package is used.
 - Out of scope: monochrome (themed) icon.
 
+
+## ADR-010 OCR engine: Paddle only, behind `OcrEngine`
+Scan reads text with PaddleOCR PP-OCRv5 (detection + recognition, ONNX
+Runtime through `flutter_onnxruntime`). No ML Kit (no Greek, and it crashed
+under R8 in the spike) and no Tesseract (does not build with the current Gradle
+template, and it ignores the EXIF orientation). The domain only knows the port
+`OcrEngine` (`domain/ports/ocr_engine.dart`), so the engine can be replaced
+without touching the use cases or the UI.
+
+The run configuration comes from the phone measurements of Phase 1.6 to 1.6c
+and lives in one place, `OcrConfig` (no magic numbers elsewhere):
+
+- provider CPU, recognition batch 1 (batch 4 or 8 was 40% to 70% slower on the
+  phone), detection side 960 (peak memory about 616 MB; 1280 gave about
+  1031 MB), 4 threads (the spike default; the thread grid on the phone is not
+  finished);
+- the stock recognition model, not the ArgMax derivative: it was about 6%
+  slower on the phone and saved only about 250 ms of CTC decoding, which typed
+  loops in Dart do in about 70 ms. Models stay exactly as their source
+  publishes them (one hash each);
+- XNNPACK and NNAPI are not used: they did not beat the noise on the phone and
+  the accuracy check on the phone was never made;
+- the engine lives in one long-lived background isolate with the models loaded
+  once. On the phone this does not make the reading faster, but it keeps the UI
+  isolate free (a stall of about 20 ms against 125 to 150 ms);
+- the page timeout is 45 s and the result is a sealed type (`success`,
+  `timedOut`, `failed(reason)`, `cancelled`), never an exception to the UI.
+
+## ADR-011 Language packs per script, chosen by the user
+A pack is one recognition model with its dictionary; the detector is shared.
+Two packs are bundled: `greek` (Greek and English, about 7.8 MB) and `latin`
+(English and the Latin-script languages with accents, about 7.9 MB). The
+choice is explicit and visible in Settings; the app never detects the language,
+because a wrong pack fails badly (mixed Greek and English: Greek pack CER 2.9%,
+Latin pack 26%; accented lines: Greek pack 0 of 284 accented letters, Latin pack
+284 of 284; see `OCR_LANGUAGE_PACKS.md`).
+
+First run: `greek` when the device language is Greek, `latin` otherwise. The
+choice is stored in the key/value store (`settings.ocr.pack`); the first-run
+wizard is unchanged. The registry (`OcrLanguagePackRegistry`) describes packs
+with an availability (`bundled` or `downloadable`) so that packs outside the APK
+(ru and others) fit later; downloading is future work and there is no network
+code in the OCR layer. Packs not in the APK must be fetched from our own hosting
+with a pinned SHA-256 (see the open item in `THIRD_PARTY_NOTICES.md`).
+
+## ADR-012 The OCR sits on the SCAN & SEND path
+The PDF of Phase 3 is meant to be searchable (an invisible text layer), so the
+text and its geometry are needed while the document is made, not afterwards.
+That is why the OCR result carries four corner points per line, normalised to
+the upright working image, and why the reading of each page starts as soon as
+the page is shot (Multi Page: the next page is photographed while the previous
+one is read). Per-character boxes (`charBoxes`) stay empty in Phase 2: Phase
+1.7 decides, on the phone, whether the selection and copying of a code such as
+an RF code needs them. The text screen of Phase 2 is a check tool, not the final
+UX (the final flow is one click with no text screen).
+
+## ADR-013 The scanner never changes the text it reads
+No correction of look-alike letters (Greek and Latin), no spell checking, no
+normalisation. The only thing allowed is to flag lines of low confidence
+(handwriting that comes out as rubbish): below `OcrConfig.minLineConfidence` the
+line is marked `filtered`. The result keeps every raw line and the flag; only
+the visible text leaves the flagged lines out. The threshold is 0.5, the
+`drop_score` default of PaddleOCR itself; the spike recorded only mean
+confidences, so there is no tuned figure of our own (Phase 2 measurements are in
+`PHASE_2_VALIDATION.md`). Any matching that must tolerate look-alike letters
+belongs to the consumer (Budget normalises text already).
+
+## ADR-014 Image decode policy
+- Never decode on the UI isolate. The 200 MP photo of Phase 1.6c froze the UI
+  for about 8 s per Dart decode and ended in the "not responding" dialog.
+- The header is read first (JPEG SOF or PNG IHDR, a few small reads) and gives
+  the size without decoding anything.
+- Up to 8 MP: `package:image` in a background isolate. Above 8 MP and up to
+  50 MP: native decode in Kotlin (`ImageDecodeHandler`), with `inSampleSize`
+  so the full-size bitmap is never created, then rotation and scaling in one
+  pass. Above 50 MP: refused with `imageTooLarge` (the reading fails, the scan is
+  still saved); the limit is inclusive at both ends.
+- The result is the upright working copy: EXIF orientation applied (the invalid
+  value 0, and anything outside 1 to 8, mean no rotation), long side at most
+  2560, JPEG quality 95, in the app cache (`ocr_work/`, purged at start-up).
+  The PDF of Phase 3 will use the same file.
+- Sizes are the pixels of the decoded image and the header's SOF size, never
+  `ExifImageWidth/Height` (false on Xiaomi camera files: 1840x4080 for a
+  972x1260 file).
+- One image at a time, buffers released after each page, models released when
+  the result screen is left.

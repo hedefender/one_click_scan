@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/errors/app_exceptions.dart';
@@ -5,6 +7,7 @@ import '../../core/logging/app_logger.dart';
 import '../../domain/entities/scan_mode.dart';
 import '../../domain/entities/storage_folder.dart';
 import '../../domain/usecases/load_settings.dart';
+import '../../domain/usecases/recognize_pages.dart';
 import '../../domain/usecases/store_scan_pages.dart';
 import '../../services/camera/camera_service.dart';
 import '../../services/scan_files/scan_temp_store.dart';
@@ -19,6 +22,7 @@ class ScanCubit extends Cubit<ScanState> {
     required this._folderPicker,
     required this._camera,
     required this._storeScanPages,
+    required this._recognizePages,
     required this._tempStore,
     required this._logger,
   }) : super(const ScanState());
@@ -27,14 +31,26 @@ class ScanCubit extends Cubit<ScanState> {
   final StorageFolderPicker _folderPicker;
   final CameraService _camera;
   final StoreScanPages _storeScanPages;
+  final RecognizePages _recognizePages;
   final ScanTempStore _tempStore;
   final AppLogger _logger;
+
+  /// Language pack of this scan, read once when the scan starts.
+  String? _packId;
+
+  /// Reads the pages in the background while the next ones are shot. Created
+  /// with the first page; handed to the result screen once the scan is saved.
+  OcrSession? _ocr;
+
+  /// The models were loaded ahead of time and nobody has used them yet.
+  var _preloaded = false;
 
   /// Entry point (and "try again" after a denied permission or a missing
   /// folder). Nothing starts without an accessible folder.
   Future<void> start() async {
     emit(state.copyWith(phase: ScanPhase.starting));
     final settings = await _loadSettings();
+    _packId = settings.ocrPackId;
     final folder = settings.storageFolder;
     final accessible = folder != null && await _hasAccess(folder);
     if (isClosed) return;
@@ -62,6 +78,7 @@ class ScanCubit extends Cubit<ScanState> {
       emit(
         state.copyWith(phase: ScanPhase.ready, pages: [...state.pages, page]),
       );
+      _readInBackground(page.path);
     } on CameraCaptureException catch (error, stackTrace) {
       _logger.error('Capture failed', error, stackTrace);
       if (isClosed) return;
@@ -81,6 +98,7 @@ class ScanCubit extends Cubit<ScanState> {
         captureFailed: false,
       ),
     );
+    await _ocr?.remove(removed.path);
     await _tempStore.delete([removed.path]);
   }
 
@@ -116,7 +134,8 @@ class ScanCubit extends Cubit<ScanState> {
       );
       if (isClosed) return;
       await _camera.close();
-      emit(state.copyWith(phase: ScanPhase.saved, result: stored));
+      _ocr?.close();
+      emit(state.copyWith(phase: ScanPhase.saved, result: stored, ocr: _ocr));
     } on ScanStoreException catch (error, stackTrace) {
       _logger.error('Storing the scan failed', error, stackTrace);
       if (isClosed) return;
@@ -166,7 +185,9 @@ class ScanCubit extends Cubit<ScanState> {
   /// Cache files of pages that were never stored. After a successful save the
   /// result screen still shows them as thumbnails and deletes them itself.
   Future<void> _discardUnsavedPages() async {
-    if (state.phase == ScanPhase.saved || !state.hasPages) return;
+    if (state.phase == ScanPhase.saved) return;
+    await _stopReading();
+    if (!state.hasPages) return;
     final paths = [for (final page in state.pages) page.path];
     if (!isClosed) emit(state.copyWith(pages: const []));
     await _tempStore.delete(paths);
@@ -192,11 +213,38 @@ class ScanCubit extends Cubit<ScanState> {
     }
   }
 
+  /// Starts reading a shot at once, while the camera goes on. Never delays
+  /// or fails the scan: the session reports problems as outcomes.
+  void _readInBackground(String path) {
+    final packId = _packId;
+    if (packId == null) return;
+    final session = _ocr ??= _recognizePages.start(packId: packId);
+    session.add(path, path);
+  }
+
+  /// The scan was abandoned: stop reading and drop the working copies.
+  Future<void> _stopReading() async {
+    final session = _ocr;
+    _ocr = null;
+    if (session != null) {
+      await session.dispose(); // also frees the models
+    } else if (_preloaded) {
+      await _recognizePages.release();
+    }
+    _preloaded = false;
+  }
+
   Future<void> _openCamera() async {
     final result = await _camera.open();
     if (isClosed) {
       await _camera.close();
       return;
+    }
+    final packId = _packId;
+    if (result == CameraOpenResult.ready && packId != null) {
+      // Loads the models while the user frames the page; best effort.
+      _preloaded = true;
+      unawaited(_recognizePages.preload(packId));
     }
     emit(
       state.copyWith(

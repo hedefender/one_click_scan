@@ -49,3 +49,8 @@ app.*.map.json
 
 .idea/
 *.iml
+
+# OCR models are downloaded by tool/fetch_ocr_models.sh (not in git)
+/assets/ocr/models/*
+!/assets/ocr/models/.gitkeep
+/android/build/

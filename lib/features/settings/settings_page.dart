@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/app_language.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/ocr/ocr_language_pack_registry.dart';
 import '../../domain/validation/mail_settings_validation.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../presentation/l10n/mail_provider_labels.dart';
@@ -73,6 +74,10 @@ class SettingsPage extends StatelessWidget {
                         _MailSection(state: state),
                         const SizedBox(height: 32),
                         _GallerySection(state: state),
+                        const SizedBox(height: 32),
+                        _OcrSection(state: state),
+                        const SizedBox(height: 32),
+                        const _LicensesSection(),
                       ],
                     )
                   : const Center(child: CircularProgressIndicator()),
@@ -375,6 +380,67 @@ class _GallerySection extends StatelessWidget {
           onChanged: cubit.setSaveToGallery,
         ),
       ],
+    );
+  }
+}
+
+/// The OCR language pack. The choice is explicit: the scanner never guesses
+/// the language, and a wrong pack reads a page badly.
+class _OcrSection extends StatelessWidget {
+  const _OcrSection({required this.state});
+
+  final SettingsEditorState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final cubit = context.read<SettingsEditorCubit>();
+    final registry = context.read<OcrLanguagePackRegistry>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(strings.ocrSettingsTitle),
+        Text(
+          strings.ocrSettingsNote,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        RadioGroup<String>(
+          groupValue: state.saved!.ocrPackId,
+          onChanged: (id) {
+            if (id != null) cubit.selectOcrPack(id);
+          },
+          child: Column(
+            children: [
+              for (final pack in registry.bundled)
+                RadioListTile<String>(
+                  key: SettingsKeys.ocrPack(pack.id),
+                  contentPadding: EdgeInsets.zero,
+                  value: pack.id,
+                  title: Text(strings.ocrPackName(pack.id)),
+                  subtitle: Text(strings.ocrPackDescription(pack.id)),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LicensesSection extends StatelessWidget {
+  const _LicensesSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return ListTile(
+      key: SettingsKeys.licenses,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.description_outlined),
+      title: Text(strings.licensesOpen),
+      onTap: () =>
+          showLicensePage(context: context, applicationName: strings.appTitle),
     );
   }
 }

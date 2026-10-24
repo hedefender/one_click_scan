@@ -22,6 +22,9 @@ dependencies:
   camera: ^0.12.1
   gal: ^2.3.3
   path_provider: ^2.1.6
+  flutter_onnxruntime: ^1.9.0
+  image: ^4.12.0
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:
@@ -29,7 +32,10 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  image: ^4.12.0
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/ocr/manifest.json
+    - assets/ocr/models/
+    - assets/licenses/
