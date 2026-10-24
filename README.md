@@ -8,7 +8,7 @@ the original JPEGs and `pdf/` holds the PDFs, with matching names
 (`YYYY-MM-DD_HH-MM-SS`). Scan produces no JSON; the Budget app reads the PDFs
 directly. The app theme always follows the device theme.
 
-Status: Phase 2 (OCR inside the app: Paddle PP-OCRv5 behind `OcrEngine`, upright working copy, language packs, OCR check screen; the OCR spikes of Phase 1.5 to 1.6c stay in `spikes/ocr_spike/` as the reference). See `docs/`:
+Status: Phase 2.1 (spike: searchable PDF, `spikes/pdf_spike/`) after Phase 2 (OCR inside the app: Paddle PP-OCRv5 behind `OcrEngine`, upright working copy, language packs, OCR check screen; the OCR spikes of Phase 1.5 to 1.6c stay in `spikes/ocr_spike/` as the reference). See `docs/`:
 
 - `ARCHITECTURE.md`
 - `PHASE_0_PLAN.md`
@@ -20,6 +20,8 @@ Status: Phase 2 (OCR inside the app: Paddle PP-OCRv5 behind `OcrEngine`, upright
 - `PHASE_1_5_VALIDATION.md`
 - `PHASE_1_6_VALIDATION.md`
 - `PHASE_2_VALIDATION.md`
+- `PHASE_2_1_VALIDATION.md`
+- `PDF_SPIKE_RESULTS.md`
 - `THIRD_PARTY_NOTICES.md`
 - `OCR_LANGUAGE_PACKS.md`
 - `OCR_SPIKE_RESULTS.md`

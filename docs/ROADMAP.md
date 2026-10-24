@@ -20,7 +20,7 @@ and the order of the first roadmap.)
 | 1.6b | Controlled phone measurements (UI load A/B, provider x threads, provider accuracy, best preset) and language-pack inventory, spike and docs only | **Tooling done and checked on the emulator; phone numbers by the user pending** (`PHASE_1_6_VALIDATION.md`). Results: `OCR_SPIKE_RESULTS.md` section 10; `OCR_LANGUAGE_PACKS.md` |
 | 1.6c | Spike crash on a 200 MP sample, safe harness (size guard, breadcrumb and resume, wake lock, exit reasons), paired A/B, language-pack measurements | **Done on the emulator; phone repeat of A to D and the paired test by the user pending** (`PHASE_1_6_VALIDATION.md`). Results: `OCR_SPIKE_RESULTS.md` section 11; `OCR_LANGUAGE_PACKS.md` |
 | 2 | OCR in the app: `OcrEngine` + Paddle PP-OCRv5 (background isolate), language packs, upright working copy, check screen | **Done on the emulator; phone check by the user pending** (`PHASE_2_VALIDATION.md`). Architecture: `ARCHITECTURE.md` 8d; decisions ADR-010 to ADR-014; third-party licences `THIRD_PARTY_NOTICES.md`. No PDF, no mail, no JSON |
-| 2.1 | Spike: searchable PDF on the phone (hidden text under the picture): can the user select and copy a code such as an RF code? Decides whether per-character boxes (`OcrLine.charBoxes`, empty in Phase 2) are needed | Spike only, before Phase 3; uses the upright working copy and the line quads of Phase 2 |
+| 2.1 | Spike: searchable PDF on the phone (hidden text under the picture): can the user select and copy a code such as an RF code? Decides whether per-character boxes (`OcrLine.charBoxes`, empty in Phase 2) are needed | **Done on the emulator and the PC; phone viewer table by the user pending** (`PHASE_2_1_VALIDATION.md`). Results: `PDF_SPIKE_RESULTS.md`. Hidden text works in the emulator's viewer for per-line and per-word layouts, with a Noto subset (`pdf` package) and with a generated glyphless font (glyphs must not be empty); per-word is the proposal; `charBoxes` are needed (from the CTC time steps, no extra inference). Spike in `spikes/pdf_spike/` |
 | 3 | PDF generation (single and multi page) into `./pdf` | Decision on the text layer, see "Open decisions" |
 | 4 | Mail: `MailProvider` interface, direct sending, separate sender account | Auth approach (OAuth vs app password) decided at the start of this phase |
 | 5 | One-click SCAN & SEND | Empty OCR: still send the mail with the PDF and notify the user |
@@ -32,6 +32,13 @@ Handwritten, multi-page bills are expected: Single/Multi Page is an independent
 choice.
 
 ## Open decisions
+
+- **Phase 3 proposal (from Phase 2.1, `PDF_SPIKE_RESULTS.md` section 5; decided after the
+  phone viewer table).** Writer: own glyphless writer (5 to 10 KB, any script, no
+  font asset) with the `pdf` package plus a Noto Sans subset as the alternative;
+  layout: one hidden run per word; the engine returns `charBoxes` from the CTC
+  time steps; the page image is the Phase 2 working copy passed through; a
+  check-digit test of RF and IBAN codes (warn, never edit) as a safety net.
 
 - **Searchable PDF vs Budget OCR (decided in Phase 3).** For Budget to read text
   from a PDF, either the Scan PDF carries an invisible text layer (searchable

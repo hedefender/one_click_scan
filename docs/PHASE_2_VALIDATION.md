@@ -98,11 +98,11 @@ modes. The preset is therefore left as it is.
 - Above 400 MP, or a file the decoder cannot read: the scan is saved, the
   reading fails with "The picture is too large to read (over 400 megapixels)" or
   "The picture could not be read", and nothing crashes.
-- Manual check if you have a very large photo (for example your 200 MP leaflet
-  of Phase 1.6c): put it through the app (share or the camera's high resolution
-  mode) and tell me the **Capture** line and the **Time**; I could not run a
-  200 MP photo on the 2 GB emulator without risking its memory (a 54 MP photo
-  was tested instead).
+- The native decode above 8 MP is a **safety net for other devices**: the app
+  has no image import and the camera of your phone gives 12.5 MP, so a photo
+  above 50 MP cannot normally reach it. It was checked only with a real 54 MP
+  photo on the emulator and, earlier, by the spike (Phase 1.6c) on the phone;
+  no 200 MP photo was run through the app, and there is no manual step for it.
 
 ## 7. Multi Page: reading while you shoot
 
