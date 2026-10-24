@@ -259,6 +259,10 @@ class AppStringsEn extends AppStrings {
       'Boxes: $boxes (filtered: $filtered)';
 
   @override
+  String ocrSummaryBorderline(int count) =>
+      'Borderline lines (0.50 to 0.65): $count';
+
+  @override
   String get ocrFilteredLabel => 'filtered, low confidence';
 
   @override
@@ -288,7 +292,7 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get ocrFailedTooLarge =>
-      'The picture is too large to read (over 50 megapixels).';
+      'The picture is too large to read (over 400 megapixels).';
 
   @override
   String get ocrFailedUnsupported => 'Text reading is not available here.';

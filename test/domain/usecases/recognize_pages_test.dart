@@ -104,11 +104,11 @@ void main() {
     });
 
     test(
-      'a 200 MP photo fails as too large, the next page still works',
+      'a 500 MP header fails as too large, the next page still works',
       () async {
         rig.header.headers['huge.jpg'] = const ImageHeader(
-          width: 12240,
-          height: 16320,
+          width: 25000,
+          height: 20000,
           orientation: 1,
         );
         final session = rig.recognize.start(packId: 'greek')

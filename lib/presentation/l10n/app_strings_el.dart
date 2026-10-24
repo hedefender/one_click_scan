@@ -261,6 +261,10 @@ class AppStringsEl extends AppStrings {
       'Κουτιά: $boxes (φιλτραρισμένα: $filtered)';
 
   @override
+  String ocrSummaryBorderline(int count) =>
+      'Οριακές γραμμές (0,50 έως 0,65): $count';
+
+  @override
   String get ocrFilteredLabel => 'φιλτραρισμένη, χαμηλή βεβαιότητα';
 
   @override
@@ -291,7 +295,7 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get ocrFailedTooLarge =>
-      'Η εικόνα είναι πολύ μεγάλη για ανάγνωση (πάνω από 50 megapixels).';
+      'Η εικόνα είναι πολύ μεγάλη για ανάγνωση (πάνω από 400 megapixels).';
 
   @override
   String get ocrFailedUnsupported =>

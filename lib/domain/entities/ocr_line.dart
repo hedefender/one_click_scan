@@ -13,7 +13,7 @@ class OcrPoint extends Equatable {
 }
 
 /// Box of one recognised character. Not produced in Phase 2 (the searchable
-/// PDF spike of Phase 1.7 decides whether it is needed).
+/// PDF spike of Phase 2.1 decides whether it is needed).
 class OcrCharBox extends Equatable {
   const OcrCharBox({required this.character, required this.quad});
 

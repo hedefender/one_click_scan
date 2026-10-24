@@ -149,7 +149,7 @@ That is why the OCR result carries four corner points per line, normalised to
 the upright working image, and why the reading of each page starts as soon as
 the page is shot (Multi Page: the next page is photographed while the previous
 one is read). Per-character boxes (`charBoxes`) stay empty in Phase 2: Phase
-1.7 decides, on the phone, whether the selection and copying of a code such as
+2.1 decides, on the phone, whether the selection and copying of a code such as
 an RF code needs them. The text screen of Phase 2 is a check tool, not the final
 UX (the final flow is one click with no text screen).
 
@@ -158,10 +158,13 @@ No correction of look-alike letters (Greek and Latin), no spell checking, no
 normalisation. The only thing allowed is to flag lines of low confidence
 (handwriting that comes out as rubbish): below `OcrConfig.minLineConfidence` the
 line is marked `filtered`. The result keeps every raw line and the flag; only
-the visible text leaves the flagged lines out. The threshold is 0.5, the
-`drop_score` default of PaddleOCR itself; the spike recorded only mean
-confidences, so there is no tuned figure of our own (Phase 2 measurements are in
-`PHASE_2_VALIDATION.md`). Any matching that must tolerate look-alike letters
+the visible text leaves the flagged lines out. The threshold is 0.65 (user
+decision after the first phone check; first version 0.5, PaddleOCR's own
+`drop_score`). Observed: pen strokes that are not text scored 0.38 to 0.60, clean,
+blurred and faint printed text 0.96 to 1.00 (invented pages; measurements in
+`PHASE_2_VALIDATION.md`). The check screen counts the "borderline" lines
+(0.50 to 0.65) so the effect on real documents can be judged. Threads stay at
+4: more do not help on the phone's small cores. Any matching that must tolerate look-alike letters
 belongs to the consumer (Budget normalises text already).
 
 ## ADR-014 Image decode policy
@@ -169,11 +172,20 @@ belongs to the consumer (Budget normalises text already).
   for about 8 s per Dart decode and ended in the "not responding" dialog.
 - The header is read first (JPEG SOF or PNG IHDR, a few small reads) and gives
   the size without decoding anything.
-- Up to 8 MP: `package:image` in a background isolate. Above 8 MP and up to
-  50 MP: native decode in Kotlin (`ImageDecodeHandler`), with `inSampleSize`
-  so the full-size bitmap is never created, then rotation and scaling in one
-  pass. Above 50 MP: refused with `imageTooLarge` (the reading fails, the scan is
-  still saved); the limit is inclusive at both ends.
+- Up to 8 MP: `package:image` in a background isolate. Above 8 MP: native
+  decode in Kotlin (`ImageDecodeHandler`), with `inSampleSize` so the
+  full-size bitmap is never created (the bitmap is at most about 5120 x 5120,
+  105 MB, whatever the file size), then rotation and scaling in one pass.
+  The 50 MP limit is the limit of a FULL decode, which never happens above it.
+  First version of this ADR (phase 2) refused everything above 50 MP; the
+  first phone check (camera 3060 x 4080, 12.5 MP) and the Phase 1.6c data (200 MP
+  sample: native decode 130 to 330 ms, peak memory about 500 MB) showed that
+  was too strict.
+- Ceiling: a header above 400 MP (`OcrConfig.maxMegapixels`, twice the largest
+  sensor mode seen) or an unreadable header fails with `imageTooLarge` or
+  `imageUnreadable`; a file the native decoder cannot read fails as
+  `imageUnreadable`. In all cases nothing crashes and the scan is still saved.
+  The limits are inclusive.
 - The result is the upright working copy: EXIF orientation applied (the invalid
   value 0, and anything outside 1 to 8, mean no rotation), long side at most
   2560, JPEG quality 95, in the app cache (`ocr_work/`, purged at start-up).

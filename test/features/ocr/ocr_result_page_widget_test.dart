@@ -165,6 +165,7 @@ void main() {
       expect(find.text('Working image: 1000 x 1400 px'), findsOneWidget);
       expect(find.text('Capture: 2000 x 2000 px (4.0 MP)'), findsOneWidget);
       expect(find.text('Boxes: 3 (filtered: 1)'), findsOneWidget);
+      expect(find.text('Borderline lines (0.50 to 0.65): 0'), findsOneWidget);
     });
 
     testWidgets('Copy puts the visible text on the clipboard, not the '
@@ -312,7 +313,7 @@ void main() {
       await failWith(tester, const OcrFailed(OcrFailureReason.imageTooLarge));
 
       expect(
-        find.text('The picture is too large to read (over 50 megapixels).'),
+        find.text('The picture is too large to read (over 400 megapixels).'),
         findsOneWidget,
       );
     });

@@ -31,10 +31,21 @@ abstract final class OcrConfig {
   /// decoding.
   static const dartDecodeMaxMegapixels = 8.0;
 
-  /// Above this many megapixels the image is refused: the header is read
-  /// first and nothing is decoded. A Dart decode of 200 MP took about 8 s of
-  /// frozen UI on the phone (the ANR of Phase 1.6c).
-  static const maxMegapixels = 50.0;
+  /// A full-size decode is never made above this many megapixels, in Dart or
+  /// natively. The native path above it does not decode full size: it uses
+  /// `inSampleSize`, so the bitmap it creates is at most about 5120 x 5120
+  /// (about 105 MB) whatever the size of the file. Kept as the documented
+  /// boundary of the policy (Phase 1.6c: a full Dart decode of 200 MP froze
+  /// the UI for about 8 s).
+  static const fullDecodeMaxMegapixels = 50.0;
+
+  /// Above this many megapixels in the header the image is refused
+  /// (`imageTooLarge`) without decoding anything. 400 MP is twice the largest
+  /// phone sensor mode seen (200 MP, the Phase 1.6c sample), and a sampled
+  /// decode of it is a long side of 20000 px scaled by 1/4. The memory of the
+  /// sampled decode does not grow with the file; the time does (reading the
+  /// JPEG), which the 45 s page timeout bounds.
+  static const maxMegapixels = 400.0;
 
   // ------------------------------------------------------------------ policy
 
@@ -43,10 +54,16 @@ abstract final class OcrConfig {
 
   /// Lines whose confidence (mean of the per-character probabilities) is
   /// below this are flagged as filtered. They are kept in the result; only the
-  /// visible text leaves them out. 0.5 is the `drop_score` default of
-  /// PaddleOCR itself; the spike recorded only mean confidences, so there is
-  /// no tuned figure of our own (see `docs/PHASE_2_VALIDATION.md`).
-  static const minLineConfidence = 0.5;
+  /// visible text leaves them out. 0.65 is the user's decision after the first
+  /// phone check. Observed: pen strokes that are not text scored 0.38 to 0.60
+  /// (emulator and phone), clean, blurred and faint printed text 0.96 to 1.00
+  /// on invented pages. PaddleOCR's own `drop_score` default is 0.5.
+  static const minLineConfidence = 0.65;
+
+  /// Lines from here up to [minLineConfidence] are "borderline": kept, but
+  /// counted on the check screen so the effect of the threshold on real
+  /// documents is visible (numbers only).
+  static const borderlineConfidence = 0.5;
 
   /// How long a model-preload request may take before the camera screen
   /// stops caring. The preload never blocks the camera.

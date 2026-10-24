@@ -156,12 +156,12 @@ void main() {
     expect(done.pages.single.outcome, isA<OcrFailed>());
   });
 
-  test('a photo above 50 MP: the scan is saved, the reading fails as too '
+  test('a photo above 400 MP: the scan is saved, the reading fails as too '
       'large', () async {
     await setUpWith();
     rig.header.headers['cache/fake_page_1.jpg'] = const ImageHeader(
-      width: 12240,
-      height: 16320,
+      width: 25000,
+      height: 20000,
       orientation: 1,
     );
     await cubit.start();

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -346,22 +348,57 @@ void main() {
     await ocr.workStore.delete(upright.path);
   });
 
-  testWidgets('a 200 MP photo is refused from its header, no crash', (
-    tester,
-  ) async {
-    final file = writeFakeHugeJpeg(
-      '${work.path}/huge.jpg',
+  testWidgets('headers above 400 MP are refused, a broken 200 MP file fails '
+      'as unreadable, neither crashes', (tester) async {
+    final tooBig = writeFakeHugeJpeg(
+      '${work.path}/huge500.jpg',
+      width: 25000,
+      height: 20000,
+    );
+    expect(
+      await readFile(tooBig.path, OcrPackIds.greek),
+      const OcrFailed(OcrFailureReason.imageTooLarge),
+    );
+    // 200 MP in the header but no image data: the native decode is tried
+    // (sampled) and fails in a controlled way.
+    final broken = writeFakeHugeJpeg(
+      '${work.path}/broken200.jpg',
       width: 12240,
       height: 16320,
     );
-    final outcome = await readFile(file.path, OcrPackIds.greek);
-    expect(outcome, const OcrFailed(OcrFailureReason.imageTooLarge));
+    expect(
+      await readFile(broken.path, OcrPackIds.greek),
+      const OcrFailed(OcrFailureReason.imageUnreadable),
+    );
     // The engine is still fine afterwards.
     final ok = await readFile(
       writeJpeg('${work.path}/after_huge.jpg', latinPage).path,
       OcrPackIds.latin,
     );
     expect(ok, isA<OcrSuccess>());
+  });
+
+  testWidgets('a real 54 MP photo is read through the sampled native decode', (
+    tester,
+  ) async {
+    // Made in a background isolate (about 300 MB of pixels there, not in the
+    // test isolate). 8200 x 6600 = 54.1 MP, above the 50 MP full-decode limit.
+    final path = '${work.path}/real54.jpg';
+    final pageBytes = img.encodeJpg(greekPage, quality: 92);
+    await makeBigPhotoInIsolate(path, pageBytes);
+    final upright = await prepare(path);
+    expect(upright.sourceMegapixels, greaterThan(50));
+    expect(math.max(upright.width, upright.height), 2560);
+    await ocr.workStore.delete(upright.path);
+
+    final sw = Stopwatch()..start();
+    final result = success(await readFile(path, OcrPackIds.greek));
+    final recall = keyRecall(result.text, greekReceipt.keyTokens);
+    report(
+      '54 MP: ${sw.elapsedMilliseconds} ms in total, '
+      'recall ${(recall * 100).toStringAsFixed(1)}%, peak RSS ${peakMb()} MB',
+    );
+    expect(recall, greaterThanOrEqualTo(0.9));
   });
 
   testWidgets('cancel in the middle, then the next call works', (tester) async {
@@ -441,3 +478,17 @@ void main() {
     await session.dispose();
   });
 }
+
+/// Top level so the isolate closure captures nothing but two plain values.
+void makeBigPhoto(String path, Uint8List pageBytes) {
+  final page = img.decodeJpg(pageBytes)!;
+  final big = img.Image(width: 8200, height: 6600, numChannels: 3);
+  img.fill(big, color: img.ColorRgb8(255, 255, 255));
+  img.compositeImage(big, img.copyResize(page, width: 8000), dstX: 100);
+  File(path).writeAsBytesSync(img.encodeJpg(big, quality: 80));
+}
+
+/// Top level on purpose: a closure made inside a test would drag the whole
+/// test context (with the engine's ports) into the isolate message.
+Future<void> makeBigPhotoInIsolate(String path, Uint8List pageBytes) =>
+    Isolate.run(() => makeBigPhoto(path, pageBytes));

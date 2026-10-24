@@ -87,15 +87,22 @@ upright working copy.
 The **Capture** line is the size of the picture the app's camera takes. The
 camera is opened with `ResolutionPreset.max`, which in the CameraX backend means
 "highest available resolution, and prefer the higher resolution over the
-capture rate". On a phone with a 200 MP sensor that can be a very large file.
-Please tell me the number for your phone.
+capture rate". Measured on your phone in the first check: **3060 x 4080
+(12.5 MP)**, which is what most phones give; larger sizes come from software
+modes. The preset is therefore left as it is.
 
-- Up to 12 MP: nothing to do.
-- Above 12 MP: it works (the native decode scales it down while decoding) but
-  slower, and the originals in `pictures/` are big.
-- **Above 50 MP**: the scan is saved, but the reading fails with "The picture
-  is too large to read (over 50 megapixels)". If you see this, tell me and I
-  will propose a lower capture size; I have not changed the camera setting.
+- Up to 8 MP: decoded by Dart in a background isolate.
+- 8 MP and above (your 12.5 MP shots too): decoded natively, scaled while
+  decoding, never at full size. Works up to 400 MP in the header (a 200 MP
+  photo is read this way; the sampled bitmap is at most about 105 MB).
+- Above 400 MP, or a file the decoder cannot read: the scan is saved, the
+  reading fails with "The picture is too large to read (over 400 megapixels)" or
+  "The picture could not be read", and nothing crashes.
+- Manual check if you have a very large photo (for example your 200 MP leaflet
+  of Phase 1.6c): put it through the app (share or the camera's high resolution
+  mode) and tell me the **Capture** line and the **Time**; I could not run a
+  200 MP photo on the 2 GB emulator without risking its memory (a 54 MP photo
+  was tested instead).
 
 ## 7. Multi Page: reading while you shoot
 
@@ -113,13 +120,17 @@ the same (the app has no network permission at all).
 
 ## 9. Handwriting and the confidence filter
 
-Scan a handwritten note (or any page the engine reads badly). Lines below 0.5
+Scan a handwritten note (or any page the engine reads badly). Lines below 0.65
 are drawn crossed out in the error colour with the label "filtered, low
 confidence"; they are not part of the copied text. Send me the confidence
 numbers only: for a handful of lines, "readable / rubbish, 0.xx". On invented
 pages the emulator gave 0.96 to 1.00 for clean, blurred and faint printed text and
-0.38 to 0.60 for pen strokes that are not text, so 0.5 is a first guess that the
-phone can improve.
+0.38 to 0.60 for pen strokes that are not text; 0.65 is your decision after the
+first phone check (it was 0.5). The summary now has a line **Borderline lines
+(0.50 to 0.65)**: the number of lines the change from 0.5 to 0.65 moved. On
+your real documents, compare that number with what you see: are the lines that
+are now crossed out good ones? Send me, per document, the number of boxes, the
+filtered count and the borderline count (and "good lines lost: yes/no").
 
 ## 10. Release behaviour
 
@@ -150,10 +161,10 @@ Times are not asserted by any test.
 
 ### Tests
 
-- Unit and widget tests: 424 (225 before Phase 2), all green. They cover the
+- Unit and widget tests: 429 (225 before Phase 2), all green. They cover the
   pixel maths and DB post-processing on synthetic arrays, CTC with blanks,
   repeats and the dictionary, the image header and EXIF orientation 0 to 9
-  (including false `ExifImageWidth/Height`), the 8 and 50 MP limits, the Dart
+  (including false `ExifImageWidth/Height`), the 8 MP, 50 MP and 400 MP limits, the Dart
   maker for EXIF 1 to 8, model verification (right, wrong, missing), the pack
   registry and the stored choice, the use cases with a fake engine (success,
   timeout, cancel, failure, filter, pipelining of several pages), the cubits,
@@ -183,7 +194,9 @@ Times are not asserted by any test.
 | EXIF 0 (invalid), 3, 6, 8 | same size and key tokens as the upright page |
 | Native and Dart maker, EXIF 0 to 9 | same size, same four quadrant colours |
 | 12 MP photo (4000 x 3000), also with EXIF 6 | native decode, working copy 2560 x 1920, key tokens 100% |
-| 200 MP header (12240 x 16320, header only) | refused as too large, nothing decoded, no crash, the next page reads |
+| Real 54 MP photo (8200 x 6600, above the 50 MP full-decode limit) | native sampled decode, working copy 2560 long side, key tokens 100%, 2.3 s in total, peak RSS 714 MB |
+| Header above 400 MP (25000 x 20000) | refused as too large, nothing decoded, no crash |
+| 200 MP header with no image data | native decode tried, fails as unreadable, no crash, the next page reads |
 | Cancel after 300 ms, then the next call | `cancelled`, the next call succeeds |
 | Timeout with a 5 ms limit, then the next call | `timedOut`, the next call succeeds |
 | Damaged model file (one byte changed) | refused by the SHA-256, file removed, extracted again on the next call |
@@ -207,13 +220,12 @@ Times are not asserted by any test.
 | clean | 11 | 0.96 | 0.98 | 1.00 | 0 |
 | blurred (Gaussian radius 3) | 11 | 0.97 | 0.99 | 1.00 | 0 |
 | faint (35% contrast) | 11 | 0.97 | 1.00 | 1.00 | 0 |
-| pen strokes that are not text | 8 | 0.38 | 0.48 | 0.60 | 5 |
+| pen strokes that are not text | 8 | 0.38 | 0.48 | 0.60 | 5 (all 8 below 0.65) |
 
-The spike has no confidence study (it recorded mean confidences only), so the
-threshold is PaddleOCR's own `drop_score` of 0.5, kept as a constant
-(`OcrConfig.minLineConfidence`). On invented pages 0.5 flags five of eight
-non-text lines and none of the readable ones; raising it to 0.65 would flag all
-eight and still leave a wide margin to 0.96. Real handwriting and faded thermal
-paper are not covered: step 9 asks you for numbers from the phone before the
-value is changed.
+The spike has no confidence study (it recorded mean confidences only). The
+threshold is 0.65 by the user's decision (`OcrConfig.minLineConfidence`); on
+these invented pages it flags all eight non-text lines (the maximum was 0.60)
+and none of the readable ones (the minimum was 0.96). Real handwriting and
+faded thermal paper are not covered; step 9 asks for the borderline numbers
+from the phone.
 

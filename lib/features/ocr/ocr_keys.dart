@@ -5,6 +5,7 @@ abstract final class OcrKeys {
   static const status = Key('ocr.status');
   static const progressBar = Key('ocr.progressBar');
   static const summary = Key('ocr.summary');
+  static const borderline = Key('ocr.borderline');
   static const lines = Key('ocr.lines');
   static const copy = Key('ocr.copy');
   static const showBoxes = Key('ocr.showBoxes');

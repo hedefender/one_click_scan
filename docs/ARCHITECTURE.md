@@ -256,16 +256,17 @@ feature only through the session passed as the route's `extra`.
 camera shot (cache JPEG)
    -> OcrSession.add            (returns at once; one page is processed at a time)
    -> PrepareImageForOcr        header (size, EXIF) -> plan:
-         <= 8 MP   DartUprightImageMaker   (Isolate.run, package:image)
-         <= 50 MP  NativeUprightImageMaker (Kotlin: inSampleSize, rotate, scale)
-         >  50 MP  refused: OcrFailed(imageTooLarge), nothing decoded
+         <= 8 MP    DartUprightImageMaker   (Isolate.run, package:image)
+         <= 400 MP  NativeUprightImageMaker (Kotlin: inSampleSize, rotate, scale;
+                    never a full-size decode)
+         >  400 MP  refused: OcrFailed(imageTooLarge), nothing decoded
    -> upright working copy (cache/ocr_work, long side <= 2560, JPEG 95)
    -> PaddleOcrEngine.recognize (root isolate: timeout 45 s, cancel, outcome)
    -> worker isolate: verify SHA-256 of the model files, load sessions once,
       decode copy -> detection (960) -> DB boxes -> crops -> recognition
       (batch 1, CPU) -> CTC -> lines with quads normalised to 0..1,
       progress events ("line N of M")
-   -> applyConfidenceFilter     (flags lines below 0.5, edits nothing)
+   -> applyConfidenceFilter     (flags lines below 0.65, edits nothing)
    -> OcrSessionSnapshot stream -> OcrResultCubit -> OcrResultPage
 ```
 
@@ -374,7 +375,7 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 | 0.5 | Settings screen, folder health check | feature `settings`, `HomeCubit` |
 | 1 | `CameraService`, originals into `./pictures` (done) | `services/camera/` + feature `scan` |
 | 2 | `OcrEngine` + Paddle PP-OCRv5, upright working copy, language packs (done, 8d) | `services/ocr/`, `services/image/` |
-| 1.7 | Spike: searchable PDF, select and copy a code on the phone | spike only |
+| 2.1 | Spike: searchable PDF, select and copy a code on the phone | spike only |
 | 3 | `PdfGenerator` into `./pdf` (text layer; uses the upright working copy and the line quads) | `services/pdf/` |
 | 4 | `MailProvider` (+ implementations) | `services/mail/` |
 | 5 | One-click orchestration use case | `domain/usecases/`, feature `scan` |

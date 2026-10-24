@@ -113,6 +113,7 @@ abstract class AppStrings {
   String ocrSummaryWorkImage(int width, int height);
   String ocrSummaryCapture(int width, int height, String megapixels);
   String ocrSummaryBoxes(int boxes, int filtered);
+  String ocrSummaryBorderline(int count);
   String get ocrFilteredLabel;
   String get ocrNoText;
   String get ocrCopy;

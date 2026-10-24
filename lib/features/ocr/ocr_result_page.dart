@@ -283,6 +283,11 @@ class _Summary extends StatelessWidget {
               strings.ocrSummaryBoxes(result.boxCount, result.filteredCount),
               style: style,
             ),
+            Text(
+              strings.ocrSummaryBorderline(result.borderlineCount),
+              key: OcrKeys.borderline,
+              style: style,
+            ),
           ],
         ),
       ),

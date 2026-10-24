@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../ocr/ocr_config.dart';
 import 'ocr_line.dart';
 
 /// What the engine read from one page.
@@ -27,6 +28,17 @@ class OcrResult extends Equatable {
   int get boxCount => lines.length;
 
   int get filteredCount => lines.where((l) => l.filtered).length;
+
+  /// Lines with a confidence from `OcrConfig.borderlineConfidence` up to (not
+  /// including) `OcrConfig.minLineConfidence`: the ones a change of the
+  /// threshold would move.
+  int get borderlineCount => lines
+      .where(
+        (l) =>
+            l.confidence >= OcrConfig.borderlineConfidence &&
+            l.confidence < OcrConfig.minLineConfidence,
+      )
+      .length;
 
   List<OcrLine> get visibleLines => [
     for (final line in lines)

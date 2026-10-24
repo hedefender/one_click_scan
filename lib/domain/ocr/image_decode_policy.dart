@@ -14,8 +14,10 @@ enum ImageDecodePlan {
 
 /// Decides from the header size ([megapixels] of the stored image). The limits
 /// are inclusive: exactly [OcrConfig.dartDecodeMaxMegapixels] is still Dart,
-/// exactly [OcrConfig.maxMegapixels] is still accepted. A decode never runs on
-/// the UI isolate, whatever the plan.
+/// exactly [OcrConfig.maxMegapixels] is still accepted (natively, with
+/// `inSampleSize`). Above [OcrConfig.fullDecodeMaxMegapixels] only the native
+/// sampled decode is ever used, never a full-size decode. A decode never runs
+/// on the UI isolate, whatever the plan.
 ImageDecodePlan planImageDecode(double megapixels) {
   if (megapixels > OcrConfig.maxMegapixels) return ImageDecodePlan.tooLarge;
   if (megapixels <= OcrConfig.dartDecodeMaxMegapixels) {

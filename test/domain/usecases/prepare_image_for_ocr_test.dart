@@ -50,8 +50,21 @@ void main() {
     expect(image.sourceMegapixels, 12.0);
   });
 
-  test('above 50 MP nothing is decoded and no file is made', () async {
-    rig.header.headers['huge.jpg'] = header(12240, 16320); // 200 MP
+  test(
+    'a 200 MP photo goes to the native maker (sampled), never to Dart',
+    () async {
+      rig.header.headers['huge.jpg'] = header(12240, 16320); // 200 MP
+
+      final image = await rig.prepare('huge.jpg');
+
+      expect(rig.nativeMaker.sources, ['huge.jpg']);
+      expect(rig.dartMaker.sources, isEmpty);
+      expect(image.sourceMegapixels, closeTo(199.7, 0.1));
+    },
+  );
+
+  test('above 400 MP nothing is decoded and no file is made', () async {
+    rig.header.headers['huge.jpg'] = header(25000, 20000); // 500 MP
 
     await expectLater(
       rig.prepare('huge.jpg'),
@@ -66,6 +79,24 @@ void main() {
 
     expect(rig.dartMaker.sources, isEmpty);
     expect(rig.nativeMaker.sources, isEmpty);
+    expect(rig.workStore.files, isEmpty);
+  });
+
+  test('a native decode that cannot read the file fails as unreadable and '
+      'removes the file', () async {
+    rig.header.headers['huge.jpg'] = header(12240, 16320);
+    rig.nativeMaker.failWith = const UprightImageException('unreadable');
+
+    await expectLater(
+      rig.prepare('huge.jpg'),
+      throwsA(
+        isA<ImagePreparationException>().having(
+          (e) => e.reason,
+          'reason',
+          OcrFailureReason.imageUnreadable,
+        ),
+      ),
+    );
     expect(rig.workStore.files, isEmpty);
   });
 
