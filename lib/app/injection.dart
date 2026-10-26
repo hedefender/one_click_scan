@@ -15,6 +15,13 @@ import '../domain/ports/pdf_builder.dart';
 import '../domain/usecases/load_settings.dart';
 import '../domain/usecases/store_scan_pdf.dart';
 import '../services/pdf/pdf_services.dart';
+import '../services/mail/mail_services.dart';
+import '../domain/mail/mail_provider.dart';
+import '../domain/ports/attachment_source.dart';
+import '../domain/ports/draft_sharer.dart';
+import '../domain/ports/mail_credential_store.dart';
+import '../domain/ports/mail_sender.dart';
+import '../domain/usecases/send_scan_pdf.dart';
 import '../domain/usecases/prepare_image_for_ocr.dart';
 import '../domain/usecases/recognize_pages.dart';
 import '../services/ocr/ocr_services.dart';
@@ -50,6 +57,7 @@ Future<GetIt> buildContainer({
   ScanTempStore scanTempStore = const NoopScanTempStore(),
   OcrServices ocr = const OcrServices.unsupported(),
   PdfServices pdf = const PdfServices.unsupported(),
+  MailServices mail = const MailServices.unsupported(),
   OcrLanguagePackRegistry? ocrPackRegistry,
   DateTime Function() clock = DateTime.now,
 }) async {
@@ -69,6 +77,11 @@ Future<GetIt> buildContainer({
   sl.registerSingleton<OcrEngine>(ocr.engine);
   sl.registerSingleton<PdfBuilder>(pdf.builder);
   sl.registerSingleton<OpenPdf>(pdf.opener);
+  sl.registerSingleton<MailSender>(mail.sender);
+  sl.registerSingleton<MailCredentialStore>(mail.credentials);
+  sl.registerSingleton<AttachmentSource>(mail.attachments);
+  sl.registerSingleton<DraftSharer>(mail.sharer);
+  sl.registerSingleton<MailProviderRegistry>(mail.providers);
 
   // Data.
   sl.registerLazySingleton<SettingsLocalDataSource>(
@@ -110,6 +123,25 @@ Future<GetIt> buildContainer({
       fileStore: sl<ScanFileStore>(),
       naming: ScanNaming(clock),
       logger: sl<AppLogger>(),
+    ),
+  );
+
+  sl.registerLazySingleton<SendScanPdf>(
+    () => SendScanPdf(
+      sender: sl<MailSender>(),
+      attachments: sl<AttachmentSource>(),
+      credentials: sl<MailCredentialStore>(),
+      providers: sl<MailProviderRegistry>(),
+      logger: sl<AppLogger>(),
+    ),
+  );
+  sl.registerLazySingleton<ShareScanPdfDraft>(
+    () => ShareScanPdfDraft(sharer: sl<DraftSharer>()),
+  );
+  sl.registerLazySingleton<CheckMailConnection>(
+    () => CheckMailConnection(
+      sender: sl<MailSender>(),
+      providers: sl<MailProviderRegistry>(),
     ),
   );
 

@@ -38,6 +38,26 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
                 openDocument(call, result)
                 return@setMethodCallHandler
             }
+            if (call.method == "shareDocument") {
+                shareDocument(call, result)
+                return@setMethodCallHandler
+            }
+            if (call.method == "describeShare") {
+                result.success(describeShare(call))
+                return@setMethodCallHandler
+            }
+            // Copies a stored document into the app cache for the mail sender.
+            if (call.method == "copyUriToFile") {
+                executor.execute {
+                    try {
+                        copyUriToFile(call)
+                        mainHandler.post { result.success(null) }
+                    } catch (e: Exception) {
+                        mainHandler.post { result.error("unreadable", e.javaClass.simpleName, null) }
+                    }
+                }
+                return@setMethodCallHandler
+            }
             // All SAF and file work runs off the UI thread.
             executor.execute {
                 try {
@@ -107,6 +127,74 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
             result.success("no_viewer")
         } catch (e: Exception) {
             result.success("failed")
+        }
+    }
+
+    /**
+     * The `ACTION_SEND` intent that hands the PDF to an e-mail app: recipient,
+     * subject, text and the document as `EXTRA_STREAM` with a temporary read
+     * grant (also on the ClipData, which is what the chooser passes on). One
+     * function builds it for [shareDocument] and [describeShare], so the test of
+     * the extras and flags checks the real intent.
+     */
+    private fun buildShareIntent(call: MethodCall): Intent {
+        val uri = Uri.parse(call.argument<String>("uri") ?: "")
+        val mimeType = call.argument<String>("mimeType") ?: "application/pdf"
+        val to = call.argument<List<String>>("to") ?: emptyList()
+        val subject = call.argument<String>("subject") ?: ""
+        val body = call.argument<String>("body") ?: ""
+        return Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_EMAIL, to.toTypedArray())
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = android.content.ClipData.newRawUri("", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    /** Opens the chooser of the apps that take the PDF; replies "opened", "no_app" or "failed". */
+    private fun shareDocument(call: MethodCall, result: MethodChannel.Result) {
+        try {
+            val send = buildShareIntent(call)
+            val chooser = Intent.createChooser(send, null).apply {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+            result.success("opened")
+        } catch (e: ActivityNotFoundException) {
+            result.success("no_app")
+        } catch (e: Exception) {
+            result.success("failed")
+        }
+    }
+
+    /** What the intent carries, for the tests: nothing is started. */
+    private fun describeShare(call: MethodCall): Map<String, Any?> {
+        val intent = buildShareIntent(call)
+        return mapOf(
+            "action" to intent.action,
+            "type" to intent.type,
+            "to" to (intent.getStringArrayExtra(Intent.EXTRA_EMAIL)?.toList() ?: emptyList<String>()),
+            "subject" to intent.getStringExtra(Intent.EXTRA_SUBJECT),
+            "text" to intent.getStringExtra(Intent.EXTRA_TEXT),
+            "stream" to intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)?.toString(),
+            "clip" to intent.clipData?.getItemAt(0)?.uri?.toString(),
+            "grantsRead" to ((intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0),
+            "grantsWrite" to ((intent.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0)
+        )
+    }
+
+    /** Copies the document behind a content URI to a file of the app cache (the mail send reads it). */
+    private fun copyUriToFile(call: MethodCall) {
+        val uri = Uri.parse(requireArgument(call, "uri"))
+        val target = File(requireArgument(call, "targetPath"))
+        val input = context.contentResolver.openInputStream(uri)
+            ?: throw ScanFilesException("unknown", "Could not open the document")
+        input.use { source ->
+            target.outputStream().use { out -> source.copyTo(out) }
         }
     }
 

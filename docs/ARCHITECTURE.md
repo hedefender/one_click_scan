@@ -1,4 +1,4 @@
-# Architecture (Phase 3)
+# Architecture (Phase 4)
 
 Status: Phase 0 skeleton and Phase 0.5 settings screen are committed; Phase 1
 adds the camera and saving the originals (see `PHASE_1_VALIDATION.md`);
@@ -6,7 +6,9 @@ Phase 1.1 fixes found in the manual check (see `PHASE_1_1_VALIDATION.md`);
 Phase 1.2 adds the app icon, the splash screen and the Gallery copy names
 (see `PHASE_1_2_VALIDATION.md`, ADR-009); Phase 2 adds the OCR layer
 (section 8d, ADR-010 to ADR-014, `PHASE_2_VALIDATION.md`); Phase 3 adds the PDF
-(section 8e, ADR-015 to ADR-018, `PHASE_3_VALIDATION.md`).
+(section 8e, ADR-015 to ADR-018, `PHASE_3_VALIDATION.md`); Phase 4 adds the mail
+(section 8f, ADR-019 to ADR-023, `PHASE_4_VALIDATION.md`, `MAIL_PROVIDERS.md`,
+`MAIL_OAUTH_PLAN.md`).
 
 ## 1. Principles
 
@@ -104,10 +106,12 @@ core, shared ◄── used by all, depend on nothing of ours
 | `destinationMode` / `customDestination` | Send to the sender's own address, or to another address. |
 | `saveToGallery` | Copy originals to the Gallery. Off by default; the wizard explains what sharing to the Gallery means. |
 | `ocrPackId` | OCR language pack (`greek` or `latin`), chosen in Settings (Phase 2). Default `greek` for a Greek device, `latin` otherwise; the wizard does not ask. |
+| `mailSendMode` | `sendNow` (SMTP from the app, default) or `shareDraft` (open the e-mail app), chosen in Settings (Phase 4, ADR-022). |
 
-No passwords or tokens are stored in Phase 0. Credentials/OAuth tokens arrive
-with the e-mail phase and will use the platform secure storage, not
-`shared_preferences`.
+No password and no token is ever in these settings. The app password of the mail
+account (Phase 4) is in the platform secure storage (Android Keystore) behind
+`MailCredentialStore`, not in `shared_preferences` (ADR-021); OAuth tokens will
+be there too (`MAIL_OAUTH_PLAN.md`).
 
 ## 7. First run wizard
 
@@ -142,8 +146,8 @@ later phases use it before every write and re-prompt when missing.
 
 Inside the chosen folder (`./`) the app writes `./pictures/` (original
 JPEGs, always saved, Phase 1) and `./pdf/` (PDFs, Phase 3). Both outputs of one
-scan share a stem, the device time `YYYY-MM-DD_HH-MM-SS` (same as the e-mail
-subject, with a `-2`, `-3` suffix on collision): `pdf/<stem>.pdf`,
+scan share a stem, the device time `YYYY-MM-DD_HH-MM-SS` (with a `-2`, `-3` suffix
+on collision; the e-mail subject is `One Click Scan - <stem>`, ADR-020): `pdf/<stem>.pdf`,
 `pictures/<stem>_<n>.jpg` with `n` from 1. The stem is chosen free in both
 folders (ADR-015). The Gallery switch only adds one more copy there; it does not
 move the originals. The e-mail contains only the PDF (ADR-005).
@@ -433,6 +437,89 @@ is stored (ADR-018); the camera's shots in `scan_pages/` are deleted when the
 result screen is left, as before.
 
 
+## 8f. Mail (Phase 4)
+
+Decisions: ADR-019 to ADR-023. Facts about the providers and the sources:
+`MAIL_PROVIDERS.md`; the plan for OAuth: `MAIL_OAUTH_PLAN.md`. The mail code is
+new and has nothing in common with the OCR code: a test reads the sources and
+allows the network (`mailer`, sockets) only in `lib/services/mail/`.
+
+### Layers
+
+```
+domain/
+  entities/   MailSendMode (sendNow, shareDraft); AppSettings.mailSendMode
+  mail/       MailProvider (+ SmtpEndpoint, SmtpSecurity, MailAuthKind,
+              AppPasswordSupport) and MailProviderRegistry (standard: gmail,
+              outlook, yahoo); MailAuth (sealed: AppPasswordAuth, OAuthAuth is
+              reserved); MailMessage, MailAttachment; MailOutcome (sealed);
+              MailCancellation; MailSizePolicy; MailText (subject, body)
+  ports/      MailSender, MailCredentialStore (+ StoredMailSecret),
+              AttachmentSource, DraftSharer
+  usecases/   SendScanPdf, ShareScanPdfDraft, CheckMailConnection
+services/mail/
+  SmtpMailSender (+ smtp_worker.dart: the isolate; smtp_error_mapping.dart),
+  SecureMailCredentialStore (+ PluginSecureStringStore),
+  AndroidAttachmentSource, AndroidDraftSharer (android_mail_channels.dart),
+  MailServices (the adapters together; `unsupported()` is the default of the
+  container, like PdfServices)
+features/scan/ MailSendCubit / MailSendState, the Send section of
+              ScanResultPage
+features/settings/ the account block of the mail section: password field,
+              instructions, connection test, send mode, delete password
+android       ScanFilesHandler.kt: shareDocument, describeShare, copyUriToFile;
+              manifest: INTERNET, allowBackup="false", dataExtractionRules
+```
+
+`domain/` imports nothing of Flutter or of a plugin. The only places that know
+`mailer` and `flutter_secure_storage` are `services/mail/smtp_*` and
+`services/mail/secure_mail_credential_store.dart`. The composition root takes
+`MailServices` (`buildContainer(mail: ...)`), registers the ports and the three
+use cases; `main.dart` creates the platform services and purges the cache copies
+of PDFs left by a killed send.
+
+### Flow of a send
+
+```
+ScanResultCubit: PDF stored (StoredPdf with its document URI)
+   -> MailSendCubit.attach(pdf)         reads the mode of Settings
+user taps Send (MailSendCubit.send)     settings are read again at each tap
+   -> shareDraft mode:  ShareScanPdfDraft -> DraftSharer (ACTION_SEND chooser)
+   -> sendNow:          SendScanPdf
+        settings complete? (provider, account, destination)  else MailNotConfigured
+        stored password for this provider AND account?       else MailNotConfigured(password)
+        PDF within MailSizePolicy of the provider?           else MailTooLarge (nothing read)
+        AttachmentSource.prepare   native copy of the document URI -> cache/mail_work/
+        MailSender.send            isolate: mailer, SMTP, the PDF streamed from the file
+        AttachmentSource.release   always
+   -> MailOutcome -> MailPhase: sent | failed(outcome) | idle (cancelled)
+```
+
+The settings screen uses `CheckMailConnection` (connect and sign in, send
+nothing) with the provider, account and password that are on the screen, or the
+stored password when the field is empty and it belongs to the same provider and
+account. The typed password is written to secure storage only by Save
+(`SettingsEditorCubit.save`), which also clears the field.
+
+### Errors
+
+`SmtpMailSender` answers with an outcome in every case. The isolate catches what
+`mailer` throws and sends back a tag and a 3 digit reply code only, never the
+text of an error. A cancel kills the isolate; the overall timeout and the
+per-reply timeout are values of the constructor.
+
+### Testing
+
+Unit and widget tests use fakes (`test/support/mail_fakes.dart`). The sender is
+also tested against a real SMTP server on the loopback of the PC
+(`tool/smtp_test_server.dart`, pure `dart:io`, used by `flutter test`):
+attachment byte for byte, wrong password, 552, 550, no server, a silent server,
+cancel. The same server runs on the PC for the emulator
+(`tool/run_mail_integration_test.sh`, `integration_test/mail_flow_test.dart`;
+the emulator reaches the PC as `10.0.2.2`) and inside the release smoke
+(`integration_test/support/mail_smoke.dart`). The `testLocal` provider exists
+only in those tests.
+
 ## 9. Testing strategy
 
 | Level | What | Where |
@@ -440,6 +527,7 @@ result screen is left, as before.
 | Unit | entities, validators, data source, repository, use cases, cubits, strings, OCR maths (pre/post-processing, CTC), image header and EXIF, model verification | `test/` |
 | Widget | whole wizard flow through the real app widget with fakes | `test/features/first_run/` |
 | Integration | wizard, settings and scan flows with real rendering on an emulator (fake folder picker, fake camera and folder store); `camera_smoke_test.dart` uses the real camera on the `virtualscene` | `integration_test/` |
+| Integration (mail) | the real mail layer against a test SMTP server on the PC (10.0.2.2): message, attachment hash, errors, Keystore, share intent, screen flow | `integration_test/mail_flow_test.dart`, `tool/run_mail_integration_test.sh` |
 | Manual | real SAF picker, real device, visual check | `PHASE_0_VALIDATION.md` |
 
 `integration_test/ocr_engine_test.dart` runs the real models on the emulator
@@ -487,6 +575,6 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 | 2 | `OcrEngine` + Paddle PP-OCRv5, upright working copy, language packs (done, 8d) | `services/ocr/`, `services/image/` |
 | 2.1 | Spike: searchable PDF, select and copy a code on the phone | spike only |
 | 3 | PDF into `./pdf` with a best-effort text layer, Open PDF (done, 8e) | `services/pdf/`, `domain/pdf/`, `features/scan` result screen |
-| 4 | `MailProvider` (+ implementations) | `services/mail/` |
+| 4 | `MailSender` / `MailProvider`, SMTP with an app password, the share route, the Send button (done, 8f) | `services/mail/`, `domain/mail/`, `features/scan` result screen, Settings |
 | 5 | One-click orchestration use case | `domain/usecases/`, feature `scan` |
 | 6 | Image enhancement | `services/` (Rust candidate) |

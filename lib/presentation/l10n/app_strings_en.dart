@@ -1,3 +1,4 @@
+import '../../domain/entities/mail_provider_id.dart';
 import 'app_strings.dart';
 
 class AppStringsEn extends AppStrings {
@@ -396,4 +397,193 @@ class AppStringsEn extends AppStrings {
   String get pdfFailedWrite =>
       'The PDF could not be written to your folder (is the storage full?). '
       'Your photos are saved.';
+
+  @override
+  String get mailPasswordLabel => 'App password';
+
+  @override
+  String get mailPasswordShow => 'Show the password';
+
+  @override
+  String get mailPasswordHide => 'Hide the password';
+
+  @override
+  String get mailPasswordStored => 'A password is stored on this phone.';
+
+  @override
+  String get mailPasswordNone => 'No password is stored.';
+
+  @override
+  String get mailPasswordPrivacy =>
+      'The password is stored encrypted on the phone (Android Keystore). It is '
+      'not in backups and it is not written anywhere else.';
+
+  @override
+  String get mailPasswordDelete => 'Delete the stored password';
+
+  @override
+  String get mailPasswordDeleted => 'The password was deleted.';
+
+  @override
+  String get mailPasswordDeleteFailed => 'The password could not be deleted.';
+
+  @override
+  String get mailTest => 'Test the connection';
+
+  @override
+  String get mailTestRunning => 'Testing the connection…';
+
+  @override
+  String get mailTestOk =>
+      'The server accepted the account. No message was sent.';
+
+  @override
+  String get mailTestNeedsPassword =>
+      'Enter the app password first (or save it).';
+
+  @override
+  String get mailModeTitle => 'How to send';
+
+  @override
+  String get mailModeSend => 'Send from the app';
+
+  @override
+  String get mailModeShare => 'Open in the e-mail app';
+
+  @override
+  String get mailModeShareNote =>
+      '"Open in the e-mail app" opens your e-mail app with the recipient, the '
+      'subject and the PDF filled in, and you press send there. No app '
+      'password is needed.';
+
+  @override
+  String get mailHelpTitle => 'How to make the app password';
+
+  @override
+  List<String> mailHelpSteps(MailProviderId provider) => switch (provider) {
+    MailProviderId.gmail => const [
+      'Turn on 2-Step Verification in your Google Account.',
+      'Open the app passwords page of your Google Account '
+          '(myaccount.google.com/apppasswords).',
+      'Create a password for One Click Scan.',
+      'Copy the 16-digit password and enter it above.',
+    ],
+    MailProviderId.outlook => const [
+      'Turn on two-step verification in your Microsoft account.',
+      'Open the Advanced security options of your Microsoft account and '
+          'scroll down to App passwords.',
+      'Choose Create a new app password.',
+      'Copy the password and enter it above.',
+    ],
+    MailProviderId.yahoo => const [
+      'Open the Account Security page of Yahoo (login.yahoo.com/account/'
+          'security). Use a browser you have been signed in to Yahoo with for '
+          'several days, not a private window.',
+      'Under External connections choose Create app password.',
+      'Enter a name (for example One Click Scan) and choose Generate password.',
+      'Copy the password and enter it above.',
+    ],
+  };
+
+  @override
+  String? mailHelpNote(MailProviderId provider) => switch (provider) {
+    MailProviderId.gmail =>
+      'If the option is missing, Google does not give app passwords to '
+          'accounts with security keys only, to work or school accounts, or '
+          'with Advanced Protection. Use "Open in the e-mail app" then.',
+    MailProviderId.outlook => mailOutlookWarning,
+    MailProviderId.yahoo => mailYahooSizeNote,
+  };
+
+  @override
+  String get mailOutlookWarning =>
+      'Careful: Outlook.com asks for modern sign-in (OAuth) and Microsoft has '
+      'ended plain password sign-in. It is not confirmed that an app password '
+      'works for sending. You can try; if it fails, choose "Open in the '
+      'e-mail app".';
+
+  @override
+  String get mailYahooSizeNote =>
+      'Yahoo does not state a size limit officially. The app assumes a '
+      'message up to 20 MB fits.';
+
+  @override
+  String get mailSendTitle => 'E-mail';
+
+  @override
+  String mailSendTo(String destination) =>
+      'The PDF will be sent to $destination.';
+
+  @override
+  String get mailSendButton => 'Send';
+
+  @override
+  String get mailShareButton => 'Open in the e-mail app';
+
+  @override
+  String get mailShareNote =>
+      'Your e-mail app opens with the message and the PDF ready. The message '
+      'leaves when you press send there.';
+
+  @override
+  String get mailSending => 'Sending…';
+
+  @override
+  String get mailCancel => 'Cancel sending';
+
+  @override
+  String get mailSent => 'The message was sent from the e-mail server.';
+
+  @override
+  String get mailRetry => 'Try again';
+
+  @override
+  String get mailOpenApp => 'Open in the e-mail app';
+
+  @override
+  String get mailOpenSettings => 'Open settings';
+
+  @override
+  String get mailNotConfiguredAccount =>
+      'No e-mail account is set up for sending. Set it up in Settings.';
+
+  @override
+  String get mailNotConfiguredPassword =>
+      'No app password is stored for this account. Enter it in Settings.';
+
+  @override
+  String get mailFailedAuth =>
+      'The server did not accept the account or the password. Check the app '
+      'password in Settings.';
+
+  @override
+  String get mailFailedNetwork =>
+      'Could not connect to the e-mail server. Check the internet and try '
+      'again.';
+
+  @override
+  String get mailFailedTooLarge =>
+      'The PDF is too big to send by e-mail through this provider. Open it in '
+      'the e-mail app or share it another way.';
+
+  @override
+  String mailFailedRejected(int code) => code == 0
+      ? 'The e-mail server rejected the message.'
+      : 'The e-mail server rejected the message (code $code).';
+
+  @override
+  String get mailFailedUnknown =>
+      'The message was not sent because of an unexpected error.';
+
+  @override
+  String get mailDraftOpened =>
+      'The e-mail app opened. Press send there to send the message.';
+
+  @override
+  String get mailDraftNoApp =>
+      'No e-mail app that takes an attachment was found.';
+
+  @override
+  String get mailDraftFailed =>
+      'The PDF could not be handed to the e-mail app.';
 }

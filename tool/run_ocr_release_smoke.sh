@@ -5,7 +5,8 @@
 #
 # `flutter test` and `flutter drive` cannot run in release mode, so this builds
 # a release APK whose entry point is tool/ocr_release_smoke_main.dart
-# (it runs the OCR smoke, opens and closes the real camera, uses
+# (it runs the OCR smoke and the mail smoke (Keystore, a real SMTP send to a
+# server in the same process), opens and closes the real camera, uses
 # shared_preferences, and prints one OCRSMOKE line), installs it
 # on the emulator, starts it and waits for the line in logcat. It also checks
 # that R8 really ran and kept the ONNX Runtime classes. Refuses to touch any

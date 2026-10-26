@@ -8,11 +8,14 @@ JPEGs and `pdf/` holds the PDFs, with matching names (`YYYY-MM-DD_HH-MM-SS`;
 since Phase 3 the PDF of a scan is `pdf/<stem>.pdf`, one file for one or many
 pages). The PDF is the picture of each page with an invisible text layer
 (search and select) added as a best effort: the app does not promise that the
-text is exact. Scan produces no JSON; the Budget app reads the PDFs directly.
+text is exact. The mail has the subject `One Click Scan - <stem>` (one rule in the
+mail app can forward every scan), a one-line neutral body and the PDF; the OCR
+text is never in it. Scan produces no JSON; the Budget app reads the PDFs directly.
 The app theme always follows the device theme.
 
-Status: Phase 3 (PDF in the app: picture + best-effort text layer, `./pdf`, open
-button) after Phase 2.1 (spike: searchable PDF, `spikes/pdf_spike/`) and Phase 2 (OCR inside the app: Paddle PP-OCRv5 behind `OcrEngine`, upright working copy, language packs, OCR check screen; the OCR spikes of Phase 1.5 to 1.6c stay in `spikes/ocr_spike/` as the reference). See `docs/`:
+Status: Phase 4 (mail: SMTP with an app password, the Send button, the share route
+as the way out, the OAuth plan) after Phase 3 (PDF in the app: picture + best-effort
+text layer, `./pdf`, open button), after Phase 2.1 (spike: searchable PDF, `spikes/pdf_spike/`) and Phase 2 (OCR inside the app: Paddle PP-OCRv5 behind `OcrEngine`, upright working copy, language packs, OCR check screen; the OCR spikes of Phase 1.5 to 1.6c stay in `spikes/ocr_spike/` as the reference). See `docs/`:
 
 - `ARCHITECTURE.md`
 - `PHASE_0_PLAN.md`
@@ -26,6 +29,9 @@ button) after Phase 2.1 (spike: searchable PDF, `spikes/pdf_spike/`) and Phase 2
 - `PHASE_2_VALIDATION.md`
 - `PHASE_2_1_VALIDATION.md`
 - `PHASE_3_VALIDATION.md`
+- `PHASE_4_VALIDATION.md`
+- `MAIL_PROVIDERS.md`
+- `MAIL_OAUTH_PLAN.md`
 - `PDF_SPIKE_RESULTS.md`
 - `THIRD_PARTY_NOTICES.md`
 - `OCR_LANGUAGE_PACKS.md`

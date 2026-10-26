@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Phase 4: the SMTP send of the mail layer (lib/services/mail/) is the only
+         use of the network. The OCR code has none (test/services/ocr/no_network_test.dart).
+         No network-state permission is needed: a failed connection is an outcome. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Camera is not mandatory for installing; the app explains when missing. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Only for the optional Gallery copy on Android 10 and older (gal plugin).
@@ -11,6 +15,9 @@
         tools:replace="android:maxSdkVersion" />
     <application
         android:label="One Click Scan"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:requestLegacyExternalStorage="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

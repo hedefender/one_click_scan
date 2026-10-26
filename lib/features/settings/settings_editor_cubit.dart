@@ -5,6 +5,10 @@ import '../../domain/entities/app_language.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/entities/mail_send_mode.dart';
+import '../../domain/mail/mail_outcome.dart';
+import '../../domain/ports/mail_credential_store.dart';
+import '../../domain/usecases/send_scan_pdf.dart';
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/update_settings.dart';
 import '../../services/storage_folder/storage_folder_picker.dart';
@@ -18,18 +22,23 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
     required this._loadSettings,
     required this._updateSettings,
     required this._folderPicker,
+    required this._credentials,
+    required this._checkConnection,
     required this._logger,
   }) : super(const SettingsEditorState());
 
   final LoadSettings _loadSettings;
   final UpdateSettings _updateSettings;
   final StorageFolderPicker _folderPicker;
+  final MailCredentialStore _credentials;
+  final CheckMailConnection _checkConnection;
   final AppLogger _logger;
 
   Future<void> start() async {
     final settings = await _loadSettings();
     if (isClosed) return;
     emit(_draftFrom(settings, folderStatus: state.folderStatus));
+    await _refreshStoredPassword(settings);
     await _refreshFolderAccess(settings);
   }
 
@@ -48,6 +57,11 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
   /// The OCR language pack. Saved at once, like the language.
   Future<void> selectOcrPack(String packId) {
     return _applyImmediately((current) => current.copyWith(ocrPackId: packId));
+  }
+
+  /// How a scan leaves by e-mail. Saved at once, like the language.
+  Future<void> selectSendMode(MailSendMode mode) {
+    return _applyImmediately((current) => current.copyWith(mailSendMode: mode));
   }
 
   Future<void> changeFolder() async {
@@ -82,11 +96,19 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
   // --- E-mail draft --------------------------------------------------------
 
   void selectProvider(MailProviderId provider) {
-    emit(state.copyWith(provider: provider));
+    emit(state.copyWith(provider: provider, mailTest: MailTestStatus.idle));
   }
 
   void setSenderAccount(String value) {
-    emit(state.copyWith(senderAccount: value));
+    emit(state.copyWith(senderAccount: value, mailTest: MailTestStatus.idle));
+  }
+
+  void setPassword(String value) {
+    emit(state.copyWith(password: value, mailTest: MailTestStatus.idle));
+  }
+
+  void togglePasswordVisible() {
+    emit(state.copyWith(passwordVisible: !state.passwordVisible));
   }
 
   void selectDestinationMode(DestinationMode mode) {
@@ -110,7 +132,105 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
       ),
     );
     if (isClosed) return;
-    emit(state.copyWith(saved: updated, justSaved: true));
+    var stored = state.hasStoredPassword;
+    final typed = snapshot.password;
+    if (typed.isNotEmpty && snapshot.provider != null) {
+      try {
+        await _credentials.write(
+          StoredMailSecret(
+            provider: snapshot.provider!,
+            accountEmail: snapshot.senderAccount.trim(),
+            secret: typed,
+          ),
+        );
+        stored = true;
+      } catch (error, stackTrace) {
+        // The kind of the error only: the password is never logged.
+        _logger.error(
+          'Storing the mail password failed',
+          error.runtimeType,
+          stackTrace,
+        );
+        stored = false;
+      }
+    } else if (stored) {
+      // A password belongs to one provider and account: another one is none.
+      stored = await _storedPasswordMatches(updated);
+    }
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        saved: updated,
+        justSaved: true,
+        password: '',
+        hasStoredPassword: stored,
+      ),
+    );
+  }
+
+  /// Signs in to the SMTP server with what is on the screen (the typed
+  /// password, or the stored one) and sends nothing.
+  Future<void> testConnection() async {
+    if (state.mailTest == MailTestStatus.running) return;
+    final provider = state.provider;
+    final account = state.senderAccount.trim();
+    var secret = state.password;
+    if (secret.isEmpty && provider != null) {
+      final stored = await _readStored();
+      if (stored != null && stored.belongsTo(provider, account)) {
+        secret = stored.secret;
+      }
+    }
+    if (isClosed) return;
+    if (secret.isEmpty) {
+      emit(state.copyWith(mailTest: MailTestStatus.needsPassword));
+      return;
+    }
+    emit(state.copyWith(mailTest: MailTestStatus.running));
+    final MailOutcome outcome;
+    try {
+      outcome = await _checkConnection(
+        provider: provider,
+        accountEmail: account,
+        secret: secret,
+      );
+    } catch (error, stackTrace) {
+      _logger.error('The connection test threw', error.runtimeType, stackTrace);
+      if (!isClosed) emit(state.copyWith(mailTest: MailTestStatus.unknown));
+      return;
+    }
+    if (isClosed) return;
+    emit(switch (outcome) {
+      MailSent() => state.copyWith(mailTest: MailTestStatus.ok),
+      MailAuthFailed() => state.copyWith(mailTest: MailTestStatus.authFailed),
+      MailNetworkError() => state.copyWith(mailTest: MailTestStatus.network),
+      MailRejected(:final code) => state.copyWith(
+        mailTest: MailTestStatus.rejected,
+        mailTestCode: code,
+      ),
+      _ => state.copyWith(mailTest: MailTestStatus.unknown),
+    });
+  }
+
+  /// Deletes the stored password (and what is typed).
+  Future<void> deletePassword() async {
+    try {
+      await _credentials.delete();
+    } catch (_) {
+      if (!isClosed) {
+        emit(state.copyWith(passwordNotice: MailPasswordNotice.deleteFailed));
+      }
+      return;
+    }
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        password: '',
+        hasStoredPassword: false,
+        mailTest: MailTestStatus.idle,
+        passwordNotice: MailPasswordNotice.deleted,
+      ),
+    );
   }
 
   /// Throws away the unsaved e-mail draft.
@@ -122,6 +242,7 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
         current,
         folderStatus: state.folderStatus,
         folderAccessLost: state.folderAccessLost,
+        hasStoredPassword: state.hasStoredPassword,
       ),
     );
   }
@@ -134,6 +255,29 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
     final updated = await _updateSettings(transform);
     if (isClosed) return;
     emit(state.copyWith(saved: updated));
+  }
+
+  Future<StoredMailSecret?> _readStored() async {
+    try {
+      return await _credentials.read();
+    } catch (error) {
+      _logger.error('Reading the mail password failed', error.runtimeType);
+      return null;
+    }
+  }
+
+  Future<bool> _storedPasswordMatches(AppSettings settings) async {
+    final stored = await _readStored();
+    final provider = settings.mailProvider;
+    return stored != null &&
+        provider != null &&
+        stored.belongsTo(provider, settings.senderAccount);
+  }
+
+  Future<void> _refreshStoredPassword(AppSettings settings) async {
+    final matches = await _storedPasswordMatches(settings);
+    if (isClosed) return;
+    emit(state.copyWith(hasStoredPassword: matches));
   }
 
   Future<void> _refreshFolderAccess(AppSettings settings) async {
@@ -152,6 +296,7 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
     AppSettings settings, {
     required SettingsFolderStatus folderStatus,
     bool folderAccessLost = false,
+    bool hasStoredPassword = false,
   }) {
     return SettingsEditorState(
       saved: settings,
@@ -159,6 +304,7 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
       senderAccount: settings.senderAccount ?? '',
       destinationMode: settings.destinationMode,
       customDestination: settings.customDestination ?? '',
+      hasStoredPassword: hasStoredPassword,
       folderStatus: folderStatus,
       folderAccessLost: folderAccessLost,
     );

@@ -1,11 +1,12 @@
 # Third-party notices
 
-Phase 2 adds text recognition (OCR) to the app and Phase 3 adds the PDF. This
-file lists what comes from others and under which licence. The same texts are
+Phase 2 adds text recognition (OCR) to the app, Phase 3 adds the PDF and Phase 4
+adds the e-mail. This file lists what comes from others and under which licence. The same texts are
 shown in the app: Settings, "Open-source licences" (Flutter's licence page; the
 entries for the OCR models, for ONNX Runtime and for the Noto Sans font are
 added by `lib/presentation/licenses/ocr_licenses.dart` from `assets/licenses/`;
-the Dart packages, `pdf` among them, are listed by Flutter itself).
+the Dart packages, `pdf`, `mailer` and `flutter_secure_storage` among them, are
+listed by Flutter itself on the same screen, with their own licence files).
 
 Flutter collects the licence files of all Dart packages in `pubspec.yaml`
 automatically, so the packages below are also on that screen. They are listed
@@ -54,6 +55,9 @@ here to make the OCR part of the picture complete.
 | `pdf` | 3.13.1 | Apache-2.0, David PHAM-VAN | writes the PDF: page, JPEG picture, hidden text with the subset of Noto Sans (Phase 3), in a background isolate |
 | `vector_math` | 2.4.3 | BSD-3-Clause, The Flutter Authors (Google) | the rotation of the hidden words (listed directly because the PDF code imports it; it was already a Flutter dependency) |
 
+| `mailer` | 7.2.0 | MIT, Kai Sellgren | the SMTP client of the Send button (Phase 4), in a background isolate; its dependencies `mime` (BSD-3-Clause, Dart project authors), `punycoder` (MIT), `unorm_dart` (MIT), `path`, `async` and `logging` (BSD-3-Clause, Dart project authors) |
+| `flutter_secure_storage` | 11.2.0 | BSD-3-Clause, German Saprykin and Julian Steenbakker | the password of the mail account in the Android Keystore (Phase 4); its platform packages `flutter_secure_storage_platform_interface`, `_darwin`, `_linux`, `_web`, `_windows` (BSD-3-Clause) and `ffi_leak_tracker` are only part of the package, the app runs on Android; the Android side uses Google Tink (`com.google.crypto.tink:tink-android`, Apache-2.0) |
+
 The MIT text of ONNX Runtime is `assets/licenses/onnxruntime_LICENSE.txt`.
 
 `pdf` brings `barcode` (Apache-2.0), `bidi` (MIT), `qr` (BSD-3-Clause),
@@ -64,6 +68,11 @@ page. The Apache-2.0 text is shown there as well.
 Packages of the earlier phases (`camera`, `gal`, `flutter_bloc`, `get_it`,
 `go_router`, `shared_preferences`, `path_provider`, `equatable`) keep their own
 licences; they appear on Flutter's licence page.
+
+The mail adapters (`lib/services/mail/`), the mail domain (`lib/domain/mail/`)
+and the test SMTP server (`tool/smtp_test_server.dart`) are written for this
+project. The test server is a few hundred lines of `dart:io`; no mail server
+package is used.
 
 ## What does not come from others
 

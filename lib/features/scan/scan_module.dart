@@ -12,6 +12,8 @@ import '../../domain/usecases/store_scan_pdf.dart';
 import '../../services/camera/camera_service.dart';
 import '../../services/scan_files/scan_temp_store.dart';
 import '../../services/storage_folder/storage_folder_picker.dart';
+import '../../domain/usecases/send_scan_pdf.dart';
+import 'mail_send_cubit.dart';
 import 'scan_cubit.dart';
 import 'scan_page.dart';
 import 'scan_result_args.dart';
@@ -41,6 +43,14 @@ void registerScanModule(GetIt sl) {
       logger: sl<AppLogger>(),
     ),
   );
+  sl.registerFactory<MailSendCubit>(
+    () => MailSendCubit(
+      loadSettings: sl<LoadSettings>(),
+      send: sl<SendScanPdf>(),
+      share: sl<ShareScanPdfDraft>(),
+      logger: sl<AppLogger>(),
+    ),
+  );
 }
 
 List<RouteBase> scanRoutes(GetIt sl) {
@@ -65,8 +75,13 @@ List<RouteBase> scanRoutes(GetIt sl) {
         final args = state.extra! as ScanResultArgs;
         return RepositoryProvider<ScanTempStore>.value(
           value: sl<ScanTempStore>(),
-          child: BlocProvider<ScanResultCubit>(
-            create: (_) => sl<ScanResultCubit>(param1: args)..start(),
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<ScanResultCubit>(
+                create: (_) => sl<ScanResultCubit>(param1: args)..start(),
+              ),
+              BlocProvider<MailSendCubit>(create: (_) => sl<MailSendCubit>()),
+            ],
             child: ScanResultPage(args: args),
           ),
         );

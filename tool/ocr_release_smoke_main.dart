@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:one_click_scan/services/scan_services_factory.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../integration_test/support/mail_smoke.dart';
 import '../integration_test/support/ocr_smoke.dart';
 
 /// Entry point for the release smoke (tool/run_ocr_release_smoke.sh): a
@@ -14,6 +15,8 @@ Future<void> main() async {
   runApp(const SizedBox.shrink());
   try {
     final result = await runOcrSmoke();
+    // Phase 4: the Keystore and a real SMTP send to a server in this process.
+    final mail = await runMailSmoke();
 
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString('smoke', 'ok');
@@ -26,7 +29,7 @@ Future<void> main() async {
 
     // ignore: avoid_print
     print(
-      'OCRSMOKE ok $result, preferences ${prefsOk ? 'ok' : 'FAILED'}, '
+      'OCRSMOKE ok $result, $mail, preferences ${prefsOk ? 'ok' : 'FAILED'}, '
       'camera ${opened.name}',
     );
   } catch (error) {

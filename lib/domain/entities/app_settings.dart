@@ -4,6 +4,7 @@ import 'app_language.dart';
 import 'destination_mode.dart';
 import '../ocr/ocr_language_pack_registry.dart';
 import 'mail_provider_id.dart';
+import 'mail_send_mode.dart';
 import 'storage_folder.dart';
 
 const Object _unset = Object();
@@ -19,6 +20,7 @@ class AppSettings extends Equatable {
     this.customDestination,
     this.saveToGallery = false,
     this.ocrPackId = OcrPackIds.latin,
+    this.mailSendMode = MailSendMode.sendNow,
   });
 
   final AppLanguage language;
@@ -40,6 +42,9 @@ class AppSettings extends Equatable {
   /// pack, or the other way round, comes out wrong.
   final String ocrPackId;
 
+  /// Send the PDF from the app over SMTP, or open the e-mail app with it.
+  final MailSendMode mailSendMode;
+
   /// Address documents are delivered to, according to [destinationMode].
   String? get effectiveDestination {
     return switch (destinationMode) {
@@ -59,6 +64,7 @@ class AppSettings extends Equatable {
     Object? customDestination = _unset,
     bool? saveToGallery,
     String? ocrPackId,
+    MailSendMode? mailSendMode,
   }) {
     return AppSettings(
       language: language ?? this.language,
@@ -78,6 +84,7 @@ class AppSettings extends Equatable {
           : customDestination as String?,
       saveToGallery: saveToGallery ?? this.saveToGallery,
       ocrPackId: ocrPackId ?? this.ocrPackId,
+      mailSendMode: mailSendMode ?? this.mailSendMode,
     );
   }
 
@@ -92,5 +99,6 @@ class AppSettings extends Equatable {
     customDestination,
     saveToGallery,
     ocrPackId,
+    mailSendMode,
   ];
 }

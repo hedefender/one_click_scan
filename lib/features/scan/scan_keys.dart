@@ -29,5 +29,15 @@ abstract final class ScanKeys {
   static const pdfRetry = Key('scan.result.pdf.retry');
   static const pdfFailure = Key('scan.result.pdf.failure');
 
+  static const mailStatus = Key('scan.result.mail.status');
+  static const mailNote = Key('scan.result.mail.note');
+  static const mailSend = Key('scan.result.mail.send');
+  static const mailCancel = Key('scan.result.mail.cancel');
+  static const mailRetry = Key('scan.result.mail.retry');
+  static const mailOpenApp = Key('scan.result.mail.openApp');
+  static const mailOpenSettings = Key('scan.result.mail.openSettings');
+  static const mailFailure = Key('scan.result.mail.failure');
+  static const mailDraft = Key('scan.result.mail.draft');
+
   static Key resultFile(String fileName) => Key('scan.result.file.$fileName');
 }

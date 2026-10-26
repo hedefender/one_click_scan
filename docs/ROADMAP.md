@@ -22,10 +22,11 @@ and the order of the first roadmap.)
 | 2 | OCR in the app: `OcrEngine` + Paddle PP-OCRv5 (background isolate), language packs, upright working copy, check screen | **Done on the emulator; phone check by the user pending** (`PHASE_2_VALIDATION.md`). Architecture: `ARCHITECTURE.md` 8d; decisions ADR-010 to ADR-014; third-party licences `THIRD_PARTY_NOTICES.md`. No PDF, no mail, no JSON |
 | 2.1 | Spike: searchable PDF on the phone (hidden text under the picture): can the user select and copy a code such as an RF code? Decides whether per-character boxes (`OcrLine.charBoxes`, empty in Phase 2) are needed | **Done on the emulator and the PC; phone viewer table by the user pending** (`PHASE_2_1_VALIDATION.md`). Results: `PDF_SPIKE_RESULTS.md`. Hidden text works in the emulator's viewer for per-line and per-word layouts, with a Noto subset (`pdf` package) and with a generated glyphless font (glyphs must not be empty); per-word is the proposal; `charBoxes` are needed (from the CTC time steps, no extra inference). Spike in `spikes/pdf_spike/` |
 | 3 | PDF generation (single and multi page) into `./pdf`, with a best-effort text layer, and an Open PDF button | **Done on the emulator; phone check by the user pending** (`PHASE_3_VALIDATION.md`). One PDF per scan, `pdf/<stem>.pdf` (ADR-015); the picture is the Phase 2 working copy at 200 dpi (ADR-017); the hidden text is one piece per word in Noto Sans, a free extra with no promise of exact copying (ADR-016); no picture stays in the cache (ADR-018). Architecture: `ARCHITECTURE.md` 8e. No mail, no JSON |
-| 4 | Mail: `MailProvider` interface, direct sending, separate sender account | Auth approach (OAuth vs app password) decided at the start of this phase |
+| 4 | Mail: `MailSender` / `MailProvider`, SMTP with an app password (Gmail, Outlook.com, Yahoo), a Send button on the result screen, the share route (open the e-mail app) as the way out, the plan for OAuth | **Done on the emulator; phone check by the user pending** (`PHASE_4_VALIDATION.md`). Facts and sources: `MAIL_PROVIDERS.md`; OAuth plan: `MAIL_OAUTH_PLAN.md`; decisions ADR-019 to ADR-023; architecture `ARCHITECTURE.md` 8f. Subject `One Click Scan - <stem>`, no OCR text in the mail. Outlook.com app passwords are NOT confirmed to work, Yahoo has no OAuth that could be confirmed. No automatic send, no automatic retry |
 | 5 | One-click SCAN & SEND | Empty OCR: still send the mail with the PDF and notify the user |
 | 6 | Image enhancement: crop, edges, perspective, contrast | Likely Rust candidate. Findings of the first phone check of Phase 2 (receipt 3060x4080, tilted, blurred, with a shadow): (1) in bold capitals the reading made mistakes (for example one word read as two different wrong words) and small faded text was lost, so better capture (focus, light) and perspective and contrast correction belong here; (2) on a tilted page the reading order paired a label with the wrong value (a net-amount label got the 0,00 that belonged to the discount line), so lines must be grouped with a tolerance for the tilt (estimate the angle and rotate the coordinates before grouping) or the page deskewed before the OCR; (3) check whether the capture waits for autofocus lock before the shutter. (The request called this "Phase 4"; in this table image enhancement is Phase 6, Phase 4 is Mail.) |
 | 7 | Revisit the Budget integration (only if Scan needs to change something) | No dependency between the apps |
+| 8 | **Mail OAuth and public release readiness** (milestone: done **before any public release**) | Replaces the app password with the official sign-in of Google (`gmail.send`) and Microsoft (Graph `Mail.Send` or SMTP XOAUTH2); Yahoo stays on app password or share. Needs the final package id, a release signing key, a public privacy policy, a homepage, a demo video, a Google verification that can take months (`MAIL_OAUTH_PLAN.md` sections 5 and 6). The non-code items should start early and in parallel |
 | V1.5 | Batch processing, auto retry, better OCR | Budget limit: 50 files per import |
 
 Handwritten, multi-page bills are expected: Single/Multi Page is an independent
@@ -70,7 +71,11 @@ real request.
   has no third-party link (`THIRD_PARTY_NOTICES.md`).
 - **Check of the 0.65 confidence threshold on handwriting** (step 9 of
   `PHASE_2_VALIDATION.md`): numbers from real documents, kept on the phone.
-- **Share button for the PDF** (ACTION_SEND) next to Open; the mail phase needs
-  it anyway.
+- **Share button for the PDF** (ACTION_SEND) next to Open. The mail route of
+  Phase 4 already shares the PDF by e-mail (`shareDraft`); a general share to any
+  app would reuse `DraftSharer`.
+- **Several recipients in the UI** (the domain takes a list, the screens show one).
+- **A real SAF check of the mail attachment** on the phone (the tests use a plain
+  folder for the stored PDF): step in `PHASE_4_VALIDATION.md`.
 - **Hidden text for symbols outside Noto Sans** (arrows, mathematical symbols,
   Roman-numeral glyphs): today they are left out.

@@ -1,3 +1,4 @@
+import '../../domain/entities/mail_provider_id.dart';
 import 'app_strings.dart';
 
 class AppStringsEl extends AppStrings {
@@ -405,4 +406,198 @@ class AppStringsEl extends AppStrings {
   String get pdfFailedWrite =>
       'Το PDF δεν γράφτηκε στον φάκελό σου (είναι γεμάτος ο χώρος;). Οι '
       'φωτογραφίες σου αποθηκεύτηκαν.';
+
+  @override
+  String get mailPasswordLabel => 'Κωδικός εφαρμογής';
+
+  @override
+  String get mailPasswordShow => 'Εμφάνιση του κωδικού';
+
+  @override
+  String get mailPasswordHide => 'Απόκρυψη του κωδικού';
+
+  @override
+  String get mailPasswordStored =>
+      'Ένας κωδικός είναι αποθηκευμένος σε αυτό το κινητό.';
+
+  @override
+  String get mailPasswordNone => 'Δεν υπάρχει αποθηκευμένος κωδικός.';
+
+  @override
+  String get mailPasswordPrivacy =>
+      'Ο κωδικός αποθηκεύεται κρυπτογραφημένος στο κινητό (Android Keystore). '
+      'Δεν μπαίνει στα αντίγραφα ασφαλείας και δεν γράφεται πουθενά αλλού.';
+
+  @override
+  String get mailPasswordDelete => 'Διαγραφή αποθηκευμένου κωδικού';
+
+  @override
+  String get mailPasswordDeleted => 'Ο κωδικός διαγράφηκε.';
+
+  @override
+  String get mailPasswordDeleteFailed => 'Ο κωδικός δεν μπόρεσε να διαγραφεί.';
+
+  @override
+  String get mailTest => 'Δοκιμή σύνδεσης';
+
+  @override
+  String get mailTestRunning => 'Δοκιμή σύνδεσης…';
+
+  @override
+  String get mailTestOk =>
+      'Ο διακομιστής δέχτηκε τον λογαριασμό. Δεν στάλθηκε κανένα μήνυμα.';
+
+  @override
+  String get mailTestNeedsPassword =>
+      'Γράψε πρώτα τον κωδικό εφαρμογής (ή αποθήκευσέ τον).';
+
+  @override
+  String get mailModeTitle => 'Τρόπος αποστολής';
+
+  @override
+  String get mailModeSend => 'Αποστολή από την εφαρμογή';
+
+  @override
+  String get mailModeShare => 'Άνοιγμα στην εφαρμογή email';
+
+  @override
+  String get mailModeShareNote =>
+      'Με το «Άνοιγμα στην εφαρμογή email» ανοίγει η εφαρμογή email σου με '
+      'έτοιμο παραλήπτη, θέμα και PDF, και πατάς εσύ αποστολή εκεί. Δεν '
+      'χρειάζεται κωδικός εφαρμογής.';
+
+  @override
+  String get mailHelpTitle => 'Πώς φτιάχνεται ο κωδικός εφαρμογής';
+
+  @override
+  List<String> mailHelpSteps(MailProviderId provider) => switch (provider) {
+    MailProviderId.gmail => const [
+      'Ενεργοποίησε την επαλήθευση σε 2 βήματα στον λογαριασμό Google σου.',
+      'Άνοιξε τη σελίδα «Κωδικοί εφαρμογών» του λογαριασμού Google '
+          '(myaccount.google.com/apppasswords).',
+      'Δημιούργησε έναν κωδικό για το One Click Scan.',
+      'Αντίγραψε τον κωδικό των 16 ψηφίων και γράψε τον πιο πάνω.',
+    ],
+    MailProviderId.outlook => const [
+      'Ενεργοποίησε την επαλήθευση σε δύο βήματα στον λογαριασμό Microsoft σου.',
+      'Άνοιξε τις «Επιλογές ασφαλείας για προχωρημένους» του λογαριασμού '
+          'Microsoft και κατέβα στο «Κωδικοί πρόσβασης εφαρμογών».',
+      'Επίλεξε «Δημιουργία νέου κωδικού πρόσβασης εφαρμογής».',
+      'Αντίγραψε τον κωδικό και γράψε τον πιο πάνω.',
+    ],
+    MailProviderId.yahoo => const [
+      'Άνοιξε τη σελίδα «Ασφάλεια λογαριασμού» του Yahoo '
+          '(login.yahoo.com/account/security). Χρησιμοποίησε πρόγραμμα '
+          'περιήγησης στο οποίο έχεις συνδεθεί στο Yahoo εδώ και μέρες, '
+          'όχι ανώνυμη περιήγηση.',
+      'Στις «Εξωτερικές συνδέσεις» πάτησε «Δημιουργία κωδικού εφαρμογής».',
+      'Γράψε ένα όνομα (π.χ. One Click Scan) και πάτησε «Δημιουργία κωδικού».',
+      'Αντίγραψε τον κωδικό και γράψε τον πιο πάνω.',
+    ],
+  };
+
+  @override
+  String? mailHelpNote(MailProviderId provider) => switch (provider) {
+    MailProviderId.gmail =>
+      'Αν η επιλογή δεν υπάρχει, η Google δεν δίνει κωδικούς εφαρμογής σε '
+          'λογαριασμούς με κλειδιά ασφαλείας μόνο, σε λογαριασμούς εργασίας ή '
+          'σχολείου και με Advanced Protection. Τότε χρησιμοποίησε το '
+          '«Άνοιγμα στην εφαρμογή email».',
+    MailProviderId.outlook => mailOutlookWarning,
+    MailProviderId.yahoo => mailYahooSizeNote,
+  };
+
+  @override
+  String get mailOutlookWarning =>
+      'Προσοχή: το Outlook.com ζητά σύγχρονη ταυτοποίηση (OAuth) και η '
+      'Microsoft έχει σταματήσει την απλή ταυτοποίηση με κωδικό. Δεν είναι '
+      'επιβεβαιωμένο ότι ένας κωδικός εφαρμογής δουλεύει για αποστολή. Μπορείς '
+      'να δοκιμάσεις· αν αποτύχει, διάλεξε «Άνοιγμα στην εφαρμογή email».';
+
+  @override
+  String get mailYahooSizeNote =>
+      'Το Yahoo δεν δηλώνει επίσημα όριο μεγέθους. Η εφαρμογή θεωρεί ότι το '
+      'μήνυμα χωράει έως 20 MB.';
+
+  @override
+  String get mailSendTitle => 'Email';
+
+  @override
+  String mailSendTo(String destination) =>
+      'Το PDF θα σταλεί στη διεύθυνση $destination.';
+
+  @override
+  String get mailSendButton => 'Αποστολή';
+
+  @override
+  String get mailShareButton => 'Άνοιγμα στην εφαρμογή email';
+
+  @override
+  String get mailShareNote =>
+      'Θα ανοίξει η εφαρμογή email σου με έτοιμο το μήνυμα και το PDF. Το '
+      'μήνυμα φεύγει όταν πατήσεις αποστολή εκεί.';
+
+  @override
+  String get mailSending => 'Αποστολή σε εξέλιξη…';
+
+  @override
+  String get mailCancel => 'Ακύρωση αποστολής';
+
+  @override
+  String get mailSent => 'Το μήνυμα στάλθηκε από τον διακομιστή email.';
+
+  @override
+  String get mailRetry => 'Δοκίμασε ξανά';
+
+  @override
+  String get mailOpenApp => 'Άνοιγμα στην εφαρμογή email';
+
+  @override
+  String get mailOpenSettings => 'Άνοιγμα ρυθμίσεων';
+
+  @override
+  String get mailNotConfiguredAccount =>
+      'Δεν έχει οριστεί λογαριασμός email για αποστολή. Όρισέ τον στις '
+      'Ρυθμίσεις.';
+
+  @override
+  String get mailNotConfiguredPassword =>
+      'Δεν υπάρχει αποθηκευμένος κωδικός εφαρμογής για αυτόν τον λογαριασμό. '
+      'Γράψε τον στις Ρυθμίσεις.';
+
+  @override
+  String get mailFailedAuth =>
+      'Ο διακομιστής δεν δέχτηκε τον λογαριασμό ή τον κωδικό. Έλεγξε τον '
+      'κωδικό εφαρμογής στις Ρυθμίσεις.';
+
+  @override
+  String get mailFailedNetwork =>
+      'Δεν έγινε σύνδεση με τον διακομιστή email. Έλεγξε το internet και '
+      'δοκίμασε ξανά.';
+
+  @override
+  String get mailFailedTooLarge =>
+      'Το PDF είναι πολύ μεγάλο για να σταλεί με email από αυτόν τον πάροχο. '
+      'Άνοιξέ το στην εφαρμογή email ή μοιράσου το αλλιώς.';
+
+  @override
+  String mailFailedRejected(int code) => code == 0
+      ? 'Ο διακομιστής email απέρριψε το μήνυμα.'
+      : 'Ο διακομιστής email απέρριψε το μήνυμα (κωδικός $code).';
+
+  @override
+  String get mailFailedUnknown =>
+      'Το μήνυμα δεν στάλθηκε λόγω απρόσμενου σφάλματος.';
+
+  @override
+  String get mailDraftOpened =>
+      'Η εφαρμογή email άνοιξε. Πάτησε αποστολή εκεί για να φύγει το μήνυμα.';
+
+  @override
+  String get mailDraftNoApp =>
+      'Δεν βρέθηκε εφαρμογή email που να δέχεται συνημμένο αρχείο.';
+
+  @override
+  String get mailDraftFailed =>
+      'Το PDF δεν μπόρεσε να δοθεί στην εφαρμογή email.';
 }

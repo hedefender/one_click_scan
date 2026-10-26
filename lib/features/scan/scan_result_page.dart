@@ -4,12 +4,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/errors/app_exceptions.dart';
 import '../../core/navigation/route_paths.dart';
+import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/entities/mail_send_mode.dart';
 import '../../domain/entities/stored_scan.dart';
+import '../../domain/mail/mail_outcome.dart';
+import '../../domain/ports/draft_sharer.dart';
 import '../../domain/ports/open_pdf.dart';
 import '../../domain/usecases/recognize_pages.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../presentation/state/settings_cubit.dart';
 import '../../services/scan_files/scan_temp_store.dart';
+import 'mail_send_cubit.dart';
+import 'mail_send_state.dart';
 import 'scan_keys.dart';
 import 'scan_page.dart' show PageThumbnail;
 import 'scan_result_args.dart';
@@ -57,73 +63,95 @@ class _ScanResultPageState extends State<ScanResultPage> {
     final folderName =
         context.watch<SettingsCubit>().state.storageFolder?.name ??
         strings.homeNotSet;
-    final busy = context.select<ScanResultCubit, bool>(
+    final pdfBusy = context.select<ScanResultCubit, bool>(
       (cubit) => cubit.state.busy,
     );
+    final mailBusy = context.select<MailSendCubit, bool>(
+      (cubit) => cubit.state.busy,
+    );
+    final busy = pdfBusy || mailBusy;
 
     // While the PDF is being made, leaving would lose it: the reading and the
-    // working copies end with this screen.
-    return PopScope(
-      canPop: !busy,
-      child: Scaffold(
-        appBar: AppBar(title: Text(strings.scanResultTitle)),
-        body: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  strings.scanResultSummary(pictures.length, folderName),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  key: ScanKeys.resultList,
-                  children: [
-                    const _PdfSection(),
-                    for (final picture in pictures)
-                      ListTile(
-                        key: ScanKeys.resultFile(picture.fileName),
-                        leading: SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: PageThumbnail(path: picture.sourcePath),
-                          ),
-                        ),
-                        title: Text(picture.fileName),
-                        subtitle: _gallerySubtitle(context, picture),
-                      ),
-                  ],
-                ),
-              ),
-              if (widget.ocr != null)
+    // working copies end with this screen. While a mail is being sent, leaving
+    // would cancel it: the Cancel button of the mail section is the way out.
+    return BlocListener<ScanResultCubit, ScanResultState>(
+      listenWhen: (previous, current) =>
+          previous.pdf == null && current.pdf != null,
+      listener: (context, state) =>
+          context.read<MailSendCubit>().attach(state.pdf!),
+      child: PopScope(
+        canPop: !busy,
+        child: Scaffold(
+          appBar: AppBar(title: Text(strings.scanResultTitle)),
+          body: SafeArea(
+            child: Column(
+              children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    strings.scanResultSummary(pictures.length, folderName),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    key: ScanKeys.resultList,
+                    children: [
+                      const _PdfSection(),
+                      const _MailSection(),
+                      for (final picture in pictures)
+                        ListTile(
+                          key: ScanKeys.resultFile(picture.fileName),
+                          leading: SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: PageThumbnail(path: picture.sourcePath),
+                            ),
+                          ),
+                          title: Text(picture.fileName),
+                          subtitle: _gallerySubtitle(context, picture),
+                        ),
+                    ],
+                  ),
+                ),
+                if (widget.ocr != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        key: ScanKeys.resultOcr,
+                        onPressed: () => context.push(
+                          RoutePaths.ocrResult,
+                          extra: widget.ocr,
+                        ),
+                        child: Text(strings.ocrOpenResult),
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
                   child: SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton(
-                      key: ScanKeys.resultOcr,
-                      onPressed: () =>
-                          context.push(RoutePaths.ocrResult, extra: widget.ocr),
-                      child: Text(strings.ocrOpenResult),
+                    child: FilledButton(
+                      key: ScanKeys.resultBack,
+                      onPressed: busy
+                          ? null
+                          : () => context.go(RoutePaths.home),
+                      child: Text(
+                        pdfBusy
+                            ? strings.pdfWait
+                            : mailBusy
+                            ? strings.mailSending
+                            : strings.scanBackHome,
+                      ),
                     ),
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    key: ScanKeys.resultBack,
-                    onPressed: busy ? null : () => context.go(RoutePaths.home),
-                    child: Text(busy ? strings.pdfWait : strings.scanBackHome),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -269,5 +297,140 @@ class _PdfSection extends StatelessWidget {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     }
     return '${(bytes / 1024).ceil()} KB';
+  }
+}
+
+/// Sends the stored PDF by e-mail, by hand: a button, then a state in words
+/// (no spinner that never stops). Shown once the PDF is stored.
+class _MailSection extends StatelessWidget {
+  const _MailSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final saved = context.select<ScanResultCubit, bool>(
+      (cubit) => cubit.state.phase == ScanPdfPhase.saved,
+    );
+    if (!saved) return const SizedBox.shrink();
+    final settings = context.watch<SettingsCubit>().state;
+    return BlocBuilder<MailSendCubit, MailSendState>(
+      builder: (context, state) {
+        final cubit = context.read<MailSendCubit>();
+        final error = TextStyle(color: theme.colorScheme.error);
+        final sharing = state.mode == MailSendMode.shareDraft;
+        final destination = settings.effectiveDestination;
+        final children = <Widget>[
+          Text(strings.mailSendTitle, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+        ];
+        switch (state.phase) {
+          case MailPhase.idle:
+            children.add(
+              Text(
+                key: ScanKeys.mailNote,
+                sharing
+                    ? strings.mailShareNote
+                    : destination == null
+                    ? strings.mailNotConfiguredAccount
+                    : strings.mailSendTo(destination),
+              ),
+            );
+            children.add(const SizedBox(height: 12));
+            children.add(
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: ScanKeys.mailSend,
+                  icon: Icon(sharing ? Icons.open_in_new : Icons.send),
+                  label: Text(
+                    sharing ? strings.mailShareButton : strings.mailSendButton,
+                  ),
+                  onPressed: cubit.send,
+                ),
+              ),
+            );
+          case MailPhase.sending:
+            children.addAll([
+              Text(key: ScanKeys.mailStatus, strings.mailSending),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                key: ScanKeys.mailCancel,
+                onPressed: cubit.cancel,
+                child: Text(strings.mailCancel),
+              ),
+            ]);
+          case MailPhase.sent:
+            children.add(Text(key: ScanKeys.mailStatus, strings.mailSent));
+          case MailPhase.failed:
+            children.addAll([
+              Text(
+                key: ScanKeys.mailFailure,
+                _failureText(strings, state.outcome, settings.mailProvider),
+                style: error,
+              ),
+              const SizedBox(height: 8),
+              if (state.needsSettings)
+                FilledButton(
+                  key: ScanKeys.mailOpenSettings,
+                  onPressed: () => context.push(RoutePaths.settings),
+                  child: Text(strings.mailOpenSettings),
+                )
+              else
+                OutlinedButton(
+                  key: ScanKeys.mailRetry,
+                  onPressed: cubit.send,
+                  child: Text(strings.mailRetry),
+                ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: ScanKeys.mailOpenApp,
+                icon: const Icon(Icons.open_in_new),
+                onPressed: cubit.openMailApp,
+                label: Text(strings.mailOpenApp),
+              ),
+            ]);
+        }
+        final draft = state.draft;
+        if (draft != null) {
+          children.addAll([
+            const SizedBox(height: 8),
+            Text(key: ScanKeys.mailDraft, switch (draft) {
+              DraftShareResult.opened => strings.mailDraftOpened,
+              DraftShareResult.noApp => strings.mailDraftNoApp,
+              DraftShareResult.failed => strings.mailDraftFailed,
+            }, style: draft == DraftShareResult.opened ? null : error),
+          ]);
+        }
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          ),
+        );
+      },
+    );
+  }
+
+  static String _failureText(
+    AppStrings strings,
+    MailOutcome? outcome,
+    MailProviderId? provider,
+  ) {
+    return switch (outcome) {
+      MailNotConfigured(:final reason) =>
+        reason == MailNotConfiguredReason.password
+            ? strings.mailNotConfiguredPassword
+            : strings.mailNotConfiguredAccount,
+      MailAuthFailed() =>
+        provider == MailProviderId.outlook
+            ? '${strings.mailFailedAuth}\n${strings.mailOutlookWarning}'
+            : strings.mailFailedAuth,
+      MailNetworkError() => strings.mailFailedNetwork,
+      MailTooLarge() => strings.mailFailedTooLarge,
+      MailRejected(:final code) => strings.mailFailedRejected(code),
+      _ => strings.mailFailedUnknown,
+    };
   }
 }

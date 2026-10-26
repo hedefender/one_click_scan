@@ -28,7 +28,7 @@ the user can share files to other apps or to their own cloud storage:
 - `./pdf/` holds the PDFs.
 
 Naming: both outputs of a scan share one stem, the device time as
-`YYYY-MM-DD_HH-MM-SS` (the same text as the e-mail subject). PDF:
+`YYYY-MM-DD_HH-MM-SS` (the e-mail subject is `One Click Scan - <stem>`, ADR-020). PDF:
 `pdf/<stem>.pdf`. Images: `pictures/<stem>_<n>.jpg`, `n` starting at 1. If the
 stem already exists (two scans in the same second) it gets a suffix `-2`, `-3`,
 and so on, so the PDF and the images of one scan always match by name.
@@ -307,3 +307,145 @@ The working copies live in the app cache (`ocr_work/`) and the PDF in
 While the PDF is made the result screen cannot be left (the buttons and the
 system back are off), because leaving ends the reading and deletes the working
 copies; the wait is bounded by the 45 s limit per page.
+
+## ADR-019 `MailProvider` with several ways to sign in; app password now, OAuth for the public release
+The mail layer is a port, `MailSender` (`domain/ports/mail_sender.dart`), that
+takes a `MailMessage`, a `MailAuth` and a `MailProvider` and answers with a
+sealed `MailOutcome` (`MailSent`, `MailAuthFailed`, `MailNetworkError`,
+`MailTooLarge`, `MailRejected(code)`, `MailCancelled`, `MailUnknown`, and
+`MailNotConfigured`, added because the use case checks the settings before it
+tries anything). It never throws to the UI and no outcome carries an address, a
+password or the text of a server reply.
+
+- `MailProvider` (`domain/mail/`) is a plain value: SMTP host, port and
+  security (implicit TLS or STARTTLS), the kinds of sign-in it supports
+  (`MailAuthKind.appPassword` today, `oauth` later), whether app passwords are
+  confirmed to work (`AppPasswordSupport`) and the biggest message it takes.
+  `MailProviderRegistry.standard` maps `MailProviderId` (`gmail`, `outlook`,
+  `yahoo`) to the facts of `MAIL_PROVIDERS.md`.
+- `MailAuth` is sealed. `AppPasswordAuth` exists; `OAuthAuth` is reserved. A
+  sender switches over the sealed type, so adding OAuth is a new subclass, a new
+  case in a sender and a new implementation, and no change in the use cases, the
+  cubits or the screens (`MAIL_OAUTH_PLAN.md`).
+- The development and the first versions use **SMTP with an app password**
+  (Gmail, Outlook.com, Yahoo), with the share route as the way out. The final
+  public version moves to OAuth (Google `gmail.send`, Microsoft Graph or SMTP
+  XOAUTH2); the milestone is "Phase 8: Mail OAuth and public release readiness"
+  in the roadmap and its long-lead tasks (package id, signing key, privacy
+  policy, Google verification) should start early.
+- **The library is `mailer` 7.2.0** (MIT), not `enough_mail` (MPL-2.0, which asks
+  that changes to its files are published, and which is an IMAP/POP/SMTP client
+  far bigger than what is needed). Reasons from the packages themselves:
+  `mailer` is SMTP only; `ssl: false` upgrades the connection with STARTTLS and
+  aborts if the server does not offer it (`allowInsecure` false), `ssl: true` is
+  implicit TLS; it streams a file attachment from disk and uses CHUNKING when
+  the server offers it; it has AUTH PLAIN, LOGIN and XOAUTH2 (the last is what
+  the OAuth phase needs); a `timeout` for every wait of the server; its errors
+  are a small set of exception classes that `smtp_error_mapping.dart` turns into
+  outcomes (535 and the other sign-in replies to `authFailed`, 552 to
+  `tooLarge`, a socket, timeout or TLS error to `network`, any other reply to
+  `rejected(code)`). It builds the whole message by streaming, with no extra
+  dependency of weight (`mime`, `path`, `logging`, `async`, `punycoder`,
+  `unorm_dart`). Its error text can hold the reply of the server, which can hold
+  the address of the user, so the code reads only the 3 digit reply code and
+  throws the text away.
+- The send runs in **its own isolate** (`SmtpMailSender` and `smtp_worker.dart`):
+  the file is read and encoded off the UI isolate, and a cancel kills the
+  isolate, which closes the connection. A message is delivered only if the
+  server received all of it, so a cancel never delivers a half message.
+  Timeouts: 30 s for each reply of the server, 4 minutes for the whole send,
+  3 times the reply limit for a connection test.
+- The test provider `testLocal` (plain connection to a server on the PC) is
+  **not in the app**: `MailProviderRegistry` takes its map in the constructor
+  and only tests build one (`test/support/mail_fakes.dart`); a test checks that
+  the standard registry holds exactly `gmail`, `outlook` and `yahoo`.
+
+## ADR-020 The subject is "One Click Scan - <name of the PDF>", the body is neutral, no OCR text
+The mail has one attachment, the PDF, a **subject** `One Click Scan - 2026-10-21_19-05-12`
+(the fixed words, then the name of the PDF without `.pdf`, which is the stem of
+the scan with `-2`, `-3` on a collision) and a **body** of one fixed line in the
+language of the app (`Σαρωμένο έγγραφο από το One Click Scan.` or `Document
+scanned with One Click Scan.`). No text of the document is ever in the mail.
+
+- The fixed start of the subject is a user decision: the user can make one rule
+  in their mail app (subject starts with "One Click Scan") and forward all scans
+  to a folder, without a rule on the sender, which would be the user's own
+  address. The part after it keeps every subject unique and equal to the name of
+  the file.
+- This replaces the earlier text of ADR-005 and of the architecture, that the
+  subject is the bare stem. The stem of the file names is unchanged.
+- `MailText` (`domain/mail/mail_text.dart`) builds both texts, so there is one
+  place to change them.
+
+## ADR-021 The password is in the Android Keystore, outside backups, outside logs
+The app password is stored with `flutter_secure_storage` 11.2.0 (BSD-3-Clause;
+Android Keystore: a Keystore key wraps the storage key, AES-GCM encrypts the
+value), behind the port `MailCredentialStore` and the adapter
+`SecureMailCredentialStore`.
+
+- **One value** under one fixed key (`mail.credentials.v1`): provider, account
+  and password together as JSON, so the account is not in the clear in a key
+  name, and a password is only used for the provider and the account it was
+  stored for (`StoredMailSecret.belongsTo`). One account at a time.
+- It is **never in the key/value store** (`shared_preferences`): a test checks the
+  settings keys and values. The integration test writes a canary password and
+  reads every file of the app's private folder outside the cache: none holds it
+  in the clear.
+- **Not in backups.** The manifest has `android:allowBackup="false"`,
+  `fullBackupContent="false"` and `dataExtractionRules` that exclude every domain
+  for cloud backup and device transfer (the plugin's README asks for the first,
+  because a restored ciphertext without its Keystore key cannot be opened).
+  Side effect: the settings are not backed up either; the user sets the app up
+  again on a new phone, which is the safer choice for an app with a password.
+  A password that cannot be read (for example a lost key) is the same as no
+  password: the user enters it again.
+- **Not in logs.** Nothing logs an address, a subject, a password or a server
+  reply; the places that log an error log its type only. `AppPasswordAuth`,
+  `StoredMailSecret`, `MailMessage` and `SettingsEditorState` print as
+  `<redacted>`. A canary password goes through the whole flow in unit tests (a
+  logger that keeps the error as well) and in the integration test, and is
+  looked for in every log line.
+- The field is hidden with a button that shows it, with no suggestions or
+  autocorrect, and the typed password lives only in the field and in the cubit
+  until Save writes it; Save clears it. "Delete the stored password" removes it.
+- The permission is `INTERNET`, and no network-state permission: the only code
+  that uses the network is `lib/services/mail/` (a test reads the sources).
+
+## ADR-022 Two ways to send: `sendNow` and `shareDraft`
+`MailSendMode.sendNow` (default) sends from the app over SMTP. `shareDraft` opens
+the e-mail app of the user (`ACTION_SEND`, `EXTRA_EMAIL`, `EXTRA_SUBJECT`,
+`EXTRA_TEXT`, and the PDF as `EXTRA_STREAM`, the `content://` document URI of
+the stored file with `FLAG_GRANT_READ_URI_PERMISSION` on the intent and on its
+`ClipData`, read only), and **the user presses send there**; the app cannot know
+whether that happens. The mode is a setting saved at once. After a failed send
+"Open in the e-mail app" is offered on the result screen, whatever the mode.
+
+- Kotlin: `ScanFilesHandler.kt` got `shareDocument`, `describeShare` (the same
+  function builds the intent, and the answer is what the intent carries, for the
+  tests) and `copyUriToFile` (native copy of the stored PDF into the app cache, so
+  the SMTP sender can read it; bytes never cross the channel; the copy is
+  deleted after the send and purged at start-up).
+- Outlook.com: the Settings screen says up front that an app password is not
+  confirmed to work (`MAIL_PROVIDERS.md`), and a refused password adds the same
+  warning and the share route on the result screen.
+
+## ADR-023 Sending is a tap in Phase 4; the automatic send comes with the one-click phase
+The result screen has a **Send** button after the PDF is stored (idle: where
+the PDF goes; sending: a state in words and a Cancel button, no spinner; sent:
+"The message was sent from the e-mail server."; failed: why, Try again, Open in
+the e-mail app; no account or password: a button to Settings). The text never
+promises delivery, only what is known: the server accepted the message.
+
+- No automatic send and **no automatic retry** (Auto Retry is V1.5). Leaving the
+  screen is locked while a send runs (the Cancel button is the way out).
+- The settings are read at each tap, so an account set up in Settings a moment
+  ago is used.
+- A PDF over the limit of the provider is refused **before** it is read or sent
+  (`MailSizePolicy`: the limit of the message divided by 1.37 for the MIME
+  encoding, minus room for the headers; about 18.2 MB of PDF for Gmail and 14.6 MB
+  for Outlook.com and Yahoo, `MAIL_PROVIDERS.md`), with the share route as the
+  way out. A server reply 552 gives the same message.
+- The one-click flow (a scan that sends by itself, with an empty OCR still sent)
+  is the one-click phase of the roadmap (Phase 5 in `ROADMAP.md`; the request
+  for Phase 4 called it Phase 7, where the table has "Revisit the Budget
+  integration"). The button of this phase is the part of it that exists now.

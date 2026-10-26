@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../domain/entities/mail_provider_id.dart';
 import 'app_strings_el.dart';
 import 'app_strings_en.dart';
 
@@ -151,6 +152,53 @@ abstract class AppStrings {
   String get pdfFailedBuild;
   String get pdfFailedNoAccess;
   String get pdfFailedWrite;
+
+  // Mail: account section of Settings
+  String get mailPasswordLabel;
+  String get mailPasswordShow;
+  String get mailPasswordHide;
+  String get mailPasswordStored;
+  String get mailPasswordNone;
+  String get mailPasswordPrivacy;
+  String get mailPasswordDelete;
+  String get mailPasswordDeleted;
+  String get mailPasswordDeleteFailed;
+  String get mailTest;
+  String get mailTestRunning;
+  String get mailTestOk;
+  String get mailTestNeedsPassword;
+  String get mailModeTitle;
+  String get mailModeSend;
+  String get mailModeShare;
+  String get mailModeShareNote;
+  String get mailHelpTitle;
+  List<String> mailHelpSteps(MailProviderId provider);
+  String? mailHelpNote(MailProviderId provider);
+  String get mailOutlookWarning;
+  String get mailYahooSizeNote;
+
+  // Mail: sending from the result screen
+  String get mailSendTitle;
+  String mailSendTo(String destination);
+  String get mailSendButton;
+  String get mailShareButton;
+  String get mailShareNote;
+  String get mailSending;
+  String get mailCancel;
+  String get mailSent;
+  String get mailRetry;
+  String get mailOpenApp;
+  String get mailOpenSettings;
+  String get mailNotConfiguredAccount;
+  String get mailNotConfiguredPassword;
+  String get mailFailedAuth;
+  String get mailFailedNetwork;
+  String get mailFailedTooLarge;
+  String mailFailedRejected(int code);
+  String get mailFailedUnknown;
+  String get mailDraftOpened;
+  String get mailDraftNoApp;
+  String get mailDraftFailed;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

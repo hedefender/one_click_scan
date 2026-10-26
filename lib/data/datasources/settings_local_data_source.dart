@@ -2,6 +2,7 @@ import '../../domain/entities/app_language.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/entities/mail_send_mode.dart';
 import '../../domain/entities/storage_folder.dart';
 import '../../domain/ocr/ocr_language_pack_registry.dart';
 import 'key_value_store.dart';
@@ -29,6 +30,7 @@ class SettingsLocalDataSource {
   static const keyCustomDestination = 'settings.mail.customDestination';
   static const keySaveToGallery = 'settings.gallery.save';
   static const keyOcrPack = 'settings.ocr.pack';
+  static const keyMailSendMode = 'settings.mail.sendMode';
 
   final KeyValueStore _store;
   final int schemaVersion;
@@ -70,6 +72,9 @@ class SettingsLocalDataSource {
       ocrPackId: _packs
           .resolve(_store.getString(keyOcrPack), defaultLanguage.code)
           .id,
+      mailSendMode:
+          _enumByName(MailSendMode.values, _store.getString(keyMailSendMode)) ??
+          MailSendMode.sendNow,
     );
   }
 
@@ -85,6 +90,7 @@ class SettingsLocalDataSource {
     await _setOrRemove(keyCustomDestination, settings.customDestination);
     await _store.setBool(keySaveToGallery, settings.saveToGallery);
     await _store.setString(keyOcrPack, settings.ocrPackId);
+    await _store.setString(keyMailSendMode, settings.mailSendMode.name);
   }
 
   Future<void> _setOrRemove(String key, String? value) {
