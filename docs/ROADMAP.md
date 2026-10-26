@@ -21,7 +21,7 @@ and the order of the first roadmap.)
 | 1.6c | Spike crash on a 200 MP sample, safe harness (size guard, breadcrumb and resume, wake lock, exit reasons), paired A/B, language-pack measurements | **Done on the emulator; phone repeat of A to D and the paired test by the user pending** (`PHASE_1_6_VALIDATION.md`). Results: `OCR_SPIKE_RESULTS.md` section 11; `OCR_LANGUAGE_PACKS.md` |
 | 2 | OCR in the app: `OcrEngine` + Paddle PP-OCRv5 (background isolate), language packs, upright working copy, check screen | **Done on the emulator; phone check by the user pending** (`PHASE_2_VALIDATION.md`). Architecture: `ARCHITECTURE.md` 8d; decisions ADR-010 to ADR-014; third-party licences `THIRD_PARTY_NOTICES.md`. No PDF, no mail, no JSON |
 | 2.1 | Spike: searchable PDF on the phone (hidden text under the picture): can the user select and copy a code such as an RF code? Decides whether per-character boxes (`OcrLine.charBoxes`, empty in Phase 2) are needed | **Done on the emulator and the PC; phone viewer table by the user pending** (`PHASE_2_1_VALIDATION.md`). Results: `PDF_SPIKE_RESULTS.md`. Hidden text works in the emulator's viewer for per-line and per-word layouts, with a Noto subset (`pdf` package) and with a generated glyphless font (glyphs must not be empty); per-word is the proposal; `charBoxes` are needed (from the CTC time steps, no extra inference). Spike in `spikes/pdf_spike/` |
-| 3 | PDF generation (single and multi page) into `./pdf` | Decision on the text layer, see "Open decisions" |
+| 3 | PDF generation (single and multi page) into `./pdf`, with a best-effort text layer, and an Open PDF button | **Done on the emulator; phone check by the user pending** (`PHASE_3_VALIDATION.md`). One PDF per scan, `pdf/<stem>.pdf` (ADR-015); the picture is the Phase 2 working copy at 200 dpi (ADR-017); the hidden text is one piece per word in Noto Sans, a free extra with no promise of exact copying (ADR-016); no picture stays in the cache (ADR-018). Architecture: `ARCHITECTURE.md` 8e. No mail, no JSON |
 | 4 | Mail: `MailProvider` interface, direct sending, separate sender account | Auth approach (OAuth vs app password) decided at the start of this phase |
 | 5 | One-click SCAN & SEND | Empty OCR: still send the mail with the PDF and notify the user |
 | 6 | Image enhancement: crop, edges, perspective, contrast | Likely Rust candidate. Findings of the first phone check of Phase 2 (receipt 3060x4080, tilted, blurred, with a shadow): (1) in bold capitals the reading made mistakes (for example one word read as two different wrong words) and small faded text was lost, so better capture (focus, light) and perspective and contrast correction belong here; (2) on a tilted page the reading order paired a label with the wrong value (a net-amount label got the 0,00 that belonged to the discount line), so lines must be grouped with a tolerance for the tilt (estimate the angle and rotate the coordinates before grouping) or the page deskewed before the OCR; (3) check whether the capture waits for autofocus lock before the shutter. (The request called this "Phase 4"; in this table image enhancement is Phase 6, Phase 4 is Mail.) |
@@ -33,18 +33,44 @@ choice.
 
 ## Open decisions
 
-- **Phase 3 proposal (from Phase 2.1, `PDF_SPIKE_RESULTS.md` section 5; decided after the
-  phone viewer table).** Writer: own glyphless writer (5 to 10 KB, any script, no
-  font asset) with the `pdf` package plus a Noto Sans subset as the alternative;
-  layout: one hidden run per word; the engine returns `charBoxes` from the CTC
-  time steps; the page image is the Phase 2 working copy passed through; a
-  check-digit test of RF and IBAN codes (warn, never edit) as a safety net.
+- **Phase 3 (decided and built; was the proposal of Phase 2.1,
+  `PDF_SPIKE_RESULTS.md` section 5).** The `pdf` package with a Noto Sans
+  subset (not the glyphless writer), one hidden piece per word, the engine
+  returns `charBoxes` from the CTC time steps, the page picture is the Phase 2
+  working copy passed through. The check-digit test is in the backlog below.
 
-- **Searchable PDF vs Budget OCR (decided in Phase 3).** For Budget to read text
-  from a PDF, either the Scan PDF carries an invisible text layer (searchable
-  PDF), or Budget runs its own OCR. Not decided yet.
+- **Searchable PDF vs Budget OCR (decided in Phase 3).** The Scan PDF carries an
+  invisible text layer as a best effort (ADR-016); it is not a promise, so
+  Budget cannot rely on it being complete or exact. Whether Budget reads that
+  layer or runs its own OCR is for the Budget side to decide (ADR-003: the apps
+  stay independent).
 - **Receipt/Document choice, soft filter, `documentType` (decided in the OCR
   phase).** They existed for the JSON export. With no JSON (ADR-008) they are
   suspended and not implemented. They come back only if the OCR phase finds a
   use for them.
 - **Theme.** Always follows the device theme. No theme option is planned.
+
+## Backlog (frozen until users ask for them)
+
+Ideas that came out of the phases so far. None is started; each waits for a
+real request.
+
+- **Check digits (mod 97) of RF and IBAN codes** found in the text: a warning
+  when the digits do not add up, never a correction (ADR-013).
+- **Per-character hidden text** (a piece per character, for exact partial
+  selection with the handles of a viewer). Phase 2.1 measured it as better for
+  codes in some viewers and worse in others; not needed for the per-word layout.
+- **The "glyphless" PDF writer** of the Phase 2.1 spike (5 to 10 KB per page
+  of text layer, any script, no font asset). The `pdf` package with the Noto
+  Sans subset does the job today.
+- **More language packs by download** (Russian and others), from our own
+  hosting with a pinned SHA-256 (ADR-011, `OCR_LANGUAGE_PACKS.md`).
+- **Models rebuilt from the official weights** with `paddle2onnx` and hosted on
+  GitHub Releases of this project, **before any public release**, so the chain
+  has no third-party link (`THIRD_PARTY_NOTICES.md`).
+- **Check of the 0.65 confidence threshold on handwriting** (step 9 of
+  `PHASE_2_VALIDATION.md`): numbers from real documents, kept on the phone.
+- **Share button for the PDF** (ACTION_SEND) next to Open; the mail phase needs
+  it anyway.
+- **Hidden text for symbols outside Noto Sans** (arrows, mathematical symbols,
+  Roman-numeral glyphs): today they are left out.

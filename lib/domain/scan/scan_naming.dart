@@ -27,6 +27,21 @@ class ScanNaming {
     return '${stem}_$pageNumber.jpg';
   }
 
+  /// `<stem>.pdf`: the PDF of a scan takes the stem of its pictures (ADR-005),
+  /// so for a multi-page scan it is named after the first page.
+  String pdfName(String stem) => '$stem.pdf';
+
+  /// [wanted] if no stored file uses it, else `<wanted>-2`, `-3`... The PDF
+  /// never replaces a file that is already there.
+  String availableStem(String wanted, Set<String> existingStems) {
+    if (!existingStems.contains(wanted)) return wanted;
+    var suffix = 2;
+    while (existingStems.contains('$wanted-$suffix')) {
+      suffix++;
+    }
+    return '$wanted-$suffix';
+  }
+
   /// Stems already used by the given file names (`<stem>_<n>.jpg` or
   /// `<stem>.pdf`). Other files are ignored.
   Set<String> existingStems(Iterable<String> fileNames) {

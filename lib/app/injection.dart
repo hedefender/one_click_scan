@@ -10,7 +10,11 @@ import '../domain/entities/app_language.dart';
 import '../domain/repositories/settings_repository.dart';
 import '../domain/ocr/ocr_language_pack_registry.dart';
 import '../domain/ports/ocr_engine.dart';
+import '../domain/ports/open_pdf.dart';
+import '../domain/ports/pdf_builder.dart';
 import '../domain/usecases/load_settings.dart';
+import '../domain/usecases/store_scan_pdf.dart';
+import '../services/pdf/pdf_services.dart';
 import '../domain/usecases/prepare_image_for_ocr.dart';
 import '../domain/usecases/recognize_pages.dart';
 import '../services/ocr/ocr_services.dart';
@@ -45,6 +49,7 @@ Future<GetIt> buildContainer({
   GalleryService gallery = const UnsupportedGalleryService(),
   ScanTempStore scanTempStore = const NoopScanTempStore(),
   OcrServices ocr = const OcrServices.unsupported(),
+  PdfServices pdf = const PdfServices.unsupported(),
   OcrLanguagePackRegistry? ocrPackRegistry,
   DateTime Function() clock = DateTime.now,
 }) async {
@@ -62,6 +67,8 @@ Future<GetIt> buildContainer({
   sl.registerSingleton<ScanTempStore>(scanTempStore);
   sl.registerSingleton<OcrLanguagePackRegistry>(packRegistry);
   sl.registerSingleton<OcrEngine>(ocr.engine);
+  sl.registerSingleton<PdfBuilder>(pdf.builder);
+  sl.registerSingleton<OpenPdf>(pdf.opener);
 
   // Data.
   sl.registerLazySingleton<SettingsLocalDataSource>(
@@ -93,6 +100,15 @@ Future<GetIt> buildContainer({
       naming: ScanNaming(clock),
       galleryNaming: GalleryNaming(clock),
       galleryCounter: KeyValueGalleryCounterStore(sl<KeyValueStore>()),
+      logger: sl<AppLogger>(),
+    ),
+  );
+
+  sl.registerLazySingleton<StoreScanPdf>(
+    () => StoreScanPdf(
+      builder: sl<PdfBuilder>(),
+      fileStore: sl<ScanFileStore>(),
+      naming: ScanNaming(clock),
       logger: sl<AppLogger>(),
     ),
   );

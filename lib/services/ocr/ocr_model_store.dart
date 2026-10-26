@@ -81,8 +81,21 @@ class OcrModelStore {
   final OcrLanguagePackRegistry registry;
   final String assetFolder;
 
+  /// The calls to [resolve] run one after the other. The camera screen asks
+  /// for the models ahead of time (preload) and the first page asks again a
+  /// moment later; two extractions of the same file at once wrote the same
+  /// `.tmp` file, and the loser failed on the rename (found by the Phase 3
+  /// integration test: the first page of a fresh install had no text).
+  Future<void> _tail = Future<void>.value();
+
   /// Throws [OcrModelException] when an asset is missing.
-  Future<OcrModelPaths> resolve(OcrLanguagePack pack) async {
+  Future<OcrModelPaths> resolve(OcrLanguagePack pack) {
+    final run = _tail.then((_) => _resolve(pack));
+    _tail = run.then<void>((_) {}, onError: (_) {});
+    return run;
+  }
+
+  Future<OcrModelPaths> _resolve(OcrLanguagePack pack) async {
     await directory.create(recursive: true);
     final det = await _ensure(registry.detector);
     final rec = await _ensure(pack.model);

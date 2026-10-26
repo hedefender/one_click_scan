@@ -225,7 +225,7 @@ class PaddleWorker {
     if (_stop(id)) return {'status': 'cancelled'};
 
     // ---------------------------------------------------------- recognise
-    final results = <(String, double)>[];
+    final results = <CtcDecoded>[];
     progress('recognizing', 0, boxes.length);
     final batch = math.max(1, OcrConfig.recognitionBatch);
     for (var i = 0; i < boxes.length; i += batch) {
@@ -264,7 +264,7 @@ class PaddleWorker {
           1,
           math.min(steps, (box.cropWidth * steps / maxW).ceil()),
         );
-        results.add(ctcGreedy(typed, j, steps, classes, valid, _dict));
+        results.add(ctcGreedyWithSpans(typed, j, steps, classes, valid, _dict));
       }
       progress('recognizing', math.min(i + batch, boxes.length), boxes.length);
     }
@@ -272,17 +272,25 @@ class PaddleWorker {
     // ------------------------------------------------------------- result
     final lines = <Object?>[];
     for (var i = 0; i < boxes.length; i++) {
-      final (text, conf) = results[i];
-      if (text.trim().isEmpty) continue;
+      final decoded = results[i];
+      if (decoded.text.trim().isEmpty) continue;
       lines
-        ..add(text)
-        ..add(conf)
+        ..add(decoded.text)
+        ..add(decoded.confidence)
         ..add(boxes[i].row);
       for (final p in boxes[i].quad(px.w, px.h)) {
         lines
           ..add(p.x)
           ..add(p.y);
       }
+      // Where each character sits along the box: [char, start, end, ...].
+      lines.add([
+        for (final span in decoded.spans) ...[
+          span.character,
+          span.start,
+          span.end,
+        ],
+      ]);
     }
     return {
       'status': 'ok',
@@ -307,7 +315,3 @@ class PaddleWorker {
     );
   }
 }
-
-/// Number of values per line in the flat `lines` list of a worker result:
-/// text, confidence, row, then eight corner coordinates.
-const workerLineStride = 11;

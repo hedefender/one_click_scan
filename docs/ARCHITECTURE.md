@@ -1,11 +1,12 @@
-# Architecture (Phase 2)
+# Architecture (Phase 3)
 
 Status: Phase 0 skeleton and Phase 0.5 settings screen are committed; Phase 1
 adds the camera and saving the originals (see `PHASE_1_VALIDATION.md`);
 Phase 1.1 fixes found in the manual check (see `PHASE_1_1_VALIDATION.md`);
 Phase 1.2 adds the app icon, the splash screen and the Gallery copy names
 (see `PHASE_1_2_VALIDATION.md`, ADR-009); Phase 2 adds the OCR layer
-(section 8d, ADR-010 to ADR-014, `PHASE_2_VALIDATION.md`).
+(section 8d, ADR-010 to ADR-014, `PHASE_2_VALIDATION.md`); Phase 3 adds the PDF
+(section 8e, ADR-015 to ADR-018, `PHASE_3_VALIDATION.md`).
 
 ## 1. Principles
 
@@ -139,11 +140,12 @@ read/write permission and returns `{uri, name}`. `hasAccess` checks that the
 permission is still granted (it can be revoked by the user or the system);
 later phases use it before every write and re-prompt when missing.
 
-Inside the chosen folder (`./`) later phases write `./pictures/` (original
-JPEGs, always saved) and `./pdf/` (PDFs). Both outputs of one scan share a
-stem, the device time `YYYY-MM-DD_HH-MM-SS` (same as the e-mail subject, with a
-`-2`, `-3` suffix on collision): `pdf/<stem>.pdf`, `pictures/<stem>_<n>.jpg`
-with `n` from 1. The Gallery switch only adds one more copy there; it does not
+Inside the chosen folder (`./`) the app writes `./pictures/` (original
+JPEGs, always saved, Phase 1) and `./pdf/` (PDFs, Phase 3). Both outputs of one
+scan share a stem, the device time `YYYY-MM-DD_HH-MM-SS` (same as the e-mail
+subject, with a `-2`, `-3` suffix on collision): `pdf/<stem>.pdf`,
+`pictures/<stem>_<n>.jpg` with `n` from 1. The stem is chosen free in both
+folders (ADR-015). The Gallery switch only adds one more copy there; it does not
 move the originals. The e-mail contains only the PDF (ADR-005).
 
 ## 8b. Camera and saving the originals (Phase 1)
@@ -331,6 +333,106 @@ draws the quads over the working image, a summary (pack, time, working image,
 capture resolution, boxes and filtered), page navigation for Multi Page, and a
 button that copies the visible text. Nothing on it animates continuously.
 
+## 8e. PDF (Phase 3)
+
+Decisions: ADR-015 to ADR-018. Numbers behind them: `PDF_SPIKE_RESULTS.md`
+(Phase 2.1) and `PHASE_3_VALIDATION.md`. The PDF code is new; nothing was
+imported from `spikes/pdf_spike/`, which stays as the reference.
+
+The product is the PDF made from what the camera sees. The invisible text under
+the picture is a free extra: best effort, no promise, and a PDF is made even
+when the OCR fails (ADR-016).
+
+### Layers
+
+```
+domain/
+  entities/   PdfPageInput (UprightImage + OcrOutcome), BuiltPdf, StoredPdf;
+              OcrLine.charBoxes (OcrCharBox: a character and its quad)
+  ocr/        char_boxes.dart (CharSpan, sliceQuad, charBoxesFromSpans)
+  pdf/        PdfConfig (200 dpi, font share, baseline), layoutPageText
+              (PdfTextRun: one per word), pageSizeFor
+  ports/      PdfBuilder, OpenPdf; ScanFileStore.copyToFolder returns the URI
+  scan/       ScanNaming.pdfName / availableStem
+  usecases/   StoreScanPdf (build, name, copy to ./pdf, delete the cache file);
+              StoreScanPages now picks a stem free in ./pictures and ./pdf;
+              OcrSession.stopReading / releaseWorkingCopies
+services/
+  ocr/paddle/ ctcGreedyWithSpans (+ charSpans), worker_lines.dart
+  pdf/        DartPdfBuilder (background isolate), pdf_writer.dart (the `pdf`
+              package), AndroidOpenPdf, PdfServices
+features/scan/ ScanResultCubit / ScanResultState / ScanResultPage (PDF section)
+android       ScanFilesHandler.kt: copyToFolder returns the document URI,
+              openDocument (ACTION_VIEW, FLAG_GRANT_READ_URI_PERMISSION)
+```
+
+`domain/` stays pure Dart: the layout of the words is plain maths on the quads
+of the OCR and works in PDF points; the library that writes the file is behind
+`PdfBuilder`.
+
+### Where the character places come from
+
+The recognition model gives, per line, a `[T, classes]` table (one column per
+time step across the width of the crop). Greedy CTC already walks it; the walk
+now also records, for every emitted character, the first and last time step of
+its run (`ctcGreedyWithSpans`). The centre of a character is the middle of its
+run, the edge between two characters the midpoint of their centres, the outer
+edges continue half a gap; the result is a fraction of the length of the box
+per character (`CharSpan`). The worker sends these as a flat
+`[char, start, end, ...]` list per line (one more field in the line record,
+`workerLineStride` 12) and the root isolate cuts the quad of the line with
+them (`sliceQuad`, linear interpolation along the top and bottom edges), giving
+`OcrLine.charBoxes`. No extra inference, one pass over the same table. A line
+whose characters do not add up to its text gets `charBoxes: null`.
+
+### Flow
+
+```
+ScanCubit.save  ->  photos to ./pictures (as before)  ->  OcrSession.close
+   -> ScanPhase.saved -> result route (ScanResultArgs: StoredScan, OcrSession)
+ScanResultCubit.start
+   -> readingText   wait for session.finished (every page has an outcome:
+                    success, timedOut, failed, cancelled; "page k of n")
+   -> creating      pages = working copy + outcome, in capture order
+        PdfBuilder.build   layout of the words (UI isolate, a few ms), then in
+                           a background isolate: PdfDocument, one page per
+                           picture at 200 dpi, the JPEG as it is, one hidden
+                           piece per word (render mode 3) in the Noto subset;
+                           the file goes to cache/pdf_work/
+        StoreScanPdf       ./pdf created, name <stem>.pdf free, copyToFolder
+                           (native, bytes never cross the channel) -> URI,
+                           cache PDF deleted
+   -> saved         OcrSession.releaseWorkingCopies (cache cleaned);
+                    "Open PDF" -> OpenPdf.open(uri) -> ACTION_VIEW
+   -> failed        reason (no picture, writer, no access, write) + Try again
+```
+
+A page whose OCR timed out, failed or was cancelled goes in as a picture
+without text; the result screen counts those pages. "Create the PDF without
+waiting for the text" calls `OcrSession.stopReading`: the page being read is
+cancelled, the next ones are only prepared (their pictures exist), and the PDF
+follows at once. While the PDF is made, the result screen cannot be left.
+
+### Text layer
+
+Per line the filter decides (confidence >= 0.65, ADR-013). A line with
+`charBoxes` is cut at its spaces into words; each word is a `PdfTextRun`: the
+start of its baseline (0.78 of the box height below its top-left corner,
+along the box's own down direction, so a tilted line keeps its tilt), the
+angle, a font size of 0.72 of the box height, and the width it must cover. The
+writer measures the word in Noto Sans and stretches it to that width with
+horizontal scaling, so a word covers the place of the printed word whatever the
+font. Characters the font cannot draw (control and zero-width characters,
+symbols outside Noto Sans) are left out of the hidden text.
+
+### Cache
+
+`ocr_work/` (working copies) and `pdf_work/` (the PDF until it is copied) are
+purged at start-up (`main.dart`); the working copies are deleted when the PDF
+is stored (ADR-018); the camera's shots in `scan_pages/` are deleted when the
+result screen is left, as before.
+
+
 ## 9. Testing strategy
 
 | Level | What | Where |
@@ -344,6 +446,14 @@ button that copies the visible text. Nothing on it animates continuously.
 (invented pages: key tokens, coordinates, EXIF, 12 MP, 200 MP header, cancel,
 timeout, Multi Page); `integration_test/ocr_release_smoke_test.dart` is the same
 engine in a release build.
+
+`integration_test/pdf_flow_test.dart` (Phase 3) runs the real models and the
+real PDF writer on the emulator: the whole screen flow for one and three pages
+with the user's folder as a real directory (`DirectoryScanFileStore`; the system
+folder picker needs a person), EXIF orientation, a 12 MP photo, a timeout and a
+cancelled reading followed by a normal scan, a refused folder, the cache after
+the PDF. `tool/run_pdf_integration_test.sh` pulls the PDFs to the PC and
+`tool/check_pdf_text.py` reads their text with PyMuPDF and `pdftotext`.
 
 `integration_test/gallery_copy_test.dart` saves a synthetic picture through the
 real `gal` plugin (Gallery file name).
@@ -376,7 +486,7 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 | 1 | `CameraService`, originals into `./pictures` (done) | `services/camera/` + feature `scan` |
 | 2 | `OcrEngine` + Paddle PP-OCRv5, upright working copy, language packs (done, 8d) | `services/ocr/`, `services/image/` |
 | 2.1 | Spike: searchable PDF, select and copy a code on the phone | spike only |
-| 3 | `PdfGenerator` into `./pdf` (text layer; uses the upright working copy and the line quads) | `services/pdf/` |
+| 3 | PDF into `./pdf` with a best-effort text layer, Open PDF (done, 8e) | `services/pdf/`, `domain/pdf/`, `features/scan` result screen |
 | 4 | `MailProvider` (+ implementations) | `services/mail/` |
 | 5 | One-click orchestration use case | `domain/usecases/`, feature `scan` |
 | 6 | Image enhancement | `services/` (Rust candidate) |

@@ -332,4 +332,77 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get licensesOpen => 'Άδειες ανοιχτού λογισμικού';
+
+  @override
+  String get pdfTitle => 'PDF';
+
+  @override
+  String pdfReading(int page, int total) => total <= 1
+      ? 'Ανάγνωση του κειμένου…'
+      : 'Ανάγνωση σελίδας $page από $total…';
+
+  @override
+  String get pdfCreating => 'Δημιουργία του PDF…';
+
+  @override
+  String pdfSaved(String fileName) => 'Το PDF αποθηκεύτηκε: $fileName';
+
+  @override
+  String pdfDetails(int pages, String size) =>
+      pages == 1 ? '1 σελίδα, $size' : '$pages σελίδες, $size';
+
+  @override
+  String pdfPagesWithoutText(int count) => count == 1
+      ? 'Μία σελίδα δεν έχει κείμενο για αναζήτηση. Η εικόνα της υπάρχει στο PDF.'
+      : '$count σελίδες δεν έχουν κείμενο για αναζήτηση. Οι εικόνες τους '
+            'υπάρχουν στο PDF.';
+
+  @override
+  String get pdfTextNote =>
+      'Το κείμενο πίσω από τις εικόνες διαβάζεται αυτόματα και μπορεί να έχει '
+      'λάθη. Έλεγχε πάντα το ίδιο το έγγραφο.';
+
+  @override
+  String get pdfOpen => 'Άνοιγμα PDF';
+
+  @override
+  String get pdfSkipText => 'Δημιουργία του PDF χωρίς αναμονή για το κείμενο';
+
+  @override
+  String get pdfRetry => 'Δοκίμασε ξανά';
+
+  @override
+  String get pdfWait => 'Περίμενε να ετοιμαστεί το PDF.';
+
+  @override
+  String get pdfOpenNoViewer =>
+      'Καμία εφαρμογή σε αυτό το κινητό δεν ανοίγει αρχεία PDF.';
+
+  @override
+  String get pdfOpenFailed => 'Το PDF δεν μπόρεσε να ανοίξει.';
+
+  @override
+  String get pdfFailedImage =>
+      'Το PDF δεν δημιουργήθηκε: μια φωτογραφία δεν διαβάζεται ή είναι πολύ '
+      'μεγάλη. Οι φωτογραφίες σου αποθηκεύτηκαν.';
+
+  @override
+  String get pdfFailedUnsupported =>
+      'Η δημιουργία PDF δεν είναι διαθέσιμη σε αυτή τη συσκευή. Οι '
+      'φωτογραφίες σου αποθηκεύτηκαν.';
+
+  @override
+  String get pdfFailedBuild =>
+      'Το PDF δεν δημιουργήθηκε. Οι φωτογραφίες σου αποθηκεύτηκαν.';
+
+  @override
+  String get pdfFailedNoAccess =>
+      'Το PDF δεν αποθηκεύτηκε: η εφαρμογή δεν έχει πια πρόσβαση στον φάκελό '
+      'σου. Οι φωτογραφίες σου αποθηκεύτηκαν. Διάλεξε ξανά τον φάκελο στις '
+      'Ρυθμίσεις.';
+
+  @override
+  String get pdfFailedWrite =>
+      'Το PDF δεν γράφτηκε στον φάκελό σου (είναι γεμάτος ο χώρος;). Οι '
+      'φωτογραφίες σου αποθηκεύτηκαν.';
 }

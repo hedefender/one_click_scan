@@ -11,6 +11,7 @@ import 'core/logging/app_logger.dart';
 import 'domain/ocr/ocr_language_pack_registry.dart';
 import 'presentation/licenses/ocr_licenses.dart';
 import 'services/ocr/ocr_services.dart';
+import 'services/pdf/pdf_services.dart';
 import 'services/scan_services_factory.dart';
 import 'services/storage_folder/storage_folder_picker_factory.dart';
 
@@ -28,6 +29,9 @@ Future<void> main() async {
   );
   // Working copies left by a run that was killed half way.
   await ocr.workStore.purgeAll();
+  final pdf = await createPlatformPdfServices(logger: const DebugAppLogger());
+  // PDFs left in the cache by a run that was killed half way.
+  await pdf.builder.purgeAll();
   final container = await buildContainer(
     config: AppConfig.forDeviceLanguage(
       PlatformDispatcher.instance.locale.languageCode,
@@ -39,6 +43,7 @@ Future<void> main() async {
     gallery: scanServices.gallery,
     scanTempStore: scanServices.tempStore,
     ocr: ocr,
+    pdf: pdf,
   );
 
   runApp(OneClickScanApp(container: container));

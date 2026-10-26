@@ -26,5 +26,12 @@ void registerOcrLicenses({
       'ONNX Runtime, Microsoft Corporation, MIT License.\n\n'
       '${await loadText('assets/licenses/onnxruntime_LICENSE.txt')}',
     );
+    yield LicenseEntryWithLineBreaks(
+      const ['Noto Sans'],
+      'Noto Sans Regular, The Noto Project Authors, licensed under the SIL '
+      'Open Font License 1.1. The app embeds the few letters it needs of this '
+      'font in the invisible text of the PDF.\n\n'
+      '${await loadText('assets/licenses/notosans_OFL.txt')}',
+    );
   });
 }

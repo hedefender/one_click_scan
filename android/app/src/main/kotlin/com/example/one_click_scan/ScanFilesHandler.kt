@@ -1,6 +1,8 @@
 package com.example.one_click_scan
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -19,7 +21,8 @@ import java.util.concurrent.Executors
  *
  * Channel name must match AndroidScanFileStore.channelName (Dart). Error codes
  * must match AndroidScanFileStore._failureFor: no_access, exists,
- * write_failed, source_missing.
+ * write_failed, source_missing. The reply of openDocument ("opened",
+ * "no_viewer", "failed") must match AndroidOpenPdf (Dart).
  */
 class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger) {
     private val executor = Executors.newSingleThreadExecutor()
@@ -29,6 +32,12 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
 
     init {
         MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
+            // Showing a stored PDF is a start of an activity: it stays on the
+            // UI thread and needs no folder permission of its own.
+            if (call.method == "openDocument") {
+                openDocument(call, result)
+                return@setMethodCallHandler
+            }
             // All SAF and file work runs off the UI thread.
             executor.execute {
                 try {
@@ -56,16 +65,13 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
                 null
             }
             "listFileNames" -> listFileNames(treeUri, requireArgument(call, "subfolder"))
-            "copyToFolder" -> {
-                copyToFolder(
-                    treeUri,
-                    requireArgument(call, "subfolder"),
-                    requireArgument(call, "fileName"),
-                    requireArgument(call, "mimeType"),
-                    requireArgument(call, "sourcePath")
-                )
-                null
-            }
+            "copyToFolder" -> copyToFolder(
+                treeUri,
+                requireArgument(call, "subfolder"),
+                requireArgument(call, "fileName"),
+                requireArgument(call, "mimeType"),
+                requireArgument(call, "sourcePath")
+            )
             "deleteFile" -> {
                 deleteFile(
                     treeUri,
@@ -75,6 +81,32 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
                 null
             }
             else -> throw ScanFilesException("unknown", "Unknown method")
+        }
+    }
+
+    /**
+     * Hands a stored document to the viewer the user chooses (ACTION_VIEW). The
+     * URI is the document URI of a file in the SAF folder; the viewer gets a
+     * temporary read grant for it. Replies "opened", "no_viewer" or "failed".
+     */
+    private fun openDocument(call: MethodCall, result: MethodChannel.Result) {
+        val uriText = call.argument<String>("uri")
+        val mimeType = call.argument<String>("mimeType") ?: "application/pdf"
+        if (uriText == null) {
+            result.success("failed")
+            return
+        }
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(Uri.parse(uriText), mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            context.startActivity(intent)
+            result.success("opened")
+        } catch (e: ActivityNotFoundException) {
+            result.success("no_viewer")
+        } catch (e: Exception) {
+            result.success("failed")
         }
     }
 
@@ -169,13 +201,14 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
         return children(treeUri, folderId).filter { !it.isDirectory }.map { it.name }
     }
 
+    /** Returns the document URI of the new file (what a viewer is given). */
     private fun copyToFolder(
         treeUri: Uri,
         subfolder: String,
         fileName: String,
         mimeType: String,
         sourcePath: String
-    ) {
+    ): String {
         val source = File(sourcePath)
         if (!source.isFile) throw ScanFilesException("source_missing", "Source file is missing")
 
@@ -211,6 +244,7 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
             if (e is ScanFilesException) throw e
             throw ScanFilesException("write_failed", "Could not write file")
         }
+        return target.toString()
     }
 
     private fun deleteFile(treeUri: Uri, subfolder: String, fileName: String) {

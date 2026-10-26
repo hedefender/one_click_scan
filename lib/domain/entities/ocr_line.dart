@@ -12,8 +12,9 @@ class OcrPoint extends Equatable {
   List<Object?> get props => [x, y];
 }
 
-/// Box of one recognised character. Not produced in Phase 2 (the searchable
-/// PDF spike of Phase 2.1 decides whether it is needed).
+/// Box of one recognised character: its slice of the line's box, from the CTC
+/// time step at which the character was emitted (Phase 3, for the text layer
+/// of the PDF).
 class OcrCharBox extends Equatable {
   const OcrCharBox({required this.character, required this.quad});
 
@@ -53,6 +54,8 @@ class OcrLine extends Equatable {
   /// result; only the visible text leaves it out.
   final bool filtered;
 
+  /// One box per character of [text], in order (spaces included), or null when
+  /// the engine could not place them. The PDF then uses the whole line.
   final List<OcrCharBox>? charBoxes;
 
   OcrLine copyWith({bool? filtered}) => OcrLine(

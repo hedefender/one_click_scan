@@ -4,7 +4,6 @@ import 'dart:isolate';
 import 'package:flutter/services.dart';
 
 import '../../core/logging/app_logger.dart';
-import '../../domain/entities/ocr_line.dart';
 import '../../domain/entities/ocr_outcome.dart';
 import '../../domain/entities/ocr_progress.dart';
 import '../../domain/entities/ocr_result.dart';
@@ -14,6 +13,7 @@ import '../../domain/ocr/ocr_config.dart';
 import '../../domain/ocr/ocr_language_pack_registry.dart';
 import '../../domain/ports/ocr_engine.dart';
 import 'ocr_model_store.dart';
+import 'paddle/worker_lines.dart';
 import 'paddle_worker.dart';
 
 /// PP-OCRv5 through ONNX Runtime, in one long-lived background isolate: the
@@ -181,31 +181,9 @@ class PaddleOcrEngine implements OcrEngine {
     if (reply is! Map) return const OcrFailed(OcrFailureReason.engineError);
     switch (reply['status']) {
       case 'ok':
-        final flat = reply['lines']! as List;
-        final lines = <OcrLine>[];
-        for (
-          var i = 0;
-          i + workerLineStride <= flat.length;
-          i += workerLineStride
-        ) {
-          lines.add(
-            OcrLine(
-              text: flat[i] as String,
-              confidence: (flat[i + 1] as num).toDouble(),
-              row: flat[i + 2] as int,
-              quad: [
-                for (var k = 0; k < 4; k++)
-                  OcrPoint(
-                    (flat[i + 3 + 2 * k] as num).toDouble(),
-                    (flat[i + 4 + 2 * k] as num).toDouble(),
-                  ),
-              ],
-            ),
-          );
-        }
         return OcrSuccess(
           OcrResult(
-            lines: lines,
+            lines: linesFromWorker(reply['lines']! as List),
             packId: packId,
             duration: Duration(microseconds: reply['recUs']! as int),
             imageWidth: reply['width']! as int,

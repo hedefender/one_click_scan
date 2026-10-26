@@ -5,6 +5,7 @@ import 'package:one_click_scan/core/logging/app_logger.dart';
 import 'package:one_click_scan/data/datasources/key_value_store.dart';
 import 'package:one_click_scan/domain/entities/storage_folder.dart';
 import 'package:one_click_scan/services/ocr/ocr_services.dart';
+import 'package:one_click_scan/services/pdf/pdf_services.dart';
 import 'package:one_click_scan/services/camera/camera_service.dart';
 import 'package:one_click_scan/domain/ports/gallery_service.dart';
 import 'package:one_click_scan/domain/ports/scan_file_store.dart';
@@ -96,6 +97,7 @@ Future<GetIt> buildTestContainer({
   GalleryService? gallery,
   ScanTempStore? scanTempStore,
   OcrServices? ocr,
+  PdfServices? pdf,
   AppConfig? config,
   DateTime Function()? clock,
 }) {
@@ -109,6 +111,7 @@ Future<GetIt> buildTestContainer({
     gallery: gallery ?? FakeGalleryService(),
     scanTempStore: scanTempStore ?? FakeScanTempStore(),
     ocr: ocr ?? const OcrServices.unsupported(),
+    pdf: pdf ?? const PdfServices.unsupported(),
     clock: clock ?? () => DateTime(2026, 10, 21, 19, 5, 12),
   );
 }

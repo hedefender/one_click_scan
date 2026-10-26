@@ -153,6 +153,10 @@ one is read). Per-character boxes (`charBoxes`) stay empty in Phase 2: Phase
 an RF code needs them. The text screen of Phase 2 is a check tool, not the final
 UX (the final flow is one click with no text screen).
 
+Update (Phase 3): Phase 2.1 found that per-word pieces need the place of the
+characters, so the engine now fills `charBoxes` from the CTC time steps
+(ADR-016).
+
 ## ADR-013 The scanner never changes the text it reads
 No correction of look-alike letters (Greek and Latin), no spell checking, no
 normalisation. The only thing allowed is to flag lines of low confidence
@@ -195,3 +199,111 @@ belongs to the consumer (Budget normalises text already).
   972x1260 file).
 - One image at a time, buffers released after each page, models released when
   the result screen is left.
+
+## ADR-015 The PDF is named after the pictures and stored in `./pdf`
+A scan makes one PDF, for one page or for many (a Multi Page scan is one PDF
+with N pages, never N PDFs). It is stored in `./pdf/` of the folder the user
+chose (ADR-005), as `<stem>.pdf`, with the **stem of the pictures of the same
+scan**: `pdf/2026-10-21_19-05-12.pdf` next to
+`pictures/2026-10-21_19-05-12_1.jpg`, `..._2.jpg`. For a Multi Page scan the
+stem is the one of the first page, which is the stem of all of them.
+
+- The request for this phase spoke of the `scan_YYYY-MM-DD_NN` name of ADR-009.
+  That name belongs only to the optional **Gallery copy** (a counter that
+  advances only when the Gallery switch is on), not to the files in
+  `./pictures`, so it could not name the PDF without changing ADR-009 and
+  ADR-005. The user confirmed the ADR-005 name.
+- No collision is possible in the normal flow: `StoreScanPages` picks the stem
+  that is free in **both** `./pictures` and `./pdf` (`-2`, `-3` on a clash,
+  e.g. a PDF left behind after the user deleted the pictures), so a PDF always
+  matches its pictures by name. If a file with the PDF's name shows up between
+  the listing and the copy (two scans in the same second) the copy fails with
+  `exists` instead of replacing it, and `StoreScanPdf` tries the next free name
+  (`-2`, ...). A file in the user's folder is never replaced.
+- The photos are stored first and are never touched by the PDF step. A PDF that
+  cannot be written (no access, full storage, folder gone) is a message on the
+  result screen with a Try again button; the photos stay.
+- The stored file is handed to the viewer by its document URI
+  (`ScanFileStore.copyToFolder` now returns it) with `ACTION_VIEW` and a
+  temporary read grant (`ScanFilesHandler.openDocument`).
+
+## ADR-016 The text layer is a best effort, one hidden piece per word
+The product is the PDF made from what the camera sees. The invisible text
+under the picture (search and selection in a viewer) is a **free extra**, not a
+promise: nothing in the app or in the documents says that copying is exact, the
+result screen says the opposite ("read automatically, can contain mistakes,
+check the document"), and if the OCR fails, times out or is cancelled the PDF
+is still made, with the picture only.
+
+- Layout: one piece of hidden text **per word** (text render mode 3), the
+  variant of Phase 2.1 that worked in the Google Drive viewer
+  (`PDF_SPIKE_RESULTS.md`): per word the selection of an RF code or an IBAN was
+  exact in the viewer, per line it was not reliable and per character it was
+  worse. A word is cut from the line at its spaces and takes the place of **its
+  own characters**.
+- Character places come from the CTC time steps of the recognition model
+  (`OcrLine.charBoxes`): the centre of a character is the middle of the time
+  steps of its run, the edge between two characters is the midpoint of their
+  centres. No extra inference. A line whose boxes are missing, or do not add up
+  to its text, becomes one piece for the whole line (a degradation, not a
+  failure).
+- Font: Noto Sans Regular (SIL Open Font License 1.1) through the `pdf` package
+  (Apache-2.0), which embeds only the glyphs that are used (a few KB per page)
+  and writes a `ToUnicode` map. Not the "glyphless" writer of the spike: it is
+  our own code to keep for a small gain; it stays in the backlog. The font
+  covers every Latin and Greek letter, digit and punctuation mark of both
+  dictionaries; mathematical symbols, arrows and Roman-numeral glyphs are not in
+  the font and are left out of the hidden text.
+- Which lines: only those that passed the confidence filter (0.65, ADR-013).
+  Lines below it are not written. Control and zero-width characters are left
+  out. The text itself is never changed (ADR-013).
+- Time: the PDF is written in a background isolate (40 to 430 ms on the
+  emulator for 1 to 3 pages, layout and isolate start included) once every page
+  has an outcome: the OCR of the pages is
+  pipelined while the user shoots, and each page has the 45 s limit (ADR-010).
+  "Create the PDF without waiting for the text" stops the reading and makes the
+  PDF with no text for the pages not read yet.
+- Check digits of RF and IBAN codes (mod 97), per-character layout and the
+  glyphless writer are **frozen** in the backlog until users ask for them.
+
+## ADR-017 The picture of the PDF is the working copy; the page follows the pixels
+The picture of every page is the **upright working copy** of Phase 2 (ADR-014):
+EXIF orientation applied, long side at most 2560 px, JPEG quality 95, no EXIF,
+no GPS. A JPEG goes into the PDF as it is, without a new compression (a test
+finds the bytes of the file inside the PDF). The PDF therefore carries no
+location, no camera data and no personal data: no author, producer, title or
+date either (a test reads the bytes); the only thing about the library is the
+comment line it writes in the header, and the trailer has a random document ID.
+
+The size of a page is `pixels * 72 / 200` points: a constant of **200 dpi**
+(`PdfConfig.dpi`). Reason: the ratio of the page is exactly the ratio of the
+picture, so nothing is stretched, whatever the shape of the paper or the way
+the phone was held; 200 dpi puts a 2560 px page at about 12.8 in on its long
+side (A4 is 11.7 in at 219 dpi), which every viewer fits to the screen, and
+the size of the file depends on the pixels only, not on the page size, so the
+page size has no effect on the limits of e-mail attachments.
+
+If a photo's working copy could not be made (unreadable file, over 400 MP) there
+is no picture for that page and the PDF is not made; the message says so and the
+photos are saved.
+
+## ADR-018 No picture of the user stays in the cache
+The working copies live in the app cache (`ocr_work/`) and the PDF in
+`pdf_work/` only as long as they are needed:
+
+- the PDF in the cache is deleted as soon as it is copied to `./pdf` (also when
+  the copy fails);
+- the working copies are deleted when the PDF is **stored**
+  (`OcrSession.releaseWorkingCopies`), not when the result screen is left. The
+  results of the reading stay in memory for the OCR check screen; its "show
+  boxes" switch then draws on the shot in the cache (`scan_pages/`, which stays
+  until the result screen is left, as before; the boxes are fractions of the
+  upright picture, so they fit it);
+- when the PDF fails the copies are kept for "Try again" and are deleted when
+  the screen is left (as before); when the scan is abandoned they are deleted
+  with it;
+- both folders are purged at start-up, for a run that was killed half way.
+
+While the PDF is made the result screen cannot be left (the buttons and the
+system back are off), because leaving ends the reading and deletes the working
+copies; the wait is bounded by the 45 s limit per page.

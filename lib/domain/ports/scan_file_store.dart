@@ -16,9 +16,10 @@ abstract interface class ScanFileStore {
   /// File names inside `./<subfolder>`. Empty when the sub-folder is missing.
   Future<List<String>> listFileNames(StorageFolder folder, String subfolder);
 
-  /// Copies [sourcePath] to `./<subfolder>/<fileName>`. Fails with
+  /// Copies [sourcePath] to `./<subfolder>/<fileName>` and returns the
+  /// document URI of the new file (what a viewer is given). Fails with
   /// `ScanStoreFailure.exists` instead of renaming when the name is taken.
-  Future<void> copyToFolder({
+  Future<String> copyToFolder({
     required StorageFolder folder,
     required String subfolder,
     required String fileName,

@@ -43,20 +43,24 @@ class AndroidScanFileStore implements ScanFileStore {
   }
 
   @override
-  Future<void> copyToFolder({
+  Future<String> copyToFolder({
     required StorageFolder folder,
     required String subfolder,
     required String fileName,
     required String mimeType,
     required String sourcePath,
-  }) {
-    return _invoke<void>('copyToFolder', <String, String>{
+  }) async {
+    final uri = await _invoke<String>('copyToFolder', <String, String>{
       'treeUri': folder.uri,
       'subfolder': subfolder,
       'fileName': fileName,
       'mimeType': mimeType,
       'sourcePath': sourcePath,
     });
+    if (uri == null) {
+      throw const ScanStoreException(ScanStoreFailure.unknown, 'no uri');
+    }
+    return uri;
   }
 
   @override

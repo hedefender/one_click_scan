@@ -328,4 +328,72 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get licensesOpen => 'Open-source licences';
+
+  @override
+  String get pdfTitle => 'PDF';
+
+  @override
+  String pdfReading(int page, int total) =>
+      total <= 1 ? 'Reading the text…' : 'Reading page $page of $total…';
+
+  @override
+  String get pdfCreating => 'Creating the PDF…';
+
+  @override
+  String pdfSaved(String fileName) => 'PDF saved: $fileName';
+
+  @override
+  String pdfDetails(int pages, String size) =>
+      pages == 1 ? '1 page, $size' : '$pages pages, $size';
+
+  @override
+  String pdfPagesWithoutText(int count) => count == 1
+      ? '1 page has no searchable text. Its picture is in the PDF.'
+      : '$count pages have no searchable text. Their pictures are in the PDF.';
+
+  @override
+  String get pdfTextNote =>
+      'The text behind the pictures is read automatically and can contain '
+      'mistakes. Always check the document itself.';
+
+  @override
+  String get pdfOpen => 'Open PDF';
+
+  @override
+  String get pdfSkipText => 'Create the PDF without waiting for the text';
+
+  @override
+  String get pdfRetry => 'Try again';
+
+  @override
+  String get pdfWait => 'Please wait until the PDF is ready.';
+
+  @override
+  String get pdfOpenNoViewer => 'No app on this phone can open PDF files.';
+
+  @override
+  String get pdfOpenFailed => 'The PDF could not be opened.';
+
+  @override
+  String get pdfFailedImage =>
+      'The PDF could not be made: a photo is unreadable or too large. Your '
+      'photos are saved.';
+
+  @override
+  String get pdfFailedUnsupported =>
+      'Making a PDF is not available on this device. Your photos are saved.';
+
+  @override
+  String get pdfFailedBuild =>
+      'The PDF could not be made. Your photos are saved.';
+
+  @override
+  String get pdfFailedNoAccess =>
+      'The PDF could not be saved: the app no longer has access to your '
+      'folder. Your photos are saved. Choose the folder again in Settings.';
+
+  @override
+  String get pdfFailedWrite =>
+      'The PDF could not be written to your folder (is the storage full?). '
+      'Your photos are saved.';
 }

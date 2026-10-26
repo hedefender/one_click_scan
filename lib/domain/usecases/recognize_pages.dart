@@ -21,6 +21,7 @@ class OcrPageState extends Equatable {
     this.progress,
     this.outcome,
     this.image,
+    this.workingCopyDeleted = false,
   });
 
   /// Identifies the page (the path of the captured shot).
@@ -33,11 +34,25 @@ class OcrPageState extends Equatable {
   /// Set when [status] is [OcrPageStatus.done].
   final OcrOutcome? outcome;
 
-  /// The working copy, once it exists.
+  /// The working copy, once it exists. After
+  /// [OcrSession.releaseWorkingCopies] only its description is left.
   final UprightImage? image;
 
+  /// The file of [image] was deleted (the PDF is stored, ADR-018).
+  final bool workingCopyDeleted;
+
+  /// The picture of the page can still be read from the cache.
+  bool get hasWorkingFile => image != null && !workingCopyDeleted;
+
   @override
-  List<Object?> get props => [key, status, progress, outcome, image];
+  List<Object?> get props => [
+    key,
+    status,
+    progress,
+    outcome,
+    image,
+    workingCopyDeleted,
+  ];
 }
 
 class OcrSessionSnapshot extends Equatable {
@@ -90,6 +105,7 @@ class OcrSession {
   var _closed = false;
   var _running = false;
   var _disposed = false;
+  var _readingStopped = false;
 
   Stream<OcrSessionSnapshot> get snapshots => _controller.stream;
 
@@ -147,6 +163,37 @@ class OcrSession {
     _maybeFinish();
   }
 
+  /// Stops the reading but not the preparation: the page being read is
+  /// cancelled and the pages after it only get their upright picture, with the
+  /// outcome [OcrCancelled]. Used by "make the PDF without waiting for the
+  /// text": every page still has its picture, so the PDF can be made.
+  void stopReading() {
+    if (_disposed) return;
+    _readingStopped = true;
+    for (final e in _entries) {
+      if (e.status == OcrPageStatus.preparing ||
+          e.status == OcrPageStatus.recognizing) {
+        e.cancellation.cancel();
+      }
+    }
+  }
+
+  /// Deletes the files of the working copies of finished pages, so no picture
+  /// of the user's documents stays in the cache once the PDF is stored. The
+  /// results stay; the pages only lose the file their image was read from.
+  Future<void> releaseWorkingCopies() async {
+    for (final e in _entries) {
+      if (e.processing || e.image == null || e.fileDeleted) continue;
+      e.fileDeleted = true;
+      try {
+        await _workStore.delete(e.image!.path);
+      } catch (_) {
+        // The cache is purged at the next start-up anyway.
+      }
+    }
+    _emit();
+  }
+
   /// Cancels, deletes the working copies and frees the engine's memory.
   Future<void> dispose() async {
     if (_disposed) return;
@@ -196,7 +243,7 @@ class OcrSession {
         _finish(e, OcrFailed(error.reason));
         return;
       }
-      if (e.cancellation.isCancelled) {
+      if (e.cancellation.isCancelled || _readingStopped) {
         _finish(e, const OcrCancelled());
         return;
       }
@@ -237,7 +284,7 @@ class OcrSession {
   Future<void> _discard(_Entry e) async {
     final image = e.image;
     e.image = null;
-    if (image != null) {
+    if (image != null && !e.fileDeleted) {
       try {
         await _workStore.delete(image.path);
       } catch (_) {
@@ -271,12 +318,16 @@ class _Entry {
   var processing = false;
   var removed = false;
 
+  /// The file of [image] was deleted by `releaseWorkingCopies`.
+  var fileDeleted = false;
+
   OcrPageState get state => OcrPageState(
     key: key,
     status: status,
     progress: progress,
     outcome: outcome,
     image: image,
+    workingCopyDeleted: fileDeleted,
   );
 }
 

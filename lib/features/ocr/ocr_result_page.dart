@@ -311,7 +311,11 @@ class _BoxesImage extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.file(
-            File(page.image!.path),
+            // The working copy is deleted once the PDF is stored (ADR-018);
+            // the shot in the cache (the key of the page) is still there
+            // while the result screen is open, and the quads are fractions of
+            // the upright picture, so they fit either.
+            File(page.hasWorkingFile ? page.image!.path : page.key),
             fit: BoxFit.fill,
             cacheWidth: 1200,
             // The working copy may be gone (the screen is being left).

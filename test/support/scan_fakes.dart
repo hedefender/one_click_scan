@@ -116,8 +116,18 @@ class FakeScanFileStore implements ScanFileStore {
     return [...files(subfolder)];
   }
 
+  /// Every copied file as (sub-folder, file name, source path), in order.
+  final List<(String, String, String)> copies = <(String, String, String)>[];
+
+  /// Fail the copies into this sub-folder only (for example `pdf`).
+  String? failSubfolder;
+
+  /// A file with this (sub-folder, name) shows up just before the first copy,
+  /// after the listing (two scans racing for a name).
+  (String, String)? raceOnFirstCopy;
+
   @override
-  Future<void> copyToFolder({
+  Future<String> copyToFolder({
     required StorageFolder folder,
     required String subfolder,
     required String fileName,
@@ -128,11 +138,19 @@ class FakeScanFileStore implements ScanFileStore {
     calls.add('copy:$fileName');
     copyCalls++;
     if (failOnCopyNumber == copyCalls) throw ScanStoreException(failure);
+    if (failSubfolder == subfolder) throw ScanStoreException(failure);
+    final race = raceOnFirstCopy;
+    if (race != null) {
+      raceOnFirstCopy = null;
+      folders.putIfAbsent(race.$1, () => <String>[]).add(race.$2);
+    }
     final list = folders.putIfAbsent(subfolder, () => <String>[]);
     if (list.contains(fileName)) {
       throw const ScanStoreException(ScanStoreFailure.exists);
     }
     list.add(fileName);
+    copies.add((subfolder, fileName, sourcePath));
+    return 'content://com.example.test/tree/Scans/document/$subfolder%2F$fileName';
   }
 
   @override

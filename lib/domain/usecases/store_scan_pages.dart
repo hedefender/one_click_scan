@@ -27,6 +27,7 @@ class StoreScanPages {
   });
 
   static const picturesFolder = 'pictures';
+  static const pdfFolder = 'pdf';
   static const _jpegMimeType = 'image/jpeg';
 
   final ScanFileStore fileStore;
@@ -48,7 +49,12 @@ class StoreScanPages {
 
     await fileStore.ensureSubfolder(folder, picturesFolder);
     await _hideFromMediaIndex(folder);
-    final existing = await fileStore.listFileNames(folder, picturesFolder);
+    // The stem is free in both folders, so the PDF that follows (named after
+    // the same stem, ADR-005) can never meet a file that is already there.
+    final existing = [
+      ...await fileStore.listFileNames(folder, picturesFolder),
+      ...await fileStore.listFileNames(folder, pdfFolder),
+    ];
     final stem = naming.nextStem(naming.existingStems(existing));
 
     final ordered = [...pages]..sort((a, b) => a.order.compareTo(b.order));

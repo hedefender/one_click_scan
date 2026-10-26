@@ -28,7 +28,7 @@ class UnsupportedScanFileStore implements ScanFileStore {
   }
 
   @override
-  Future<void> copyToFolder({
+  Future<String> copyToFolder({
     required StorageFolder folder,
     required String subfolder,
     required String fileName,

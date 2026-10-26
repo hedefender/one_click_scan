@@ -3,12 +3,16 @@
 One-click document capture, local OCR, PDF and e-mail delivery. Privacy first,
 fully local. Android first, iOS later.
 
-Output layout (from Phase 1): inside the folder you choose, `pictures/` holds
-the original JPEGs and `pdf/` holds the PDFs, with matching names
-(`YYYY-MM-DD_HH-MM-SS`). Scan produces no JSON; the Budget app reads the PDFs
-directly. The app theme always follows the device theme.
+Output layout: inside the folder you choose, `pictures/` holds the original
+JPEGs and `pdf/` holds the PDFs, with matching names (`YYYY-MM-DD_HH-MM-SS`;
+since Phase 3 the PDF of a scan is `pdf/<stem>.pdf`, one file for one or many
+pages). The PDF is the picture of each page with an invisible text layer
+(search and select) added as a best effort: the app does not promise that the
+text is exact. Scan produces no JSON; the Budget app reads the PDFs directly.
+The app theme always follows the device theme.
 
-Status: Phase 2.1 (spike: searchable PDF, `spikes/pdf_spike/`) after Phase 2 (OCR inside the app: Paddle PP-OCRv5 behind `OcrEngine`, upright working copy, language packs, OCR check screen; the OCR spikes of Phase 1.5 to 1.6c stay in `spikes/ocr_spike/` as the reference). See `docs/`:
+Status: Phase 3 (PDF in the app: picture + best-effort text layer, `./pdf`, open
+button) after Phase 2.1 (spike: searchable PDF, `spikes/pdf_spike/`) and Phase 2 (OCR inside the app: Paddle PP-OCRv5 behind `OcrEngine`, upright working copy, language packs, OCR check screen; the OCR spikes of Phase 1.5 to 1.6c stay in `spikes/ocr_spike/` as the reference). See `docs/`:
 
 - `ARCHITECTURE.md`
 - `PHASE_0_PLAN.md`
@@ -21,6 +25,7 @@ Status: Phase 2.1 (spike: searchable PDF, `spikes/pdf_spike/`) after Phase 2 (OC
 - `PHASE_1_6_VALIDATION.md`
 - `PHASE_2_VALIDATION.md`
 - `PHASE_2_1_VALIDATION.md`
+- `PHASE_3_VALIDATION.md`
 - `PDF_SPIKE_RESULTS.md`
 - `THIRD_PARTY_NOTICES.md`
 - `OCR_LANGUAGE_PACKS.md`

@@ -131,6 +131,26 @@ abstract class AppStrings {
   String ocrPackName(String packId);
   String ocrPackDescription(String packId);
   String get licensesOpen;
+
+  // PDF (result screen)
+  String get pdfTitle;
+  String pdfReading(int page, int total);
+  String get pdfCreating;
+  String pdfSaved(String fileName);
+  String pdfDetails(int pages, String size);
+  String pdfPagesWithoutText(int count);
+  String get pdfTextNote;
+  String get pdfOpen;
+  String get pdfSkipText;
+  String get pdfRetry;
+  String get pdfWait;
+  String get pdfOpenNoViewer;
+  String get pdfOpenFailed;
+  String get pdfFailedImage;
+  String get pdfFailedUnsupported;
+  String get pdfFailedBuild;
+  String get pdfFailedNoAccess;
+  String get pdfFailedWrite;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {
