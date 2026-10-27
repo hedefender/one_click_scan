@@ -1,4 +1,5 @@
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/mail/mail_outcome.dart';
 import 'app_strings.dart';
 
 class AppStringsEn extends AppStrings {
@@ -454,7 +455,8 @@ class AppStringsEn extends AppStrings {
   String get mailModeShareNote =>
       '"Open in the e-mail app" opens your e-mail app with the recipient, the '
       'subject and the PDF filled in, and you press send there. No app '
-      'password is needed.';
+      'password is needed. The e-mail app uses the account it already has '
+      'selected.';
 
   @override
   String get mailHelpTitle => 'How to make the app password';
@@ -462,50 +464,97 @@ class AppStringsEn extends AppStrings {
   @override
   List<String> mailHelpSteps(MailProviderId provider) => switch (provider) {
     MailProviderId.gmail => const [
-      'Turn on 2-Step Verification in your Google Account.',
-      'Open the app passwords page of your Google Account '
-          '(myaccount.google.com/apppasswords).',
-      'Create a password for One Click Scan.',
-      'Copy the 16-digit password and enter it above.',
+      'Make sure your Google Account has 2-Step Verification turned on.',
+      'Tap "Open the provider page". It opens in the browser and may ask you '
+          'to sign in.',
+      'Follow the page to make an app password (if it asks for a name, write '
+          'for example One Click Scan).',
+      'Copy the password and paste it above, without spaces.',
     ],
-    MailProviderId.outlook => const [
-      'Turn on two-step verification in your Microsoft account.',
-      'Open the Advanced security options of your Microsoft account and '
-          'scroll down to App passwords.',
-      'Choose Create a new app password.',
-      'Copy the password and enter it above.',
-    ],
+    MailProviderId.outlook => const [],
     MailProviderId.yahoo => const [
-      'Open the Account Security page of Yahoo (login.yahoo.com/account/'
-          'security). Use a browser you have been signed in to Yahoo with for '
-          'several days, not a private window.',
-      'Under External connections choose Create app password.',
-      'Enter a name (for example One Click Scan) and choose Generate password.',
-      'Copy the password and enter it above.',
+      'Tap "Open the provider page". The Yahoo Account Security page opens in '
+          'the browser.',
+      'Under "External connections" tap "Create app password".',
+      'Enter a name (for example One Click Scan) and tap "Generate password".',
+      'Copy the password and paste it above, without spaces.',
     ],
   };
 
   @override
   String? mailHelpNote(MailProviderId provider) => switch (provider) {
     MailProviderId.gmail =>
-      'If the option is missing, Google does not give app passwords to '
-          'accounts with security keys only, to work or school accounts, or '
-          'with Advanced Protection. Use "Open in the e-mail app" then.',
-    MailProviderId.outlook => mailOutlookWarning,
-    MailProviderId.yahoo => mailYahooSizeNote,
+      '2-Step Verification must be on. The option is missing for accounts '
+          'with security keys only, for work or school accounts (the '
+          'administrator may forbid it) and with Advanced Protection. Use the '
+          'backup way to send then.',
+    MailProviderId.outlook => null,
+    MailProviderId.yahoo =>
+      'To make one, Yahoo asks for a browser you have been signed in to Yahoo '
+          'with for several days, not a private window. $mailYahooSizeNote',
   };
 
   @override
   String get mailOutlookWarning =>
-      'Careful: Outlook.com asks for modern sign-in (OAuth) and Microsoft has '
-      'ended plain password sign-in. It is not confirmed that an app password '
-      'works for sending. You can try; if it fails, choose "Open in the '
-      'e-mail app".';
+      'Outlook does not yet accept sending from the app with an app password. '
+      'It will be supported after OAuth is built. For now use the backup way '
+      'to send (open in the e-mail app).';
 
   @override
   String get mailYahooSizeNote =>
       'Yahoo does not state a size limit officially. The app assumes a '
       'message up to 20 MB fits.';
+
+  @override
+  String get mailGuideWhat =>
+      'An app password is a separate password that the provider makes for one '
+      'app only. It is not the normal password of your account, and with '
+      '2-step verification on, the normal password is not accepted.';
+
+  @override
+  String get mailGuideReminder =>
+      'The password is shown only once: copy it at once and paste it without '
+      'spaces. The page of the provider may differ from this description.';
+
+  @override
+  String get mailGuideOpenPage => 'Open the provider page';
+
+  @override
+  String get mailGuideOpenFailed =>
+      'No browser opened. Open the security page of your account by hand.';
+
+  @override
+  String get mailGuideOpenSettings => 'App password guide';
+
+  @override
+  String get mailGuideOutlook =>
+      'There are no app password steps for Outlook: it is not supported for '
+      'sending. It will be supported after OAuth is built. For now use the '
+      'backup way to send.';
+
+  @override
+  String get mailFallbackButton => 'Use the backup way to send';
+
+  @override
+  String get mailFallbackReasonAuth =>
+      'The provider did not accept an app password for this account. The '
+      'backup way opens your e-mail app with the message ready.';
+
+  @override
+  String get mailFallbackReasonOutlook =>
+      'Outlook does not yet support sending with an app password. The backup '
+      'way opens your e-mail app with the message ready.';
+
+  @override
+  String mailDiagnostic(MailStage stage, int? code) {
+    final name = switch (stage) {
+      MailStage.connection => 'connection',
+      MailStage.tls => 'TLS',
+      MailStage.authentication => 'authentication',
+      MailStage.sending => 'sending',
+    };
+    return code == null ? 'Step: $name' : 'Step: $name, code $code';
+  }
 
   @override
   String get mailSendTitle => 'E-mail';
@@ -522,8 +571,9 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get mailShareNote =>
-      'Your e-mail app opens with the message and the PDF ready. The message '
-      'leaves when you press send there.';
+      'Your e-mail app opens with the message and the PDF ready. It uses the '
+      'account that the e-mail app already has selected. The message leaves '
+      'when you press send there.';
 
   @override
   String get mailSending => 'Sending…';
@@ -553,8 +603,11 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get mailFailedAuth =>
-      'The server did not accept the account or the password. Check the app '
-      'password in Settings.';
+      'The server did not accept the account or the password. With MFA '
+      '(2-step verification) on, an app password made at the provider is '
+      'needed, not the normal password of the account. For some accounts '
+      '(for example work or school accounts) the administrator does not allow '
+      'app passwords.';
 
   @override
   String get mailFailedNetwork =>
@@ -577,7 +630,13 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get mailDraftOpened =>
-      'The e-mail app opened. Press send there to send the message.';
+      'The e-mail app opened, with the account it already has selected. Press '
+      'send there to send the message.';
+
+  @override
+  String get mailDraftOpenedGeneric =>
+      'No e-mail app was found, so the generic share menu opened. Choose an '
+      'app to send the PDF.';
 
   @override
   String get mailDraftNoApp =>

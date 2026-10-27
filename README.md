@@ -13,8 +13,9 @@ mail app can forward every scan), a one-line neutral body and the PDF; the OCR
 text is never in it. Scan produces no JSON; the Budget app reads the PDFs directly.
 The app theme always follows the device theme.
 
-Status: Phase 4 (mail: SMTP with an app password, the Send button, the share route
-as the way out, the OAuth plan) after Phase 3 (PDF in the app: picture + best-effort
+Status: Phase 4.1 (the share route opens the provider's own e-mail app, diagnostic line,
+one-tap backup way, app password guide) on Phase 4 (mail: SMTP with an app password,
+the Send button, the share route as the way out, the OAuth plan) after Phase 3 (PDF in the app: picture + best-effort
 text layer, `./pdf`, open button), after Phase 2.1 (spike: searchable PDF, `spikes/pdf_spike/`) and Phase 2 (OCR inside the app: Paddle PP-OCRv5 behind `OcrEngine`, upright working copy, language packs, OCR check screen; the OCR spikes of Phase 1.5 to 1.6c stay in `spikes/ocr_spike/` as the reference). See `docs/`:
 
 - `ARCHITECTURE.md`

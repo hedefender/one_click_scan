@@ -19,6 +19,8 @@ import '../services/mail/mail_services.dart';
 import '../domain/mail/mail_provider.dart';
 import '../domain/ports/attachment_source.dart';
 import '../domain/ports/draft_sharer.dart';
+import '../domain/ports/link_opener.dart';
+import '../domain/ports/mail_app_finder.dart';
 import '../domain/ports/mail_credential_store.dart';
 import '../domain/ports/mail_sender.dart';
 import '../domain/usecases/send_scan_pdf.dart';
@@ -81,6 +83,8 @@ Future<GetIt> buildContainer({
   sl.registerSingleton<MailCredentialStore>(mail.credentials);
   sl.registerSingleton<AttachmentSource>(mail.attachments);
   sl.registerSingleton<DraftSharer>(mail.sharer);
+  sl.registerSingleton<MailAppFinder>(mail.appFinder);
+  sl.registerSingleton<LinkOpener>(mail.links);
   sl.registerSingleton<MailProviderRegistry>(mail.providers);
 
   // Data.
@@ -136,7 +140,17 @@ Future<GetIt> buildContainer({
     ),
   );
   sl.registerLazySingleton<ShareScanPdfDraft>(
-    () => ShareScanPdfDraft(sharer: sl<DraftSharer>()),
+    () => ShareScanPdfDraft(
+      sharer: sl<DraftSharer>(),
+      finder: sl<MailAppFinder>(),
+      providers: sl<MailProviderRegistry>(),
+    ),
+  );
+  sl.registerLazySingleton<OpenProviderGuide>(
+    () => OpenProviderGuide(
+      opener: sl<LinkOpener>(),
+      providers: sl<MailProviderRegistry>(),
+    ),
   );
   sl.registerLazySingleton<CheckMailConnection>(
     () => CheckMailConnection(

@@ -7,6 +7,7 @@ import '../../domain/mail/mail_cancellation.dart';
 import '../../domain/mail/mail_outcome.dart';
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/send_scan_pdf.dart';
+import '../../domain/usecases/update_settings.dart';
 import 'mail_send_state.dart';
 
 /// Sends the stored PDF by e-mail when the user taps the button (Phase 4: by
@@ -18,12 +19,14 @@ import 'mail_send_state.dart';
 class MailSendCubit extends Cubit<MailSendState> {
   MailSendCubit({
     required this._loadSettings,
+    required this._updateSettings,
     required this._send,
     required this._share,
     required this._logger,
   }) : super(const MailSendState());
 
   final LoadSettings _loadSettings;
+  final UpdateSettings _updateSettings;
   final SendScanPdf _send;
   final ShareScanPdfDraft _share;
   final AppLogger _logger;
@@ -85,6 +88,24 @@ class MailSendCubit extends Cubit<MailSendState> {
       _cancellation = null;
     }
     _finish(outcome);
+  }
+
+  /// "Use the backup way to send": sets the mode to `shareDraft` with one tap
+  /// (the same setting as in Settings) and leaves the failure behind, so the
+  /// main button now opens the e-mail app.
+  Future<void> useShareMode() async {
+    if (state.busy) return;
+    await _updateSettings(
+      (current) => current.copyWith(mailSendMode: MailSendMode.shareDraft),
+    );
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        phase: MailPhase.idle,
+        mode: MailSendMode.shareDraft,
+        clearOutcome: true,
+      ),
+    );
   }
 
   /// Stops a send in progress.

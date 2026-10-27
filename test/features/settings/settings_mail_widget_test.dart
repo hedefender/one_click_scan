@@ -22,6 +22,7 @@ void main() {
     MailProviderId provider = MailProviderId.gmail,
     bool stored = false,
     String language = 'en',
+    MailSendMode mode = MailSendMode.sendNow,
   }) async {
     tester.view.physicalSize = const Size(800, 3600);
     tester.view.devicePixelRatio = 1;
@@ -41,6 +42,7 @@ void main() {
         storageFolder: testFolder,
         mailProvider: provider,
         senderAccount: testAccount,
+        mailSendMode: mode,
       ),
     );
     final container = await build();
@@ -123,54 +125,97 @@ void main() {
     expect(find.text('A password is stored on this phone.'), findsOneWidget);
   });
 
-  testWidgets('every provider has its steps; the Gmail ones are shown', (
-    tester,
-  ) async {
+  testWidgets('the guide is open while no password is stored: what it is, '
+      'the steps, the reminder, the Gmail prerequisites', (tester) async {
     await pumpSettings(tester);
 
-    await tapKey(tester, SettingsKeys.help);
-
+    expect(find.textContaining('not the normal password'), findsOneWidget);
     expect(
-      find.textContaining('1. Turn on 2-Step Verification'),
+      find.textContaining('1. Make sure your Google Account has 2-Step'),
       findsOneWidget,
     );
-    expect(
-      find.textContaining('myaccount.google.com/apppasswords'),
-      findsOneWidget,
-    );
-    expect(
-      find.textContaining('4. Copy the 16-digit password'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('4. Copy the password'), findsOneWidget);
+    expect(find.textContaining('shown only once'), findsOneWidget);
+    expect(find.textContaining('without spaces'), findsWidgets);
+    expect(find.textContaining('administrator may forbid'), findsOneWidget);
+    expect(find.byKey(SettingsKeys.guideOpen), findsOneWidget);
+    expect(find.byKey(SettingsKeys.guideOutlook), findsNothing);
+    // No menu name of Google that could not be read on an official page.
+    expect(find.textContaining('Security >'), findsNothing);
   });
 
-  testWidgets('Yahoo steps and the assumption about its size', (tester) async {
-    await pumpSettings(tester, provider: MailProviderId.yahoo);
+  testWidgets('with a stored password the guide is folded, and opens on tap', (
+    tester,
+  ) async {
+    await pumpSettings(tester, stored: true);
+    expect(find.textContaining('4. Copy the password'), findsNothing);
 
     await tapKey(tester, SettingsKeys.help);
 
+    expect(find.textContaining('4. Copy the password'), findsOneWidget);
+  });
+
+  testWidgets('the button opens the official page of the provider, and only '
+      'that', (tester) async {
+    await pumpSettings(tester);
+
+    await tapKey(tester, SettingsKeys.guideOpen);
+
+    expect(mail.links.opened, ['https://myaccount.google.com/apppasswords']);
+  });
+
+  testWidgets('Yahoo: its steps with the names of the Yahoo page, its page, '
+      'and the assumption about size', (tester) async {
+    await pumpSettings(tester, provider: MailProviderId.yahoo);
+
     expect(find.textContaining('External connections'), findsOneWidget);
+    expect(find.textContaining('Create app password'), findsOneWidget);
+    expect(find.textContaining('Generate password'), findsOneWidget);
     expect(
       find.textContaining('assumes a message up to 20 MB'),
       findsOneWidget,
     );
+
+    await tapKey(tester, SettingsKeys.guideOpen);
+    expect(mail.links.opened, ['https://login.yahoo.com/account/security']);
+  });
+
+  testWidgets('a browser that did not open is said, not hidden', (
+    tester,
+  ) async {
+    await pumpSettings(tester);
+    mail.links.result = false;
+
+    await tapKey(tester, SettingsKeys.guideOpen);
+
+    expect(find.byKey(SettingsKeys.guideOpenFailed), findsOneWidget);
   });
 
   testWidgets('the steps are in Greek too', (tester) async {
     await pumpSettings(tester, language: 'el');
 
-    await tapKey(tester, SettingsKeys.help);
-
-    expect(find.textContaining('επαλήθευση σε 2 βήματα'), findsOneWidget);
+    expect(
+      find.textContaining('1. Βεβαιώσου ότι ο λογαριασμός Google'),
+      findsOneWidget,
+    );
+    expect(find.text('Άνοιγμα σελίδας του παρόχου'), findsOneWidget);
   });
 
-  testWidgets('Outlook shows the warning at once: an app password is not '
-      'confirmed to work', (tester) async {
+  testWidgets('Outlook: no app password steps and no page button, a short '
+      'text, and the backup way offered at once', (tester) async {
     await pumpSettings(tester, provider: MailProviderId.outlook);
 
+    expect(find.byKey(SettingsKeys.guideOutlook), findsOneWidget);
+    expect(find.textContaining('after OAuth is built'), findsWidgets);
+    expect(find.textContaining('1. '), findsNothing);
+    expect(find.byKey(SettingsKeys.guideOpen), findsNothing);
     expect(find.byKey(SettingsKeys.providerWarning), findsOneWidget);
-    expect(find.textContaining('not confirmed'), findsOneWidget);
-    expect(find.textContaining('Open in the e-mail app'), findsWidgets);
+    expect(find.byKey(SettingsKeys.fallback), findsOneWidget);
+
+    await tapKey(tester, SettingsKeys.fallback);
+
+    expect((await repository.load()).mailSendMode, MailSendMode.shareDraft);
+    expect(find.byKey(SettingsKeys.fallback), findsNothing);
   });
 
   testWidgets('Gmail and Yahoo show no such warning', (tester) async {
@@ -217,6 +262,57 @@ void main() {
       mail.sender.outcome = const MailNetworkError();
       await tapKey(tester, SettingsKeys.mailTest);
       expect(find.textContaining('Could not connect'), findsOneWidget);
+    });
+
+    testWidgets('a failure carries the diagnostic line: step and code, and '
+        'no address, host or password', (tester) async {
+      await pumpSettings(tester);
+      await enterPassword(tester, canarySecret);
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+
+      await tapKey(tester, SettingsKeys.mailTest);
+
+      final text = tester
+          .widget<Text>(find.byKey(SettingsKeys.mailTestResult))
+          .data!;
+      expect(text, endsWith('Step: authentication, code 535'));
+      expect(text, isNot(contains(canarySecret)));
+      expect(text, isNot(contains(testAccount)));
+      expect(text, isNot(contains('smtp')));
+    });
+
+    testWidgets('a refused sign-in offers the backup way with one tap; other '
+        'failures do not', (tester) async {
+      await pumpSettings(tester);
+      await enterPassword(tester, canarySecret);
+
+      mail.sender.outcome = const MailNetworkError();
+      await tapKey(tester, SettingsKeys.mailTest);
+      expect(find.byKey(SettingsKeys.fallback), findsNothing);
+
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+      await tapKey(tester, SettingsKeys.mailTest);
+      expect(find.byKey(SettingsKeys.fallback), findsOneWidget);
+      expect(
+        find.textContaining('did not accept an app password'),
+        findsOneWidget,
+      );
+
+      await tapKey(tester, SettingsKeys.fallback);
+      expect((await repository.load()).mailSendMode, MailSendMode.shareDraft);
+      expect(find.byKey(SettingsKeys.fallback), findsNothing);
+    });
+
+    testWidgets('already in the share mode: the backup way is not offered', (
+      tester,
+    ) async {
+      await pumpSettings(tester, mode: MailSendMode.shareDraft);
+      await enterPassword(tester, canarySecret);
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+
+      await tapKey(tester, SettingsKeys.mailTest);
+
+      expect(find.byKey(SettingsKeys.fallback), findsNothing);
     });
 
     testWidgets('the password is not shown in the result or anywhere in the '

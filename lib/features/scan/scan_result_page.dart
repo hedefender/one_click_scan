@@ -369,7 +369,46 @@ class _MailSection extends StatelessWidget {
                 _failureText(strings, state.outcome, settings.mailProvider),
                 style: error,
               ),
+              // The step and the reply code, so the user can say what
+              // happened without giving any data.
+              if (state.outcome?.stage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    key: ScanKeys.mailDiagnostic,
+                    strings.mailDiagnostic(
+                      state.outcome!.stage!,
+                      state.outcome!.replyCode,
+                    ),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
               const SizedBox(height: 8),
+              if (state.offersFallback(settings.mailProvider)) ...[
+                Text(
+                  key: ScanKeys.mailFallbackReason,
+                  settings.mailProvider == MailProviderId.outlook
+                      ? strings.mailFallbackReasonOutlook
+                      : strings.mailFallbackReasonAuth,
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  key: ScanKeys.mailFallback,
+                  icon: const Icon(Icons.open_in_new),
+                  onPressed: cubit.useShareMode,
+                  label: Text(strings.mailFallbackButton),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (state.outcome is MailAuthFailed &&
+                  settings.mailProvider != MailProviderId.outlook) ...[
+                OutlinedButton(
+                  key: ScanKeys.mailGuide,
+                  onPressed: () => context.push(RoutePaths.settings),
+                  child: Text(strings.mailGuideOpenSettings),
+                ),
+                const SizedBox(height: 8),
+              ],
               if (state.needsSettings)
                 FilledButton(
                   key: ScanKeys.mailOpenSettings,
@@ -395,11 +434,21 @@ class _MailSection extends StatelessWidget {
         if (draft != null) {
           children.addAll([
             const SizedBox(height: 8),
-            Text(key: ScanKeys.mailDraft, switch (draft) {
-              DraftShareResult.opened => strings.mailDraftOpened,
-              DraftShareResult.noApp => strings.mailDraftNoApp,
-              DraftShareResult.failed => strings.mailDraftFailed,
-            }, style: draft == DraftShareResult.opened ? null : error),
+            Text(
+              key: ScanKeys.mailDraft,
+              switch (draft) {
+                DraftShareResult.opened => strings.mailDraftOpened,
+                DraftShareResult.openedGeneric =>
+                  strings.mailDraftOpenedGeneric,
+                DraftShareResult.noApp => strings.mailDraftNoApp,
+                DraftShareResult.failed => strings.mailDraftFailed,
+              },
+              style:
+                  draft == DraftShareResult.opened ||
+                      draft == DraftShareResult.openedGeneric
+                  ? null
+                  : error,
+            ),
           ]);
         }
         return Padding(
@@ -429,7 +478,8 @@ class _MailSection extends StatelessWidget {
             : strings.mailFailedAuth,
       MailNetworkError() => strings.mailFailedNetwork,
       MailTooLarge() => strings.mailFailedTooLarge,
-      MailRejected(:final code) => strings.mailFailedRejected(code),
+      // The code is in the diagnostic line, not in the sentence.
+      MailRejected() => strings.mailFailedRejected(0),
       _ => strings.mailFailedUnknown,
     };
   }

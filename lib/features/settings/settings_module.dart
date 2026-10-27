@@ -23,6 +23,7 @@ void registerSettingsModule(GetIt sl) {
       folderPicker: sl<StorageFolderPicker>(),
       credentials: sl<MailCredentialStore>(),
       checkConnection: sl<CheckMailConnection>(),
+      openGuide: sl<OpenProviderGuide>(),
       logger: sl<AppLogger>(),
     ),
   );

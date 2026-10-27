@@ -24,6 +24,7 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
     required this._folderPicker,
     required this._credentials,
     required this._checkConnection,
+    required this._openGuide,
     required this._logger,
   }) : super(const SettingsEditorState());
 
@@ -32,6 +33,7 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
   final StorageFolderPicker _folderPicker;
   final MailCredentialStore _credentials;
   final CheckMailConnection _checkConnection;
+  final OpenProviderGuide _openGuide;
   final AppLogger _logger;
 
   Future<void> start() async {
@@ -200,16 +202,38 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
       return;
     }
     if (isClosed) return;
+    // The diagnostic line: the step and the reply code, nothing else.
+    final stage = outcome.stage;
+    final code = outcome.replyCode ?? 0;
     emit(switch (outcome) {
       MailSent() => state.copyWith(mailTest: MailTestStatus.ok),
-      MailAuthFailed() => state.copyWith(mailTest: MailTestStatus.authFailed),
-      MailNetworkError() => state.copyWith(mailTest: MailTestStatus.network),
-      MailRejected(:final code) => state.copyWith(
+      MailAuthFailed() => state.copyWith(
+        mailTest: MailTestStatus.authFailed,
+        mailTestStage: stage,
+        mailTestCode: code,
+      ),
+      MailNetworkError() => state.copyWith(
+        mailTest: MailTestStatus.network,
+        mailTestStage: stage,
+        mailTestCode: code,
+      ),
+      MailRejected() => state.copyWith(
         mailTest: MailTestStatus.rejected,
+        mailTestStage: stage,
         mailTestCode: code,
       ),
       _ => state.copyWith(mailTest: MailTestStatus.unknown),
     });
+  }
+
+  /// Opens the official page where the provider on the screen makes an app
+  /// password, in the browser. Only for a link of the registry.
+  Future<void> openGuide() async {
+    final provider = state.provider;
+    if (provider == null) return;
+    final opened = await _openGuide(provider);
+    if (isClosed) return;
+    if (!opened) emit(state.copyWith(guideFailed: true));
   }
 
   /// Deletes the stored password (and what is typed).

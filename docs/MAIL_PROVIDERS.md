@@ -178,6 +178,76 @@ the number above.
   `One Click Scan - <stem>`; the OCR text is never in the mail (ADR-019,
   ADR-020).
 
+## Phase 4.1: app packages, guide pages, diagnostics
+
+Verified on **2026-10-27**. The app uses these facts in the share route (open the
+provider's own e-mail app first) and in the guide of Settings (the button that
+opens the page where the user makes an app password).
+
+### The guide pages
+
+| Provider | Page the button opens (`https`, nothing added) | Source | What the source says |
+|---|---|---|---|
+| Gmail | `https://myaccount.google.com/apppasswords` | Google Account Help, "Sign in with app passwords" (`https://support.google.com/accounts/answer/185833`), read 2026-10-27 | The page links it: "Create and manage your app passwords ... You may need to sign in to your Google Account." Prerequisite: "App passwords can only be used with accounts that have 2-Step Verification turned on." Missing option when: 2-Step Verification only for security keys, a work, school or other organization account, or Advanced Protection. |
+| Yahoo | `https://login.yahoo.com/account/security` | Yahoo Help, "Generate and manage 3rd-party app passwords" (`https://help.yahoo.com/kb/SLN15241.html`), read 2026-10-27 | Steps: "Sign in to your Yahoo Account Security page." Under "External connections" click "Create app password"; enter the name of the app; click "Generate password"; use the one-time password; click "Done". Also: use a browser you have used to sign in to Yahoo for several days in a row and avoid Incognito mode. |
+| Outlook | none | `MAIL_PROVIDERS.md` (Outlook.com) | An app password for SMTP is not confirmed (the main unknown of Phase 4); the app shows no steps, only that Outlook waits for OAuth, and offers the backup way. |
+
+What is **not** in those pages, so the app does not claim it as a fact of the
+provider: the Google page gives no click path and no names of menus (only the
+link), and does not say the password is shown once or whether it has spaces; the
+Yahoo page does not mention 2-step verification and does not say the password
+is shown once. The "shown only once, paste it without spaces" reminder of the
+guide is a precaution of the app, not a quotation (Yahoo calls it a "one-time
+password"). The guide therefore gives the Gmail steps in general words and the
+address only, and uses the Yahoo menu names exactly as the Yahoo page writes them
+(in English). The pages of the providers change: the text says so.
+
+### The app packages (share route)
+
+| Provider | Package | Confirmed from an official source? |
+|---|---|---|
+| Gmail | `com.google.android.gm` | **No.** |
+| Outlook | `com.microsoft.office.outlook` | **No.** |
+| Yahoo Mail | `com.yahoo.mobile.client.android.mail` | **No.** |
+
+The official place for a package name is the Google Play listing of the app
+(`https://play.google.com/store/apps/details?id=<package>`). Fetching those three
+pages on 2026-10-27 returned a 200 reply with an empty body (the page is built by
+script), so **nothing could be read from them**. The names were then found only
+in non-official places: APK mirror sites (APKMirror lists all three, Softpedia the
+Yahoo one), a book chapter on Android forensics (Gmail), and setup guides of a
+university and of a hosting company that link to the Play listing of the Outlook
+package. They agree with each other and with long-standing practice, but they
+are **not** an official statement. Why this is safe: the app does not trust the
+name blindly. It asks the phone whether the package is installed
+(`PackageManager`), and if it is not (or the name is wrong), it falls back to the
+e-mail apps that handle `mailto:`, and only then to the generic share menu. A
+wrong name would mean the provider app is not picked directly, never a failure.
+Step 8b of `PHASE_4_VALIDATION.md` checks on a real phone that each opens.
+
+### What the share route asks of the phone
+
+- `<queries>` in the manifest: the three packages above and one intent
+  (`ACTION_SENDTO`, scheme `mailto`). **No** `QUERY_ALL_PACKAGES`.
+- The PDF is a `content://` document URI. The intent has
+  `FLAG_GRANT_READ_URI_PERMISSION` (also on the ClipData) and, for an explicit
+  package, the app calls `grantUriPermission` for that package with read access
+  only. Never a write grant. Whether the target app can really read the
+  attachment is checked by the user (step 8b); the tests only check the intent.
+- The e-mail app uses **the account it already has selected**; the app cannot
+  force the sender. The texts say so.
+
+### The diagnostic line
+
+A failed test or send shows one line, for example `Step: authentication, code 535`
+(`Στάδιο: ταυτοποίηση, κωδικός 535`): the step (connection, TLS, authentication,
+sending) and the 3 digit SMTP reply code when there is one. Never an address, a
+host with a user name, a password, or the text of a server reply. The step comes
+from the kind of the error (a socket error or a timeout: connection; a failed
+encryption: TLS; a refused sign-in: authentication; any other reply: sending).
+A timeout is always shown as "connection", even if it happened later, because
+the library does not say where it stopped.
+
 ## Not confirmed (list)
 
 - Gmail: exact click path for app passwords (the page could not be read),
@@ -187,3 +257,8 @@ the number above.
   sending limits, which of 20 MB and 25 MB is the real limit.
 - Yahoo: STARTTLS wording, app-password format, whether two-step verification
   is required, **attachment size and sending limits**.
+- **Phase 4.1:** the three app package names (no official page could be read),
+  the click path and menu names of the Google page for app passwords (the page
+  only links to `myaccount.google.com/apppasswords`), whether the Google and
+  Yahoo passwords are shown only once, and whether Yahoo needs 2-step
+  verification.

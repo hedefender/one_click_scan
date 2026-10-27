@@ -449,3 +449,53 @@ promises delivery, only what is known: the server accepted the message.
   is the one-click phase of the roadmap (Phase 5 in `ROADMAP.md`; the request
   for Phase 4 called it Phase 7, where the table has "Revisit the Budget
   integration"). The button of this phase is the part of it that exists now.
+
+## ADR-024 The share route opens the provider's own e-mail app first; a failed sign-in has a one-tap way out; the guide opens the provider's page
+Phase 4 opened the generic Android share menu for the e-mail route. The user's
+check on a phone showed that the route works (Gmail got the mail with the subject,
+the body and the PDF), and asked for the e-mail app to open directly.
+
+- **Order** (`chooseShareRoute`, pure, `domain/mail/share_route.dart`): (1) the
+  installed app of the provider chosen in Settings, by an explicit intent with
+  `setPackage`, so the compose screen opens at once; (2) otherwise the apps that
+  handle `ACTION_SENDTO` with `mailto:`: one is opened directly, several are shown
+  in a chooser that lists only them (the first is the target, the others its
+  `EXTRA_INITIAL_INTENTS`); (3) only when there is no e-mail app, the generic share
+  menu, and the screen says that no e-mail app was found (`openedGeneric`).
+  Dart decides (`ShareScanPdfDraft` asks a `MailAppFinder`), Kotlin carries out
+  (`findMailApps`, `shareDocument`), so the choice is a unit test with a fake phone.
+- **The PDF**: `content://` document URI, `FLAG_GRANT_READ_URI_PERMISSION` on the
+  intent and the ClipData, and `grantUriPermission` for the chosen package, read
+  only, never write. The target app's real ability to read it is a phone check.
+- **Package visibility** (Android 11 and newer): `<queries>` with the three
+  package names and one `mailto` intent; no `QUERY_ALL_PACKAGES`. The package
+  names are not confirmed from an official page (`MAIL_PROVIDERS.md`); the install
+  check and the fallback make a wrong name harmless.
+- **The account** is the one the e-mail app has selected; the app cannot choose
+  it. The share texts say so (EL and EN).
+- **Diagnostic line** on a failed test or send: the step and the reply code,
+  nothing else (`MailOutcome.stage`, `MailOutcome.replyCode`). The isolate sends
+  back a tag, a code and a step index, never text. A canary test checks that no
+  password or address gets in.
+- **One-tap backup way**: when the sign-in is refused, or the provider is Outlook
+  (no app password for SMTP), and the mode is `sendNow`, the screen shows the reason
+  and a button that sets the mode to `shareDraft` (the same setting as in
+  Settings, `MailSendCubit.useShareMode`). Not shown when the mode is already
+  `shareDraft`. The refused-sign-in text now says that with MFA an app password
+  made at the provider is needed, not the normal password, and that an
+  administrator may forbid app passwords.
+- **Guide per provider** in Settings (what an app password is, prerequisites,
+  numbered steps, a reminder, a button). Gmail and Yahoo open the official page in
+  the browser; Outlook has no steps, only that it waits for OAuth. Menu names are
+  used only where an official page gave them (Yahoo); for Gmail only the address.
+  The wizard of the first run is **not** changed: it has no password field, and
+  the guide is in Settings (a one-line note in the plan of Phase 4.1).
+- **Opening a link** is `ACTION_VIEW` through the existing channel
+  (`ScanFilesHandler.kt`, `openLink`), with no new package, only on a tap, and
+  only for a link that the registry allows (`MailProviderRegistry.isAllowedGuideLink`:
+  `https`, no user info, no query, no fragment, exactly a guide page of a
+  provider; the Kotlin side again accepts only `https`). Nothing of the user goes
+  into the link. This starts the browser; the app itself opens no connection and
+  uses no socket, so `no_network_test.dart` still holds (it now also checks that
+  there is no `url_launcher` and that only the native link opener sends
+  `openLink`).

@@ -328,7 +328,11 @@ void main() {
     test('share draft: the recipient, the same subject and body, the document '
         'URI of the PDF', () async {
       final sharer = FakeDraftSharer();
-      final share = ShareScanPdfDraft(sharer: sharer);
+      final share = ShareScanPdfDraft(
+        sharer: sharer,
+        finder: FakeMailAppFinder(),
+        providers: MailProviderRegistry.standard,
+      );
       final pdf = pdfOf();
 
       final result = await share(
@@ -352,10 +356,11 @@ void main() {
       'share draft works without an account: the recipient is left empty',
       () async {
         final sharer = FakeDraftSharer();
-        await ShareScanPdfDraft(sharer: sharer)(
-          settings: settingsOf(provider: null, sender: null),
-          pdf: pdfOf(),
-        );
+        await ShareScanPdfDraft(
+          sharer: sharer,
+          finder: FakeMailAppFinder(),
+          providers: MailProviderRegistry.standard,
+        )(settings: settingsOf(provider: null, sender: null), pdf: pdfOf());
         expect(sharer.shared.single['to'], isEmpty);
       },
     );

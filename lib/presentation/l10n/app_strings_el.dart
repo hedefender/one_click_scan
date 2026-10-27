@@ -1,4 +1,5 @@
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/mail/mail_outcome.dart';
 import 'app_strings.dart';
 
 class AppStringsEl extends AppStrings {
@@ -464,7 +465,8 @@ class AppStringsEl extends AppStrings {
   String get mailModeShareNote =>
       'Με το «Άνοιγμα στην εφαρμογή email» ανοίγει η εφαρμογή email σου με '
       'έτοιμο παραλήπτη, θέμα και PDF, και πατάς εσύ αποστολή εκεί. Δεν '
-      'χρειάζεται κωδικός εφαρμογής.';
+      'χρειάζεται κωδικός εφαρμογής. Θα χρησιμοποιηθεί ο λογαριασμός που έχει '
+      'ήδη επιλεγμένο η εφαρμογή email.';
 
   @override
   String get mailHelpTitle => 'Πώς φτιάχνεται ο κωδικός εφαρμογής';
@@ -472,52 +474,100 @@ class AppStringsEl extends AppStrings {
   @override
   List<String> mailHelpSteps(MailProviderId provider) => switch (provider) {
     MailProviderId.gmail => const [
-      'Ενεργοποίησε την επαλήθευση σε 2 βήματα στον λογαριασμό Google σου.',
-      'Άνοιξε τη σελίδα «Κωδικοί εφαρμογών» του λογαριασμού Google '
-          '(myaccount.google.com/apppasswords).',
-      'Δημιούργησε έναν κωδικό για το One Click Scan.',
-      'Αντίγραψε τον κωδικό των 16 ψηφίων και γράψε τον πιο πάνω.',
+      'Βεβαιώσου ότι ο λογαριασμός Google έχει ενεργή επαλήθευση σε 2 βήματα.',
+      'Πάτησε «Άνοιγμα σελίδας του παρόχου». Θα ανοίξει στον browser και '
+          'μπορεί να ζητήσει να συνδεθείς.',
+      'Ακολούθησε τη σελίδα για να φτιάξεις έναν κωδικό εφαρμογής (αν ζητηθεί '
+          'όνομα, γράψε π.χ. One Click Scan).',
+      'Αντίγραψε τον κωδικό και επικόλλησέ τον πιο πάνω, χωρίς κενά.',
     ],
-    MailProviderId.outlook => const [
-      'Ενεργοποίησε την επαλήθευση σε δύο βήματα στον λογαριασμό Microsoft σου.',
-      'Άνοιξε τις «Επιλογές ασφαλείας για προχωρημένους» του λογαριασμού '
-          'Microsoft και κατέβα στο «Κωδικοί πρόσβασης εφαρμογών».',
-      'Επίλεξε «Δημιουργία νέου κωδικού πρόσβασης εφαρμογής».',
-      'Αντίγραψε τον κωδικό και γράψε τον πιο πάνω.',
-    ],
+    MailProviderId.outlook => const [],
     MailProviderId.yahoo => const [
-      'Άνοιξε τη σελίδα «Ασφάλεια λογαριασμού» του Yahoo '
-          '(login.yahoo.com/account/security). Χρησιμοποίησε πρόγραμμα '
-          'περιήγησης στο οποίο έχεις συνδεθεί στο Yahoo εδώ και μέρες, '
-          'όχι ανώνυμη περιήγηση.',
-      'Στις «Εξωτερικές συνδέσεις» πάτησε «Δημιουργία κωδικού εφαρμογής».',
-      'Γράψε ένα όνομα (π.χ. One Click Scan) και πάτησε «Δημιουργία κωδικού».',
-      'Αντίγραψε τον κωδικό και γράψε τον πιο πάνω.',
+      'Πάτησε «Άνοιγμα σελίδας του παρόχου». Θα ανοίξει στον browser η '
+          'ασφάλεια λογαριασμού του Yahoo (Account Security).',
+      'Στην ενότητα «External connections» πάτησε «Create app password».',
+      'Γράψε ένα όνομα (π.χ. One Click Scan) και πάτησε «Generate password».',
+      'Αντίγραψε τον κωδικό και επικόλλησέ τον πιο πάνω, χωρίς κενά.',
     ],
   };
 
   @override
   String? mailHelpNote(MailProviderId provider) => switch (provider) {
     MailProviderId.gmail =>
-      'Αν η επιλογή δεν υπάρχει, η Google δεν δίνει κωδικούς εφαρμογής σε '
+      'Χρειάζεται ενεργή επαλήθευση σε 2 βήματα. Η επιλογή δεν υπάρχει σε '
           'λογαριασμούς με κλειδιά ασφαλείας μόνο, σε λογαριασμούς εργασίας ή '
-          'σχολείου και με Advanced Protection. Τότε χρησιμοποίησε το '
-          '«Άνοιγμα στην εφαρμογή email».',
-    MailProviderId.outlook => mailOutlookWarning,
-    MailProviderId.yahoo => mailYahooSizeNote,
+          'σχολείου (ο διαχειριστής μπορεί να την απαγορεύει) και με '
+          'Advanced Protection. Τότε χρησιμοποίησε την εφεδρική αποστολή.',
+    MailProviderId.outlook => null,
+    MailProviderId.yahoo =>
+      'Για τη δημιουργία, το Yahoo ζητά browser στον οποίο έχεις συνδεθεί '
+          'εδώ και μέρες, όχι ανώνυμη περιήγηση. $mailYahooSizeNote',
   };
 
   @override
   String get mailOutlookWarning =>
-      'Προσοχή: το Outlook.com ζητά σύγχρονη ταυτοποίηση (OAuth) και η '
-      'Microsoft έχει σταματήσει την απλή ταυτοποίηση με κωδικό. Δεν είναι '
-      'επιβεβαιωμένο ότι ένας κωδικός εφαρμογής δουλεύει για αποστολή. Μπορείς '
-      'να δοκιμάσεις· αν αποτύχει, διάλεξε «Άνοιγμα στην εφαρμογή email».';
+      'Ο Outlook δεν δέχεται ακόμα αποστολή από την εφαρμογή με κωδικό '
+      'εφαρμογής. Θα υποστηριχθεί μετά την υλοποίηση OAuth. Προς το παρόν '
+      'χρησιμοποίησε την εφεδρική αποστολή (άνοιγμα στην εφαρμογή email).';
 
   @override
   String get mailYahooSizeNote =>
       'Το Yahoo δεν δηλώνει επίσημα όριο μεγέθους. Η εφαρμογή θεωρεί ότι το '
       'μήνυμα χωράει έως 20 MB.';
+
+  @override
+  String get mailGuideWhat =>
+      'Ο κωδικός εφαρμογής είναι ξεχωριστός κωδικός που φτιάχνει ο πάροχος για '
+      'μία μόνο εφαρμογή. Δεν είναι ο κανονικός κωδικός του λογαριασμού σου, '
+      'και με ενεργή επαλήθευση σε 2 βήματα ο κανονικός κωδικός δεν γίνεται '
+      'δεκτός.';
+
+  @override
+  String get mailGuideReminder =>
+      'Ο κωδικός φαίνεται μία μόνο φορά: αντίγραψέ τον αμέσως και επικόλλησέ '
+      'τον χωρίς κενά. Η σελίδα του παρόχου μπορεί να διαφέρει από την '
+      'περιγραφή.';
+
+  @override
+  String get mailGuideOpenPage => 'Άνοιγμα σελίδας του παρόχου';
+
+  @override
+  String get mailGuideOpenFailed =>
+      'Δεν άνοιξε browser. Άνοιξε χειροκίνητα τη σελίδα ασφάλειας του '
+      'λογαριασμού σου.';
+
+  @override
+  String get mailGuideOpenSettings => 'Οδηγός κωδικού εφαρμογής';
+
+  @override
+  String get mailGuideOutlook =>
+      'Για τον Outlook δεν υπάρχουν βήματα κωδικού εφαρμογής: δεν υποστηρίζεται '
+      'για αποστολή. Θα υποστηριχθεί μετά την υλοποίηση OAuth. Προς το παρόν '
+      'χρησιμοποίησε την εφεδρική αποστολή.';
+
+  @override
+  String get mailFallbackButton => 'Χρήση εφεδρικής αποστολής';
+
+  @override
+  String get mailFallbackReasonAuth =>
+      'Ο πάροχος δεν δέχτηκε κωδικό εφαρμογής για αυτόν τον λογαριασμό. Η '
+      'εφεδρική αποστολή ανοίγει την εφαρμογή email σου με έτοιμο το μήνυμα.';
+
+  @override
+  String get mailFallbackReasonOutlook =>
+      'Ο Outlook δεν υποστηρίζει ακόμα αποστολή με κωδικό εφαρμογής. Η '
+      'εφεδρική αποστολή ανοίγει την εφαρμογή email σου με έτοιμο το μήνυμα.';
+
+  @override
+  String mailDiagnostic(MailStage stage, int? code) {
+    final name = switch (stage) {
+      MailStage.connection => 'σύνδεση',
+      MailStage.tls => 'TLS',
+      MailStage.authentication => 'ταυτοποίηση',
+      MailStage.sending => 'αποστολή',
+    };
+    return code == null ? 'Στάδιο: $name' : 'Στάδιο: $name, κωδικός $code';
+  }
 
   @override
   String get mailSendTitle => 'Email';
@@ -534,8 +584,9 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get mailShareNote =>
-      'Θα ανοίξει η εφαρμογή email σου με έτοιμο το μήνυμα και το PDF. Το '
-      'μήνυμα φεύγει όταν πατήσεις αποστολή εκεί.';
+      'Θα ανοίξει η εφαρμογή email σου με έτοιμο το μήνυμα και το PDF. Θα '
+      'χρησιμοποιηθεί ο λογαριασμός που έχει ήδη επιλεγμένο η εφαρμογή email. '
+      'Το μήνυμα φεύγει όταν πατήσεις αποστολή εκεί.';
 
   @override
   String get mailSending => 'Αποστολή σε εξέλιξη…';
@@ -567,8 +618,11 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get mailFailedAuth =>
-      'Ο διακομιστής δεν δέχτηκε τον λογαριασμό ή τον κωδικό. Έλεγξε τον '
-      'κωδικό εφαρμογής στις Ρυθμίσεις.';
+      'Ο διακομιστής δεν δέχτηκε τον λογαριασμό ή τον κωδικό. Με ενεργό MFA '
+      '(επαλήθευση σε 2 βήματα) χρειάζεται κωδικός εφαρμογής που φτιάχνεται '
+      'στον πάροχο, όχι ο κανονικός κωδικός του λογαριασμού. Σε ορισμένους '
+      'λογαριασμούς (π.χ. εταιρικούς ή σχολικούς) ο διαχειριστής δεν '
+      'επιτρέπει κωδικούς εφαρμογής.';
 
   @override
   String get mailFailedNetwork =>
@@ -591,7 +645,13 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get mailDraftOpened =>
-      'Η εφαρμογή email άνοιξε. Πάτησε αποστολή εκεί για να φύγει το μήνυμα.';
+      'Η εφαρμογή email άνοιξε με τον λογαριασμό που έχει ήδη επιλεγμένο. '
+      'Πάτησε αποστολή εκεί για να φύγει το μήνυμα.';
+
+  @override
+  String get mailDraftOpenedGeneric =>
+      'Δεν βρέθηκε εφαρμογή email, οπότε άνοιξε το γενικό μενού κοινοποίησης. '
+      'Διάλεξε εφαρμογή για να στείλεις το PDF.';
 
   @override
   String get mailDraftNoApp =>

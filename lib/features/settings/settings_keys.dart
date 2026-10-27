@@ -18,6 +18,11 @@ abstract final class SettingsKeys {
   static const mailTestResult = Key('settings.mail.testResult');
   static const sendMode = Key('settings.mail.sendMode');
   static const help = Key('settings.mail.help');
+  static const guideOpen = Key('settings.mail.guideOpen');
+  static const guideOpenFailed = Key('settings.mail.guideOpenFailed');
+  static const guideOutlook = Key('settings.mail.guideOutlook');
+  static const fallback = Key('settings.mail.fallback');
+  static const fallbackReason = Key('settings.mail.fallbackReason');
   static const providerWarning = Key('settings.mail.providerWarning');
   static Key ocrPack(String id) => Key('settings.ocrPack.$id');
   static const dialogDiscard = Key('settings.dialog.discard');

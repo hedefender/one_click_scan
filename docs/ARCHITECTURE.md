@@ -7,8 +7,9 @@ Phase 1.2 adds the app icon, the splash screen and the Gallery copy names
 (see `PHASE_1_2_VALIDATION.md`, ADR-009); Phase 2 adds the OCR layer
 (section 8d, ADR-010 to ADR-014, `PHASE_2_VALIDATION.md`); Phase 3 adds the PDF
 (section 8e, ADR-015 to ADR-018, `PHASE_3_VALIDATION.md`); Phase 4 adds the mail
-(section 8f, ADR-019 to ADR-023, `PHASE_4_VALIDATION.md`, `MAIL_PROVIDERS.md`,
-`MAIL_OAUTH_PLAN.md`).
+(section 8f, ADR-019 to ADR-024, `PHASE_4_VALIDATION.md`, `MAIL_PROVIDERS.md`,
+`MAIL_OAUTH_PLAN.md`); Phase 4.1 completes the share route and the error texts
+(ADR-024).
 
 ## 1. Principles
 
@@ -439,7 +440,7 @@ result screen is left, as before.
 
 ## 8f. Mail (Phase 4)
 
-Decisions: ADR-019 to ADR-023. Facts about the providers and the sources:
+Decisions: ADR-019 to ADR-024. Facts about the providers and the sources:
 `MAIL_PROVIDERS.md`; the plan for OAuth: `MAIL_OAUTH_PLAN.md`. The mail code is
 new and has nothing in common with the OCR code: a test reads the sources and
 allows the network (`mailer`, sockets) only in `lib/services/mail/`.
@@ -455,20 +456,25 @@ domain/
               reserved); MailMessage, MailAttachment; MailOutcome (sealed);
               MailCancellation; MailSizePolicy; MailText (subject, body)
   ports/      MailSender, MailCredentialStore (+ StoredMailSecret),
-              AttachmentSource, DraftSharer
-  usecases/   SendScanPdf, ShareScanPdfDraft, CheckMailConnection
+              AttachmentSource, DraftSharer, MailAppFinder, LinkOpener
+  mail/       (4.1) DraftShareRoute (sealed) + chooseShareRoute + MailApps;
+              MailProvider.appPackage / appPasswordGuideUrl; MailStage
+  usecases/   SendScanPdf, ShareScanPdfDraft, CheckMailConnection,
+              OpenProviderGuide
 services/mail/
   SmtpMailSender (+ smtp_worker.dart: the isolate; smtp_error_mapping.dart),
   SecureMailCredentialStore (+ PluginSecureStringStore),
-  AndroidAttachmentSource, AndroidDraftSharer (android_mail_channels.dart),
+  AndroidAttachmentSource, AndroidDraftSharer, AndroidMailAppFinder,
+  AndroidLinkOpener (android_mail_channels.dart),
   MailServices (the adapters together; `unsupported()` is the default of the
   container, like PdfServices)
 features/scan/ MailSendCubit / MailSendState, the Send section of
               ScanResultPage
 features/settings/ the account block of the mail section: password field,
               instructions, connection test, send mode, delete password
-android       ScanFilesHandler.kt: shareDocument, describeShare, copyUriToFile;
-              manifest: INTERNET, allowBackup="false", dataExtractionRules
+android       ScanFilesHandler.kt: shareDocument, describeShare, copyUriToFile,
+              findMailApps, openLink; manifest: INTERNET, allowBackup="false",
+              dataExtractionRules, <queries> (three packages, one mailto intent)
 ```
 
 `domain/` imports nothing of Flutter or of a plugin. The only places that know
@@ -501,7 +507,32 @@ stored password when the field is empty and it belongs to the same provider and
 account. The typed password is written to secure storage only by Save
 (`SettingsEditorCubit.save`), which also clears the field.
 
+### The share route (Phase 4.1, ADR-024)
+
+```
+ShareScanPdfDraft
+   MailAppFinder.find(providerPackage)        Kotlin findMailApps: is the package
+                                              installed? which apps handle mailto:
+   chooseShareRoute(...)                      pure
+      ProviderAppRoute(pkg)      installed app of the provider   -> explicit intent
+      SingleMailAppRoute(pkg)    the only mailto app             -> explicit intent
+      MailAppChooserRoute(pkgs)  several mailto apps             -> chooser of those only
+      GenericShareRoute          no e-mail app                   -> generic share menu
+   DraftSharer.share(route, ...)              Kotlin shareDocument: ACTION_SEND, the
+                                              PDF read-only, grantUriPermission(pkg)
+```
+
+The result is `opened` or `openedGeneric` (the screen says no e-mail app was
+found), `noApp`, `failed`. The guide button of Settings goes through
+`OpenProviderGuide` (registry allow-list) and `LinkOpener` (`ACTION_VIEW`,
+`https` only); the app opens no socket for it.
+
 ### Errors
+
+A failed test or send shows a diagnostic line: `MailOutcome.stage` (connection,
+TLS, authentication, sending) and `replyCode` (3 digits), nothing else. The
+failure screen can offer the one-tap backup way (`MailSendState.offersFallback`,
+`MailSendCubit.useShareMode`).
 
 `SmtpMailSender` answers with an outcome in every case. The isolate catches what
 `mailer` throws and sends back a tag and a 3 digit reply code only, never the
@@ -575,6 +606,6 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 | 2 | `OcrEngine` + Paddle PP-OCRv5, upright working copy, language packs (done, 8d) | `services/ocr/`, `services/image/` |
 | 2.1 | Spike: searchable PDF, select and copy a code on the phone | spike only |
 | 3 | PDF into `./pdf` with a best-effort text layer, Open PDF (done, 8e) | `services/pdf/`, `domain/pdf/`, `features/scan` result screen |
-| 4 | `MailSender` / `MailProvider`, SMTP with an app password, the share route, the Send button (done, 8f) | `services/mail/`, `domain/mail/`, `features/scan` result screen, Settings |
+| 4, 4.1 | `MailSender` / `MailProvider`, SMTP with an app password, the share route (the provider's own app first), the Send button, the diagnostic line, the guide (done, 8f) | `services/mail/`, `domain/mail/`, `features/scan` result screen, Settings |
 | 5 | One-click orchestration use case | `domain/usecases/`, feature `scan` |
 | 6 | Image enhancement | `services/` (Rust candidate) |

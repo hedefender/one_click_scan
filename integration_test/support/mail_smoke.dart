@@ -10,9 +10,11 @@ import 'package:one_click_scan/domain/entities/pdf_page_input.dart';
 import 'package:one_click_scan/domain/mail/mail_message.dart';
 import 'package:one_click_scan/domain/mail/mail_outcome.dart';
 import 'package:one_click_scan/domain/mail/mail_provider.dart';
+import 'package:one_click_scan/domain/mail/share_route.dart';
 import 'package:one_click_scan/domain/ports/attachment_source.dart';
 import 'package:one_click_scan/domain/ports/mail_credential_store.dart';
 import 'package:one_click_scan/domain/usecases/send_scan_pdf.dart';
+import 'package:one_click_scan/services/mail/android_mail_channels.dart';
 import 'package:one_click_scan/services/mail/secure_mail_credential_store.dart';
 import 'package:one_click_scan/services/mail/smtp_mail_sender.dart';
 import 'package:path_provider/path_provider.dart';
@@ -109,8 +111,9 @@ Future<String> runMailSmoke() async {
     if (await store.read() != null) {
       throw StateError('the password was not deleted');
     }
+    final intents = await _checkIntents();
     return 'mail: keystore ok, sent ${attachment.bytes.length} bytes with an '
-        'identical attachment in ${clock.elapsedMilliseconds} ms';
+        'identical attachment in ${clock.elapsedMilliseconds} ms, $intents';
   } finally {
     await server.close();
     if (dir.existsSync()) dir.deleteSync(recursive: true);
@@ -131,4 +134,55 @@ class _LocalFiles implements AttachmentSource {
 
   @override
   Future<void> purgeAll() async {}
+}
+
+/// Builds the share intents of every route in the release build (R8 on) and asks
+/// the phone for its e-mail apps and for the install state of a package. Nothing
+/// is started: `describeShare` only reports what the intent carries.
+Future<String> _checkIntents() async {
+  final sharer = AndroidDraftSharer();
+  Future<Map<String, Object?>> describe(DraftShareRoute route) =>
+      sharer.describe(
+        route: route,
+        to: const ['inbox@example.com'],
+        subject: 'One Click Scan - 2026-10-21_19-05-12',
+        body: 'Document scanned with One Click Scan.',
+        documentUri: 'content://com.example.test/document/pdf%2Fx.pdf',
+        mimeType: 'application/pdf',
+      );
+
+  final provider = await describe(
+    const ProviderAppRoute('com.google.android.gm'),
+  );
+  final single = await describe(const SingleMailAppRoute('com.example.mail'));
+  final chooser = await describe(
+    const MailAppChooserRoute(['a.mail', 'b.mail']),
+  );
+  final generic = await describe(const GenericShareRoute());
+  for (final d in [provider, single, chooser, generic]) {
+    if (d['action'] != 'android.intent.action.SEND' ||
+        d['grantsRead'] != true ||
+        d['grantsWrite'] != false ||
+        d['subject'] != 'One Click Scan - 2026-10-21_19-05-12') {
+      throw StateError('a share intent is not as expected: $d');
+    }
+  }
+  if (provider['package'] != 'com.google.android.gm' ||
+      single['package'] != 'com.example.mail' ||
+      provider['genericChooser'] != false ||
+      chooser['genericChooser'] != false ||
+      generic['genericChooser'] != true ||
+      generic['package'] != null) {
+    throw StateError('the routes are not as expected');
+  }
+  final finder = AndroidMailAppFinder();
+  final own = await finder.find(providerPackage: 'com.example.one_click_scan');
+  final missing = await finder.find(providerPackage: 'no.such.app.example');
+  if (!own.providerAppInstalled || missing.providerAppInstalled) {
+    throw StateError('the install check is not as expected');
+  }
+  if (await AndroidLinkOpener().open('http://example.com/x')) {
+    throw StateError('a link that is not https was opened');
+  }
+  return 'intents ok (4 routes, ${own.mailtoPackages.length} mail apps)';
 }

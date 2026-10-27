@@ -246,4 +246,87 @@ void main() {
 
     expect(cubit.isClosed, isTrue);
   });
+
+  group('the backup way with one tap', () {
+    test('sets the mode to shareDraft, in the settings and in the state, and '
+        'leaves the failure', () async {
+      await cubit.attach(pdf);
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+      await cubit.send();
+      expect(cubit.state.phase, MailPhase.failed);
+      expect(cubit.state.offersFallback(MailProviderId.gmail), isTrue);
+
+      await cubit.useShareMode();
+
+      expect(cubit.state.phase, MailPhase.idle);
+      expect(cubit.state.outcome, isNull);
+      expect(cubit.state.mode, MailSendMode.shareDraft);
+      expect((await repository.load()).mailSendMode, MailSendMode.shareDraft);
+      expect(cubit.state.offersFallback(MailProviderId.gmail), isFalse);
+    });
+
+    test('is offered for a refused sign-in, and for any failure of Outlook, '
+        'never for a missing setup or for sent', () async {
+      const auth = MailAuthFailed();
+      const network = MailNetworkError();
+      expect(
+        const MailSendState(
+          phase: MailPhase.failed,
+          outcome: auth,
+        ).offersFallback(MailProviderId.yahoo),
+        isTrue,
+      );
+      expect(
+        const MailSendState(
+          phase: MailPhase.failed,
+          outcome: network,
+        ).offersFallback(MailProviderId.yahoo),
+        isFalse,
+      );
+      expect(
+        const MailSendState(
+          phase: MailPhase.failed,
+          outcome: network,
+        ).offersFallback(MailProviderId.outlook),
+        isTrue,
+      );
+      expect(
+        const MailSendState(
+          phase: MailPhase.failed,
+          outcome: MailNotConfigured(MailNotConfiguredReason.password),
+        ).offersFallback(MailProviderId.outlook),
+        isFalse,
+      );
+      expect(
+        const MailSendState(phase: MailPhase.sent)
+            .offersFallback(MailProviderId.outlook),
+        isFalse,
+      );
+    });
+
+    test('is not offered when the mode is already shareDraft', () {
+      expect(
+        const MailSendState(
+          phase: MailPhase.failed,
+          mode: MailSendMode.shareDraft,
+          outcome: MailAuthFailed(),
+        ).offersFallback(MailProviderId.gmail),
+        isFalse,
+      );
+    });
+
+    test('does nothing while a send runs', () async {
+      await cubit.attach(pdf);
+      mail.sender.hold = Completer<MailOutcome>();
+      final sending = cubit.send();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      await cubit.useShareMode();
+
+      expect(cubit.state.phase, MailPhase.sending);
+      expect((await repository.load()).mailSendMode, MailSendMode.sendNow);
+      mail.sender.hold!.complete(const MailSent());
+      await sending;
+    });
+  });
 }

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/entities/mail_send_mode.dart';
 import '../../domain/mail/mail_outcome.dart';
 import '../../domain/ports/draft_sharer.dart';
@@ -37,6 +38,15 @@ class MailSendState extends Equatable {
   final DraftShareResult? draft;
 
   bool get busy => phase == MailPhase.sending;
+
+  /// The one-tap way to the backup route: the sign-in was refused, or the
+  /// provider is Outlook (no app password for SMTP), and the mode is still
+  /// `sendNow`.
+  bool offersFallback(MailProviderId? provider) {
+    if (mode != MailSendMode.sendNow || phase != MailPhase.failed) return false;
+    if (outcome is MailNotConfigured) return false;
+    return outcome is MailAuthFailed || provider == MailProviderId.outlook;
+  }
 
   /// The settings are incomplete: the screen leads to Settings.
   bool get needsSettings => outcome is MailNotConfigured;

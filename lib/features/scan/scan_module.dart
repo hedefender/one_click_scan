@@ -13,6 +13,7 @@ import '../../services/camera/camera_service.dart';
 import '../../services/scan_files/scan_temp_store.dart';
 import '../../services/storage_folder/storage_folder_picker.dart';
 import '../../domain/usecases/send_scan_pdf.dart';
+import '../../domain/usecases/update_settings.dart';
 import 'mail_send_cubit.dart';
 import 'scan_cubit.dart';
 import 'scan_page.dart';
@@ -46,6 +47,7 @@ void registerScanModule(GetIt sl) {
   sl.registerFactory<MailSendCubit>(
     () => MailSendCubit(
       loadSettings: sl<LoadSettings>(),
+      updateSettings: sl<UpdateSettings>(),
       send: sl<SendScanPdf>(),
       share: sl<ShareScanPdfDraft>(),
       logger: sl<AppLogger>(),

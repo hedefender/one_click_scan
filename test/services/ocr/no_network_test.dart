@@ -94,6 +94,20 @@ void main() {
     }
   });
 
+  test('opening the guide page of a provider is a start of the browser: no '
+      'package for it, no socket, and only the native link opener', () {
+    final pubspec = File('$root/pubspec.yaml').readAsStringSync();
+    expect(pubspec, isNot(contains('url_launcher')));
+    final offenders = <String>[];
+    for (final e in Directory('$root/lib').listSync(recursive: true)) {
+      if (e is! File || !e.path.endsWith('.dart')) continue;
+      final path = e.path.replaceAll(r'\', '/');
+      if (path.endsWith('/services/mail/android_mail_channels.dart')) continue;
+      if (e.readAsStringSync().contains("'openLink'")) offenders.add(path);
+    }
+    expect(offenders, isEmpty, reason: offenders.join('\n'));
+  });
+
   test('only lib/services/mail uses a mail package or a socket', () {
     final offenders = <String>[];
     final mailPackage = RegExp(

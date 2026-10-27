@@ -44,7 +44,8 @@ class SmtpJob {
   final List<List<String>> attachments;
 }
 
-/// What the isolate answers: a tag and a reply code (0 when none).
+/// What the isolate answers: a tag, a reply code (0 when none) and the index of
+/// the [MailStage] (-1 when none).
 typedef SmtpReply = List<Object>;
 
 const _tagSent = 'sent';
@@ -55,24 +56,35 @@ const _tagRejected = 'rejected';
 const _tagUnknown = 'unknown';
 
 MailOutcome outcomeFromReply(SmtpReply reply) {
+  final code = reply[1] as int;
+  final stageIndex = reply.length > 2 ? reply[2] as int : -1;
   return switch (reply.first) {
     _tagSent => const MailSent(),
-    _tagAuth => const MailAuthFailed(),
-    _tagNetwork => const MailNetworkError(),
-    _tagTooLarge => const MailTooLarge(),
-    _tagRejected => MailRejected(reply.last as int),
+    _tagAuth => MailAuthFailed(code: code == 0 ? null : code),
+    _tagNetwork => MailNetworkError(
+      failedStage: stageIndex == MailStage.tls.index
+          ? MailStage.tls
+          : MailStage.connection,
+    ),
+    _tagTooLarge => MailTooLarge(fromServer: code != 0),
+    _tagRejected => MailRejected(code),
     _ => const MailUnknown(),
   };
 }
 
 SmtpReply _replyFor(MailOutcome outcome) {
+  final stage = outcome.stage?.index ?? -1;
   return switch (outcome) {
-    MailSent() => [_tagSent, 0],
-    MailAuthFailed() => [_tagAuth, 0],
-    MailNetworkError() => [_tagNetwork, 0],
-    MailTooLarge() => [_tagTooLarge, 552],
-    MailRejected(:final code) => [_tagRejected, code],
-    _ => [_tagUnknown, 0],
+    MailSent() => [_tagSent, 0, -1],
+    MailAuthFailed(:final code) => [_tagAuth, code ?? 0, stage],
+    MailNetworkError() => [_tagNetwork, 0, stage],
+    MailTooLarge(:final fromServer) => [
+      _tagTooLarge,
+      fromServer ? 552 : 0,
+      stage,
+    ],
+    MailRejected(:final code) => [_tagRejected, code, stage],
+    _ => [_tagUnknown, 0, -1],
   };
 }
 

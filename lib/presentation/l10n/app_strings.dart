@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/mail/mail_outcome.dart';
 import 'app_strings_el.dart';
 import 'app_strings_en.dart';
 
@@ -176,6 +177,19 @@ abstract class AppStrings {
   String? mailHelpNote(MailProviderId provider);
   String get mailOutlookWarning;
   String get mailYahooSizeNote;
+  String get mailGuideWhat;
+  String get mailGuideReminder;
+  String get mailGuideOpenPage;
+  String get mailGuideOpenFailed;
+  String get mailGuideOpenSettings;
+  String get mailGuideOutlook;
+  String get mailFallbackButton;
+  String get mailFallbackReasonAuth;
+  String get mailFallbackReasonOutlook;
+
+  /// One short line for a failure: the step and the 3 digit reply code of the
+  /// server when there is one. Never an address, a host or a server text.
+  String mailDiagnostic(MailStage stage, int? code);
 
   // Mail: sending from the result screen
   String get mailSendTitle;
@@ -199,6 +213,7 @@ abstract class AppStrings {
   String get mailDraftOpened;
   String get mailDraftNoApp;
   String get mailDraftFailed;
+  String get mailDraftOpenedGeneric;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

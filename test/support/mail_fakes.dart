@@ -8,6 +8,9 @@ import 'package:one_click_scan/domain/mail/mail_cancellation.dart';
 import 'package:one_click_scan/domain/mail/mail_message.dart';
 import 'package:one_click_scan/domain/mail/mail_outcome.dart';
 import 'package:one_click_scan/domain/mail/mail_provider.dart';
+import 'package:one_click_scan/domain/mail/share_route.dart';
+import 'package:one_click_scan/domain/ports/link_opener.dart';
+import 'package:one_click_scan/domain/ports/mail_app_finder.dart';
 import 'package:one_click_scan/domain/ports/attachment_source.dart';
 import 'package:one_click_scan/domain/ports/draft_sharer.dart';
 import 'package:one_click_scan/domain/ports/mail_credential_store.dart';
@@ -174,14 +177,19 @@ class FakeDraftSharer implements DraftSharer {
   DraftShareResult result = DraftShareResult.opened;
   final List<Map<String, Object>> shared = [];
 
+  /// The routes asked for, in order.
+  final List<DraftShareRoute> routes = [];
+
   @override
   Future<DraftShareResult> share({
+    required DraftShareRoute route,
     required List<String> to,
     required String subject,
     required String body,
     required String documentUri,
     required String mimeType,
   }) async {
+    routes.add(route);
     shared.add({
       'to': to,
       'subject': subject,
@@ -193,18 +201,50 @@ class FakeDraftSharer implements DraftSharer {
   }
 }
 
+/// A phone with the given apps (what `MailAppFinder` answers).
+class FakeMailAppFinder implements MailAppFinder {
+  MailApps apps = const MailApps();
+  bool throws = false;
+
+  /// The `providerPackage` of every question.
+  final List<String?> asked = [];
+
+  @override
+  Future<MailApps> find({String? providerPackage}) async {
+    asked.add(providerPackage);
+    if (throws) throw StateError('finder failed');
+    // The provider app counts as installed only when the test says so.
+    return apps;
+  }
+}
+
+class FakeLinkOpener implements LinkOpener {
+  bool result = true;
+  final List<String> opened = [];
+
+  @override
+  Future<bool> open(String url) async {
+    opened.add(url);
+    return result;
+  }
+}
+
 /// Fake mail adapters as a bundle for `buildTestContainer`.
 class MailTestRig {
   final sender = FakeMailSender();
   final credentials = FakeMailCredentialStore();
   final attachments = FakeAttachmentSource();
   final sharer = FakeDraftSharer();
+  final appFinder = FakeMailAppFinder();
+  final links = FakeLinkOpener();
 
   MailServices get services => MailServices(
     sender: sender,
     credentials: credentials,
     attachments: attachments,
     sharer: sharer,
+    appFinder: appFinder,
+    links: links,
   );
 
   /// A stored password for [provider] and [account] (the one of the settings

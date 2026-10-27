@@ -9,6 +9,7 @@ import 'package:one_click_scan/domain/entities/destination_mode.dart';
 import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
 import 'package:one_click_scan/domain/entities/mail_send_mode.dart';
 import 'package:one_click_scan/domain/mail/mail_outcome.dart';
+import 'package:one_click_scan/domain/mail/share_route.dart';
 import 'package:one_click_scan/domain/ports/draft_sharer.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
 import 'package:one_click_scan/features/home/home_keys.dart';
@@ -177,8 +178,11 @@ void main() {
     final cases = <String, (MailOutcome, String)>{
       'auth': (
         const MailAuthFailed(),
-        'The server did not accept the account or the password. Check the app '
-            'password in Settings.',
+        'The server did not accept the account or the password. With MFA '
+            '(2-step verification) on, an app password made at the provider is '
+            'needed, not the normal password of the account. For some accounts '
+            '(for example work or school accounts) the administrator does not '
+            'allow app passwords.',
       ),
       'network': (
         const MailNetworkError(),
@@ -192,7 +196,7 @@ void main() {
       ),
       'rejected': (
         const MailRejected(550),
-        'The e-mail server rejected the message (code 550).',
+        'The e-mail server rejected the message.',
       ),
       'unknown': (
         const MailUnknown(),
@@ -236,8 +240,170 @@ void main() {
 
     await tapKey(tester, ScanKeys.mailSend);
 
-    expect(find.textContaining('modern sign-in (OAuth)'), findsOneWidget);
+    expect(
+      find.textContaining('does not yet accept sending from the app'),
+      findsOneWidget,
+    );
     expect(find.byKey(ScanKeys.mailOpenApp), findsOneWidget);
+    expect(find.byKey(ScanKeys.mailFallback), findsOneWidget);
+  });
+
+  group('the diagnostic line: the step and the code, nothing else', () {
+    final cases = <String, (MailOutcome, String)>{
+      'auth 535': (
+        const MailAuthFailed(code: 535),
+        'Step: authentication, code 535',
+      ),
+      'auth, no code': (const MailAuthFailed(), 'Step: authentication'),
+      'network': (const MailNetworkError(), 'Step: connection'),
+      'tls': (const MailNetworkError(failedStage: MailStage.tls), 'Step: TLS'),
+      'rejected': (const MailRejected(550), 'Step: sending, code 550'),
+      'rejected without a code': (const MailRejected(0), 'Step: sending'),
+      'too large from the server': (
+        const MailTooLarge(fromServer: true),
+        'Step: sending, code 552',
+      ),
+    };
+    for (final entry in cases.entries) {
+      testWidgets(entry.key, (tester) async {
+        await pumpHome(tester);
+        mail.sender.outcome = entry.value.$1;
+
+        await tapKey(tester, ScanKeys.mailSend);
+
+        expect(
+          tester.widget<Text>(find.byKey(ScanKeys.mailDiagnostic)).data,
+          entry.value.$2,
+        );
+      });
+    }
+
+    testWidgets('no line without a step (too large before sending, unknown)', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      mail.sender.outcome = const MailTooLarge();
+      await tapKey(tester, ScanKeys.mailSend);
+      expect(find.byKey(ScanKeys.mailDiagnostic), findsNothing);
+
+      mail.sender.outcome = const MailUnknown();
+      await tapKey(tester, ScanKeys.mailRetry);
+      expect(find.byKey(ScanKeys.mailDiagnostic), findsNothing);
+    });
+
+    testWidgets('the screen shows neither the password nor the address in '
+        'the failure', (tester) async {
+      await pumpHome(tester);
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+
+      await tapKey(tester, ScanKeys.mailSend);
+
+      final texts = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((t) => t.data ?? '')
+          .join('\n');
+      expect(texts, isNot(contains(canarySecret)));
+      expect(texts, isNot(contains(testAccount)));
+    });
+
+    testWidgets('in Greek', (tester) async {
+      await pumpHome(tester, language: 'el');
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+
+      await tapKey(tester, ScanKeys.mailSend);
+
+      expect(
+        tester.widget<Text>(find.byKey(ScanKeys.mailDiagnostic)).data,
+        'Στάδιο: ταυτοποίηση, κωδικός 535',
+      );
+    });
+  });
+
+  group('the one-tap backup way', () {
+    testWidgets('a refused sign-in offers it, with the reason; one tap sets '
+        'the mode and the button now opens the e-mail app', (tester) async {
+      await pumpHome(tester);
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+      await tapKey(tester, ScanKeys.mailSend);
+
+      expect(find.byKey(ScanKeys.mailFallback), findsOneWidget);
+      expect(
+        find.textContaining('did not accept an app password'),
+        findsOneWidget,
+      );
+
+      await tapKey(tester, ScanKeys.mailFallback);
+
+      expect(find.byKey(ScanKeys.mailFallback), findsNothing);
+      expect(find.byKey(ScanKeys.mailFailure), findsNothing);
+      expect(find.text('Open in the e-mail app'), findsOneWidget);
+    });
+
+    testWidgets('the mode is stored: the next tap opens the mail app', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+      await tapKey(tester, ScanKeys.mailSend);
+      await tapKey(tester, ScanKeys.mailFallback);
+
+      await tapKey(tester, ScanKeys.mailSend);
+
+      expect(mail.sharer.shared, hasLength(1));
+      expect(mail.sender.sent, hasLength(1)); // only the first, failed try
+    });
+
+    testWidgets('a network failure does not offer it (Gmail)', (tester) async {
+      await pumpHome(tester);
+      mail.sender.outcome = const MailNetworkError();
+      await tapKey(tester, ScanKeys.mailSend);
+      expect(find.byKey(ScanKeys.mailFallback), findsNothing);
+    });
+
+    testWidgets('Outlook offers it for any failure, with its own reason', (
+      tester,
+    ) async {
+      await pumpHome(tester, provider: MailProviderId.outlook);
+      mail.sender.outcome = const MailNetworkError();
+      await tapKey(tester, ScanKeys.mailSend);
+
+      expect(find.byKey(ScanKeys.mailFallback), findsOneWidget);
+      expect(
+        find.textContaining(
+          'does not yet support sending with an app password',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('already in the share mode: not offered', (tester) async {
+      await pumpHome(tester, mode: MailSendMode.shareDraft);
+      mail.sharer.result = DraftShareResult.failed;
+      await tapKey(tester, ScanKeys.mailSend);
+      expect(find.byKey(ScanKeys.mailFallback), findsNothing);
+    });
+
+    testWidgets('a refused sign-in also leads to the guide in Settings', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+      await tapKey(tester, ScanKeys.mailSend);
+
+      await tapKey(tester, ScanKeys.mailGuide);
+
+      // The settings screen is open, where the guide is.
+      expect(find.byKey(SettingsKeys.password), findsOneWidget);
+    });
+
+    testWidgets('the guide link is not offered for Outlook (no steps)', (
+      tester,
+    ) async {
+      await pumpHome(tester, provider: MailProviderId.outlook);
+      mail.sender.outcome = const MailAuthFailed(code: 535);
+      await tapKey(tester, ScanKeys.mailSend);
+      expect(find.byKey(ScanKeys.mailGuide), findsNothing);
+    });
   });
 
   testWidgets('Open in the e-mail app after a failure hands the PDF to the '
@@ -266,6 +432,36 @@ void main() {
     expect(
       find.text('No e-mail app that takes an attachment was found.'),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('only the generic menu opened: it says no e-mail app was found', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    mail.sender.outcome = const MailNetworkError();
+    mail.sharer.result = DraftShareResult.openedGeneric;
+    await tapKey(tester, ScanKeys.mailSend);
+
+    await tapKey(tester, ScanKeys.mailOpenApp);
+
+    expect(find.textContaining('generic share menu opened'), findsOneWidget);
+  });
+
+  testWidgets('the route asked for is the one of the phone: the app of the '
+      'provider first', (tester) async {
+    await pumpHome(tester, mode: MailSendMode.shareDraft, withPassword: false);
+    mail.appFinder.apps = const MailApps(
+      providerAppInstalled: true,
+      mailtoPackages: ['com.example.other'],
+    );
+
+    await tapKey(tester, ScanKeys.mailSend);
+
+    expect(mail.appFinder.asked.single, 'com.google.android.gm');
+    expect(
+      (mail.sharer.routes.single as ProviderAppRoute).package,
+      'com.google.android.gm',
     );
   });
 

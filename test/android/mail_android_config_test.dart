@@ -43,6 +43,24 @@ void main() {
       }
     });
 
+    test('package visibility: the three mail apps and one mailto intent, and '
+        'no permission to see every app', () {
+      expect(manifest, isNot(contains('QUERY_ALL_PACKAGES')));
+      final queries = manifest.substring(
+        manifest.indexOf('<queries>'),
+        manifest.indexOf('</queries>'),
+      );
+      for (final package in [
+        'com.google.android.gm',
+        'com.microsoft.office.outlook',
+        'com.yahoo.mobile.client.android.mail',
+      ]) {
+        expect(queries, contains('<package android:name="$package" />'));
+      }
+      expect(queries, contains('android.intent.action.SENDTO'));
+      expect(queries, contains('android:scheme="mailto"'));
+    });
+
     test('INTERNET is asked for, and nothing else about the network', () {
       expect(manifest, contains('android.permission.INTERNET'));
       expect(manifest, isNot(contains('ACCESS_NETWORK_STATE')));
@@ -89,9 +107,33 @@ void main() {
         'describeShare',
         'copyUriToFile',
         'openDocument',
+        'findMailApps',
+        'openLink',
       ]) {
         expect(kotlin, contains('"$method"'), reason: method);
       }
+    });
+
+    test('the routes: an explicit package, a chooser of the mail apps, the '
+        'generic menu last, and a read grant for the package', () {
+      for (final needle in [
+        'setPackage(targetPackage)',
+        'route == "provider" || route == "mail"',
+        'route == "chooser"',
+        'EXTRA_INITIAL_INTENTS',
+        'grantUriPermission',
+        'Intent.createChooser(buildShareIntent(call, null), null)',
+        'Intent.ACTION_SENDTO',
+        'mailto:',
+      ]) {
+        expect(kotlin, contains(needle), reason: needle);
+      }
+    });
+
+    test('a link opens only if it is https, as a browsable view', () {
+      expect(kotlin, contains('uri.scheme != "https"'));
+      expect(kotlin, contains('Intent.ACTION_VIEW, uri'));
+      expect(kotlin, contains('Intent.CATEGORY_BROWSABLE'));
     });
 
     test('no mail address or text of a message is logged natively', () {

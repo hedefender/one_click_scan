@@ -118,4 +118,75 @@ void main() {
       );
     });
   });
+
+  group('the step and the reply code of a failure (the diagnostic line)', () {
+    test('a refused sign-in: the step authentication, and the code', () {
+      final outcome = outcomeForSmtpError(
+        SmtpClientAuthenticationException(
+          'Authentication Failed\nResponse from server: < 535 5.7.8 bad',
+        ),
+      );
+      expect(outcome.stage, MailStage.authentication);
+      expect(outcome.replyCode, 535);
+    });
+
+    test('a refused sign-in with no reply text still names the step', () {
+      final outcome = outcomeForSmtpError(
+        SmtpClientAuthenticationException('Authentication Failed'),
+      );
+      expect(outcome.stage, MailStage.authentication);
+      expect(outcome.replyCode, isNull);
+    });
+
+    test('the sign-in reply codes keep their code', () {
+      for (final code in [530, 534, 535, 454]) {
+        expect(outcomeForReplyCode(code).replyCode, code);
+        expect(outcomeForReplyCode(code).stage, MailStage.authentication);
+      }
+    });
+
+    test('552 is the step sending with its code', () {
+      expect(outcomeForReplyCode(552).stage, MailStage.sending);
+      expect(outcomeForReplyCode(552).replyCode, 552);
+    });
+
+    test('another reply: sending, and its code', () {
+      final outcome = outcomeForReplyCode(550);
+      expect(outcome.stage, MailStage.sending);
+      expect(outcome.replyCode, 550);
+    });
+
+    test('a socket error or a timeout: the step connection, no code', () {
+      for (final error in <Object>[
+        const SocketException('x'),
+        TimeoutException('t'),
+      ]) {
+        final outcome = outcomeForSmtpError(error);
+        expect(outcome.stage, MailStage.connection);
+        expect(outcome.replyCode, isNull);
+      }
+    });
+
+    test('a failed encryption: the step TLS', () {
+      for (final error in <Object>[
+        const HandshakeException('h'),
+        const TlsException('t'),
+      ]) {
+        expect(outcomeForSmtpError(error).stage, MailStage.tls);
+      }
+    });
+
+    test('the step and the code hold nothing of the text of the error', () {
+      final outcome = outcomeForSmtpError(
+        SmtpClientAuthenticationException(
+          'Response from server: < 535 user@example.test smtp.example.test '
+          'secret-xyz',
+        ),
+      );
+      final line = '${outcome.stage} ${outcome.replyCode}';
+      for (final secret in ['example', 'smtp', 'secret-xyz', '@']) {
+        expect(line, isNot(contains(secret)));
+      }
+    });
+  });
 }

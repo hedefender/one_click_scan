@@ -10,7 +10,10 @@ import '../../domain/mail/mail_message.dart';
 import '../../domain/mail/mail_outcome.dart';
 import '../../domain/mail/mail_provider.dart';
 import '../../domain/ports/attachment_source.dart';
+import '../../domain/mail/share_route.dart';
 import '../../domain/ports/draft_sharer.dart';
+import '../../domain/ports/link_opener.dart';
+import '../../domain/ports/mail_app_finder.dart';
 import '../../domain/ports/mail_credential_store.dart';
 import '../../domain/ports/mail_sender.dart';
 import 'android_mail_channels.dart';
@@ -24,6 +27,8 @@ class MailServices {
     required this.credentials,
     required this.attachments,
     required this.sharer,
+    required this.appFinder,
+    required this.links,
     this.providers = MailProviderRegistry.standard,
   });
 
@@ -34,12 +39,16 @@ class MailServices {
       credentials = const UnsupportedMailCredentialStore(),
       attachments = const UnsupportedAttachmentSource(),
       sharer = const UnsupportedDraftSharer(),
+      appFinder = const UnsupportedMailAppFinder(),
+      links = const UnsupportedLinkOpener(),
       providers = MailProviderRegistry.standard;
 
   final MailSender sender;
   final MailCredentialStore credentials;
   final AttachmentSource attachments;
   final DraftSharer sharer;
+  final MailAppFinder appFinder;
+  final LinkOpener links;
 
   /// `standard` in the app; the integration tests map a provider to a server
   /// on the PC (the `testLocal` provider exists only there).
@@ -61,6 +70,8 @@ Future<MailServices> createPlatformMailServices({
       directory: Directory('${cache.path}${Platform.pathSeparator}mail_work'),
     ),
     sharer: AndroidDraftSharer(),
+    appFinder: AndroidMailAppFinder(),
+    links: AndroidLinkOpener(),
   );
 }
 
@@ -115,10 +126,25 @@ class UnsupportedDraftSharer implements DraftSharer {
 
   @override
   Future<DraftShareResult> share({
+    required DraftShareRoute route,
     required List<String> to,
     required String subject,
     required String body,
     required String documentUri,
     required String mimeType,
   }) async => DraftShareResult.failed;
+}
+
+class UnsupportedMailAppFinder implements MailAppFinder {
+  const UnsupportedMailAppFinder();
+
+  @override
+  Future<MailApps> find({String? providerPackage}) async => const MailApps();
+}
+
+class UnsupportedLinkOpener implements LinkOpener {
+  const UnsupportedLinkOpener();
+
+  @override
+  Future<bool> open(String url) async => false;
 }

@@ -522,9 +522,24 @@ class _PasswordBlock extends StatelessWidget {
       MailTestStatus.needsPassword => strings.mailTestNeedsPassword,
       MailTestStatus.authFailed => strings.mailFailedAuth,
       MailTestStatus.network => strings.mailFailedNetwork,
-      MailTestStatus.rejected => strings.mailFailedRejected(state.mailTestCode),
+      // The code is in the diagnostic line, not in the sentence.
+      MailTestStatus.rejected => strings.mailFailedRejected(0),
       MailTestStatus.unknown => strings.mailFailedUnknown,
     };
+    final stage = state.mailTestStage;
+    final diagnostic = stage == null
+        ? null
+        : strings.mailDiagnostic(
+            stage,
+            state.mailTestCode == 0 ? null : state.mailTestCode,
+          );
+    final saved = state.saved;
+    final offerFallback =
+        saved != null &&
+        saved.mailSendMode == MailSendMode.sendNow &&
+        provider != null &&
+        (provider == MailProviderId.outlook ||
+            state.mailTest == MailTestStatus.authFailed);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -568,37 +583,7 @@ class _PasswordBlock extends StatelessWidget {
             style: error,
           ),
         ],
-        if (provider != null)
-          ExpansionTile(
-            key: SettingsKeys.help,
-            tilePadding: EdgeInsets.zero,
-            title: Text(strings.mailHelpTitle),
-            children: [
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final (i, step)
-                        in strings.mailHelpSteps(provider).indexed)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text('${i + 1}. $step'),
-                      ),
-                    if (strings.mailHelpNote(provider) != null &&
-                        support != AppPasswordSupport.unconfirmed)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          strings.mailHelpNote(provider)!,
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        if (provider != null) _Guide(state: state, provider: provider),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -629,14 +614,129 @@ class _PasswordBlock extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               key: SettingsKeys.mailTestResult,
-              testText,
+              diagnostic == null ? testText : '$testText\n$diagnostic',
               style: switch (state.mailTest) {
                 MailTestStatus.ok || MailTestStatus.running => null,
                 _ => error,
               },
             ),
           ),
+        if (offerFallback)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  key: SettingsKeys.fallbackReason,
+                  provider == MailProviderId.outlook
+                      ? strings.mailFallbackReasonOutlook
+                      : strings.mailFallbackReasonAuth,
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  key: SettingsKeys.fallback,
+                  icon: const Icon(Icons.open_in_new),
+                  onPressed: () =>
+                      cubit.selectSendMode(MailSendMode.shareDraft),
+                  label: Text(strings.mailFallbackButton),
+                ),
+              ],
+            ),
+          ),
       ],
+    );
+  }
+}
+
+/// The guide to make an app password for the provider: what it is, the
+/// prerequisites, a few numbered steps, a reminder, and a button that opens the
+/// official page in the browser. Outlook has no steps (no app password for
+/// SMTP): a short text instead. Open while no password is stored.
+class _Guide extends StatelessWidget {
+  const _Guide({required this.state, required this.provider});
+
+  final SettingsEditorState state;
+  final MailProviderId provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final cubit = context.read<SettingsEditorCubit>();
+    final registry = context.read<MailProviderRegistry>();
+    final steps = strings.mailHelpSteps(provider);
+    final note = strings.mailHelpNote(provider);
+    final hasPage = registry.guideUrlFor(provider) != null;
+    // A new provider is a new tile, so it opens again.
+    return KeyedSubtree(
+      key: ValueKey('guide.${provider.name}'),
+      child: ExpansionTile(
+        key: SettingsKeys.help,
+        tilePadding: EdgeInsets.zero,
+        initiallyExpanded: !state.hasStoredPassword,
+        title: Text(strings.mailHelpTitle),
+        children: [
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (steps.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      key: SettingsKeys.guideOutlook,
+                      strings.mailGuideOutlook,
+                    ),
+                  )
+                else ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(strings.mailGuideWhat),
+                  ),
+                  if (note != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(note, style: theme.textTheme.bodySmall),
+                    ),
+                  for (final (i, step) in steps.indexed)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text('${i + 1}. $step'),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      strings.mailGuideReminder,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+                if (hasPage)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: OutlinedButton.icon(
+                      key: SettingsKeys.guideOpen,
+                      icon: const Icon(Icons.open_in_browser),
+                      onPressed: cubit.openGuide,
+                      label: Text(strings.mailGuideOpenPage),
+                    ),
+                  ),
+                if (state.guideFailed)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      key: SettingsKeys.guideOpenFailed,
+                      strings.mailGuideOpenFailed,
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

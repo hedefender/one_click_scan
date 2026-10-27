@@ -10,8 +10,11 @@ import '../mail/mail_outcome.dart';
 import '../mail/mail_provider.dart';
 import '../mail/mail_size_policy.dart';
 import '../mail/mail_text.dart';
+import '../mail/share_route.dart';
 import '../ports/attachment_source.dart';
 import '../ports/draft_sharer.dart';
+import '../ports/link_opener.dart';
+import '../ports/mail_app_finder.dart';
 import '../ports/mail_credential_store.dart';
 import '../ports/mail_sender.dart';
 
@@ -96,25 +99,61 @@ class SendScanPdf {
 }
 
 /// Opens the e-mail app with the message filled in (the `shareDraft` mode, and
-/// the way out when a send failed). The user presses send there; nothing is
-/// known about what happens next.
+/// the way out when a send failed). The route: the app of the provider in the
+/// settings if it is installed, else the e-mail apps of the phone (one: opened;
+/// several: a chooser of e-mail apps only), else the generic share menu. The
+/// user presses send there; nothing is known about what happens next.
 class ShareScanPdfDraft {
-  const ShareScanPdfDraft({required this.sharer});
+  const ShareScanPdfDraft({
+    required this.sharer,
+    required this.finder,
+    required this.providers,
+  });
 
   final DraftSharer sharer;
+  final MailAppFinder finder;
+  final MailProviderRegistry providers;
 
   Future<DraftShareResult> call({
     required AppSettings settings,
     required StoredPdf pdf,
-  }) {
+  }) async {
     final destination = settings.effectiveDestination?.trim();
+    final providerId = settings.mailProvider;
+    final providerPackage = providerId == null
+        ? null
+        : providers.resolve(providerId).appPackage;
+    final MailApps apps;
+    try {
+      apps = await finder.find(providerPackage: providerPackage);
+    } catch (_) {
+      return DraftShareResult.failed;
+    }
     return sharer.share(
+      route: chooseShareRoute(providerPackage: providerPackage, apps: apps),
       to: isValidEmail(destination) ? [destination!] : const [],
       subject: MailText.subject(pdf.fileName),
       body: MailText.body(settings.language),
       documentUri: pdf.uri,
       mimeType: 'application/pdf',
     );
+  }
+}
+
+/// Opens the official page where the user makes an app password, in the
+/// browser, and only for a link of the registry (`https`, nothing added).
+class OpenProviderGuide {
+  const OpenProviderGuide({required this.opener, required this.providers});
+
+  final LinkOpener opener;
+  final MailProviderRegistry providers;
+
+  /// False when the provider has no guide page, the link is not allowed, or no
+  /// browser started.
+  Future<bool> call(MailProviderId provider) async {
+    final url = providers.guideUrlFor(provider);
+    if (url == null || !providers.isAllowedGuideLink(url)) return false;
+    return opener.open(url);
   }
 }
 

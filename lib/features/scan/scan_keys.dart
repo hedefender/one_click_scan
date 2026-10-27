@@ -34,6 +34,10 @@ abstract final class ScanKeys {
   static const mailSend = Key('scan.result.mail.send');
   static const mailCancel = Key('scan.result.mail.cancel');
   static const mailRetry = Key('scan.result.mail.retry');
+  static const mailFallback = Key('scan.mail.fallback');
+  static const mailFallbackReason = Key('scan.mail.fallbackReason');
+  static const mailGuide = Key('scan.mail.guide');
+  static const mailDiagnostic = Key('scan.mail.diagnostic');
   static const mailOpenApp = Key('scan.result.mail.openApp');
   static const mailOpenSettings = Key('scan.result.mail.openSettings');
   static const mailFailure = Key('scan.result.mail.failure');

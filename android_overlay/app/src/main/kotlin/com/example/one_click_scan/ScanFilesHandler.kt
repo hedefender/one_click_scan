@@ -3,6 +3,7 @@ package com.example.one_click_scan
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -44,6 +45,14 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
             }
             if (call.method == "describeShare") {
                 result.success(describeShare(call))
+                return@setMethodCallHandler
+            }
+            if (call.method == "findMailApps") {
+                result.success(findMailApps(call))
+                return@setMethodCallHandler
+            }
+            if (call.method == "openLink") {
+                openLink(call, result)
                 return@setMethodCallHandler
             }
             // Copies a stored document into the app cache for the mail sender.
@@ -132,12 +141,14 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
 
     /**
      * The `ACTION_SEND` intent that hands the PDF to an e-mail app: recipient,
-     * subject, text and the document as `EXTRA_STREAM` with a temporary read
-     * grant (also on the ClipData, which is what the chooser passes on). One
-     * function builds it for [shareDocument] and [describeShare], so the test of
-     * the extras and flags checks the real intent.
+     * subject, text and the document as `EXTRA_STREAM` with a read-only grant
+     * (also on the ClipData, which is what the chooser passes on). With a
+     * [targetPackage] the intent is explicit (`setPackage`), so the app opens at
+     * once, and the grant is also given to that package. One function builds it
+     * for [shareDocument] and [describeShare], so the test of the extras and
+     * flags checks the real intent.
      */
-    private fun buildShareIntent(call: MethodCall): Intent {
+    private fun buildShareIntent(call: MethodCall, targetPackage: String?): Intent {
         val uri = Uri.parse(call.argument<String>("uri") ?: "")
         val mimeType = call.argument<String>("mimeType") ?: "application/pdf"
         val to = call.argument<List<String>>("to") ?: emptyList()
@@ -151,18 +162,57 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
             putExtra(Intent.EXTRA_STREAM, uri)
             clipData = android.content.ClipData.newRawUri("", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if (targetPackage != null) setPackage(targetPackage)
         }
     }
 
-    /** Opens the chooser of the apps that take the PDF; replies "opened", "no_app" or "failed". */
+    private fun routeOf(call: MethodCall): String = call.argument<String>("route") ?: "generic"
+
+    private fun packagesOf(call: MethodCall): List<String> =
+        call.argument<List<String>>("packages") ?: emptyList()
+
+    /** Read-only grant of the PDF to one package; a failure is not fatal (the intent flag still applies). */
+    private fun grantRead(call: MethodCall, targetPackage: String) {
+        try {
+            context.grantUriPermission(
+                targetPackage,
+                Uri.parse(call.argument<String>("uri") ?: ""),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (e: Exception) {
+        }
+    }
+
+    /**
+     * Opens the e-mail app for the route that Dart chose: the app of the provider
+     * or the only e-mail app (explicit intent), a chooser of e-mail apps only
+     * (the first package is the target of the chooser, the others its initial
+     * intents), or the generic share menu. Replies "opened", "no_app" or "failed".
+     */
     private fun shareDocument(call: MethodCall, result: MethodChannel.Result) {
         try {
-            val send = buildShareIntent(call)
-            val chooser = Intent.createChooser(send, null).apply {
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val route = routeOf(call)
+            val packages = packagesOf(call)
+            val intent: Intent = when {
+                (route == "provider" || route == "mail") && packages.size == 1 -> {
+                    grantRead(call, packages[0])
+                    buildShareIntent(call, packages[0])
+                }
+                route == "chooser" && packages.isNotEmpty() -> {
+                    packages.forEach { grantRead(call, it) }
+                    val first = buildShareIntent(call, packages[0])
+                    val others = packages.drop(1).map { buildShareIntent(call, it) }
+                    Intent.createChooser(first, null).apply {
+                        putExtra(Intent.EXTRA_INITIAL_INTENTS, others.toTypedArray())
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                }
+                else -> Intent.createChooser(buildShareIntent(call, null), null).apply {
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
             }
-            context.startActivity(chooser)
+            if (context !is android.app.Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
             result.success("opened")
         } catch (e: ActivityNotFoundException) {
             result.success("no_app")
@@ -173,10 +223,18 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
 
     /** What the intent carries, for the tests: nothing is started. */
     private fun describeShare(call: MethodCall): Map<String, Any?> {
-        val intent = buildShareIntent(call)
+        val route = routeOf(call)
+        val packages = packagesOf(call)
+        val single = (route == "provider" || route == "mail") && packages.size == 1
+        val intent = buildShareIntent(call, if (single) packages[0] else null)
         return mapOf(
             "action" to intent.action,
             "type" to intent.type,
+            "package" to intent.`package`,
+            "route" to route,
+            // True only for the generic share menu (a chooser with no package).
+            "genericChooser" to (route != "provider" && route != "mail" && route != "chooser"),
+            "chooserPackages" to (if (route == "chooser") packages else emptyList<String>()),
             "to" to (intent.getStringArrayExtra(Intent.EXTRA_EMAIL)?.toList() ?: emptyList<String>()),
             "subject" to intent.getStringExtra(Intent.EXTRA_SUBJECT),
             "text" to intent.getStringExtra(Intent.EXTRA_TEXT),
@@ -185,6 +243,52 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
             "grantsRead" to ((intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0),
             "grantsWrite" to ((intent.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0)
         )
+    }
+
+    /**
+     * Which e-mail apps the phone has: whether [providerPackage] is installed and
+     * the packages that handle `mailto:` (this app is left out). Needs the
+     * `<queries>` of the manifest on Android 11 and newer.
+     */
+    private fun findMailApps(call: MethodCall): Map<String, Any?> {
+        val manager = context.packageManager
+        val providerPackage = call.argument<String>("providerPackage")
+        val installed = providerPackage != null && try {
+            manager.getPackageInfo(providerPackage, 0)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        } catch (e: Exception) {
+            false
+        }
+        val packages = try {
+            manager.queryIntentActivities(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")), 0)
+                .map { it.activityInfo.packageName }
+                .filter { it != context.packageName }
+                .distinct()
+        } catch (e: Exception) {
+            emptyList<String>()
+        }
+        return mapOf("providerAppInstalled" to installed, "mailtoPackages" to packages)
+    }
+
+    /** Shows a page in the browser (ACTION_VIEW). Only `https`; replies "opened" or "failed". */
+    private fun openLink(call: MethodCall, result: MethodChannel.Result) {
+        val uri = Uri.parse(call.argument<String>("url") ?: "")
+        if (uri.scheme != "https" || uri.host.isNullOrEmpty()) {
+            result.success("failed")
+            return
+        }
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            result.success("opened")
+        } catch (e: Exception) {
+            result.success("failed")
+        }
     }
 
     /** Copies the document behind a content URI to a file of the app cache (the mail send reads it). */

@@ -17,6 +17,7 @@ import 'package:one_click_scan/domain/entities/pdf_page_input.dart';
 import 'package:one_click_scan/domain/mail/mail_cancellation.dart';
 import 'package:one_click_scan/domain/mail/mail_outcome.dart';
 import 'package:one_click_scan/domain/mail/mail_provider.dart';
+import 'package:one_click_scan/domain/mail/share_route.dart';
 import 'package:one_click_scan/domain/ocr/ocr_language_pack_registry.dart';
 import 'package:one_click_scan/domain/ports/mail_credential_store.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
@@ -123,6 +124,8 @@ void main() {
       attachments: AndroidAttachmentSource(
         directory: Directory('${cache.path}/mail_work'),
       ),
+      appFinder: AndroidMailAppFinder(),
+      links: AndroidLinkOpener(),
       sharer: AndroidDraftSharer(),
       providers: registryFor(provider),
     );
@@ -460,8 +463,11 @@ void main() {
         final folder = Directory('${dataDir.path}/$name');
         if (!folder.existsSync()) continue;
         for (final entity in folder.listSync(recursive: true)) {
-          if (entity is! File || entity.lengthSync() > 5000000) continue;
+          if (entity is! File) continue;
           try {
+            // Inside the try: the plugin replaces its preferences file
+            // (a .bak) while this loop runs, so a file can vanish.
+            if (entity.lengthSync() > 5000000) continue;
             final text = latin1.decode(entity.readAsBytesSync());
             expect(text, isNot(contains(canarySecret)), reason: entity.path);
             checked++;
@@ -482,6 +488,7 @@ void main() {
     test('the intent carries the recipient, the subject, the text and the '
         'PDF with a read grant', () async {
       final described = await AndroidDraftSharer().describe(
+        route: const GenericShareRoute(),
         to: const ['inbox@example.com'],
         subject: 'One Click Scan - 2026-10-21_19-05-12',
         body: 'Document scanned with One Click Scan.',
@@ -506,8 +513,114 @@ void main() {
       expect(described['grantsWrite'], isFalse);
     });
 
+    test('the app of the provider: an explicit package, no generic menu, the '
+        'PDF read-only', () async {
+      final described = await AndroidDraftSharer().describe(
+        route: const ProviderAppRoute('com.google.android.gm'),
+        to: const ['inbox@example.com'],
+        subject: 'One Click Scan - 2026-10-21_19-05-12',
+        body: 'Document scanned with One Click Scan.',
+        documentUri: 'content://com.example.test/document/pdf%2Fx.pdf',
+        mimeType: 'application/pdf',
+      );
+
+      expect(described['action'], 'android.intent.action.SEND');
+      expect(described['package'], 'com.google.android.gm');
+      expect(described['route'], 'provider');
+      expect(described['genericChooser'], isFalse);
+      expect(described['to'], ['inbox@example.com']);
+      expect(described['subject'], 'One Click Scan - 2026-10-21_19-05-12');
+      expect(described['text'], 'Document scanned with One Click Scan.');
+      expect(
+        described['stream'],
+        'content://com.example.test/document/pdf%2Fx.pdf',
+      );
+      expect(described['clip'], described['stream']);
+      expect(described['grantsRead'], isTrue);
+      expect(described['grantsWrite'], isFalse);
+    });
+
+    test('the only mail app: also explicit, no generic menu', () async {
+      final described = await AndroidDraftSharer().describe(
+        route: const SingleMailAppRoute('com.example.mail'),
+        to: const [],
+        subject: 's',
+        body: 'b',
+        documentUri: 'content://x/doc/1',
+        mimeType: 'application/pdf',
+      );
+      expect(described['package'], 'com.example.mail');
+      expect(described['genericChooser'], isFalse);
+    });
+
+    test('several mail apps: a chooser of exactly those, not the generic '
+        'menu', () async {
+      final described = await AndroidDraftSharer().describe(
+        route: const MailAppChooserRoute(['a.mail', 'b.mail']),
+        to: const [],
+        subject: 's',
+        body: 'b',
+        documentUri: 'content://x/doc/1',
+        mimeType: 'application/pdf',
+      );
+      expect(described['route'], 'chooser');
+      expect(described['chooserPackages'], ['a.mail', 'b.mail']);
+      expect(described['genericChooser'], isFalse);
+      expect(described['grantsRead'], isTrue);
+      expect(described['grantsWrite'], isFalse);
+    });
+
+    test('the generic menu is the last resort and the only one that says '
+        'so', () async {
+      final described = await AndroidDraftSharer().describe(
+        route: const GenericShareRoute(),
+        to: const [],
+        subject: 's',
+        body: 'b',
+        documentUri: 'content://x/doc/1',
+        mimeType: 'application/pdf',
+      );
+      expect(described['genericChooser'], isTrue);
+      expect(described['package'], isNull);
+    });
+
+    test('the finder: this app counts as installed, a made-up package does '
+        'not, and the list is of packages other than this app', () async {
+      final finder = AndroidMailAppFinder();
+
+      final own = await finder.find(
+        providerPackage: 'com.example.one_click_scan',
+      );
+      expect(own.providerAppInstalled, isTrue);
+      expect(own.mailtoPackages, isNot(contains('com.example.one_click_scan')));
+
+      final none = await finder.find(providerPackage: 'no.such.app.example');
+      expect(none.providerAppInstalled, isFalse);
+
+      final noProvider = await finder.find();
+      expect(noProvider.providerAppInstalled, isFalse);
+    });
+
+    test(
+      'a link that is not https is refused natively (nothing is started)',
+      () async {
+        final opener = AndroidLinkOpener();
+        for (final url in [
+          'http://example.com/x',
+          'file:///sdcard/x',
+          'javascript:alert(1)',
+          'intent://x#Intent;scheme=https;end',
+          'not a link',
+          '',
+        ]) {
+          expect(await opener.open(url), isFalse, reason: url);
+        }
+      },
+    );
+
     test('with no recipient the list is empty', () async {
       final described = await AndroidDraftSharer().describe(
+        route: const GenericShareRoute(),
         to: const [],
         subject: 's',
         body: 'b',

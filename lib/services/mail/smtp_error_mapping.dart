@@ -10,19 +10,21 @@ import '../../domain/mail/mail_outcome.dart';
 /// the text of a server reply can contain the address of the user.
 MailOutcome outcomeForSmtpError(Object error) {
   if (error is SmtpClientAuthenticationException) {
-    return const MailAuthFailed();
+    return MailAuthFailed(code: smtpReplyCode(error.message));
   }
   if (error is SmtpClientCommunicationException) {
     final code = smtpReplyCode(error.message);
     if (code == null) return const MailNetworkError();
     return outcomeForReplyCode(code);
   }
+  if (error is HandshakeException ||
+      error is TlsException ||
+      error is SmtpUnsecureException) {
+    return const MailNetworkError(failedStage: MailStage.tls);
+  }
   if (error is SocketException ||
       error is TimeoutException ||
-      error is HandshakeException ||
-      error is TlsException ||
-      error is SmtpNoGreetingException ||
-      error is SmtpUnsecureException) {
+      error is SmtpNoGreetingException) {
     return const MailNetworkError();
   }
   return const MailUnknown();
@@ -33,12 +35,12 @@ MailOutcome outcomeForSmtpError(Object error) {
 MailOutcome outcomeForReplyCode(int code) {
   switch (code) {
     case 552:
-      return const MailTooLarge();
+      return const MailTooLarge(fromServer: true);
     case 530:
     case 534:
     case 535:
     case 454:
-      return const MailAuthFailed();
+      return MailAuthFailed(code: code);
     default:
       return MailRejected(code);
   }

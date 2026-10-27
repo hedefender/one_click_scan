@@ -61,6 +61,8 @@ class MailProvider extends Equatable {
     required this.appPasswordSupport,
     required this.maxMessageBytes,
     this.sizeLimitConfirmed = true,
+    this.appPackage,
+    this.appPasswordGuideUrl,
   });
 
   /// Stable name (`gmail`, `outlook`, `yahoo`; `testLocal` only in tests).
@@ -77,6 +79,15 @@ class MailProvider extends Equatable {
   /// assumption (Yahoo).
   final bool sizeLimitConfirmed;
 
+  /// Android package of the provider's own mail app, which the share route
+  /// opens first (`MAIL_PROVIDERS.md` has the sources and what is confirmed).
+  final String? appPackage;
+
+  /// The official page where the user makes an app password, opened in the
+  /// browser when the user taps the button. `https` only; null when the
+  /// provider has no such page for SMTP (Outlook.com).
+  final String? appPasswordGuideUrl;
+
   bool supports(MailAuthKind kind) => authKinds.contains(kind);
 
   @override
@@ -87,6 +98,8 @@ class MailProvider extends Equatable {
     appPasswordSupport,
     maxMessageBytes,
     sizeLimitConfirmed,
+    appPackage,
+    appPasswordGuideUrl,
   ];
 }
 
@@ -110,6 +123,8 @@ class MailProviderRegistry {
       authKinds: {MailAuthKind.appPassword},
       appPasswordSupport: AppPasswordSupport.supported,
       maxMessageBytes: 25000000,
+      appPackage: 'com.google.android.gm',
+      appPasswordGuideUrl: 'https://myaccount.google.com/apppasswords',
     ),
     MailProviderId.outlook: MailProvider(
       id: 'outlook',
@@ -122,6 +137,7 @@ class MailProviderRegistry {
       appPasswordSupport: AppPasswordSupport.unconfirmed,
       // Two official pages say 20 MB and 25 MB: the smaller one.
       maxMessageBytes: 20000000,
+      appPackage: 'com.microsoft.office.outlook',
     ),
     MailProviderId.yahoo: MailProvider(
       id: 'yahoo',
@@ -135,6 +151,8 @@ class MailProviderRegistry {
       // No official page states it: the smallest confirmed number.
       maxMessageBytes: 20000000,
       sizeLimitConfirmed: false,
+      appPackage: 'com.yahoo.mobile.client.android.mail',
+      appPasswordGuideUrl: 'https://login.yahoo.com/account/security',
     ),
   });
 
@@ -142,4 +160,25 @@ class MailProviderRegistry {
   MailProvider resolve(MailProviderId id) => _providers[id]!;
 
   Iterable<MailProvider> get all => _providers.values;
+
+  /// The guide page of [id], or null.
+  String? guideUrlFor(MailProviderId id) => _providers[id]?.appPasswordGuideUrl;
+
+  /// Whether [url] may be opened in the browser: `https`, no user info, no
+  /// query, no fragment, and exactly a guide page of a provider of this
+  /// registry. Nothing of the user is ever added to the link.
+  bool isAllowedGuideLink(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return false;
+    if (uri.userInfo.isNotEmpty || uri.hasQuery || uri.hasFragment) {
+      return false;
+    }
+    if (uri.hasPort && uri.port != 443) return false;
+    return all.any((provider) {
+      final guide = provider.appPasswordGuideUrl;
+      if (guide == null) return false;
+      final known = Uri.parse(guide);
+      return known.host == uri.host && known.path == uri.path;
+    });
+  }
 }

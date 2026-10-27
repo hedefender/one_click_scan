@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/mail/mail_outcome.dart';
 import '../../domain/validation/mail_settings_validation.dart';
 
 enum SettingsFolderStatus { idle, picking, failed }
@@ -40,6 +41,8 @@ class SettingsEditorState extends Equatable {
     this.hasStoredPassword = false,
     this.mailTest = MailTestStatus.idle,
     this.mailTestCode = 0,
+    this.mailTestStage,
+    this.guideFailed = false,
     this.passwordNotice = MailPasswordNotice.none,
     this.folderStatus = SettingsFolderStatus.idle,
     this.folderAccessLost = false,
@@ -62,8 +65,14 @@ class SettingsEditorState extends Equatable {
   final bool hasStoredPassword;
   final MailTestStatus mailTest;
 
-  /// The reply code when [mailTest] is [MailTestStatus.rejected].
+  /// The reply code of the server for a failed test, 0 when there is none.
   final int mailTestCode;
+
+  /// The step that failed (the diagnostic line), null when there is none.
+  final MailStage? mailTestStage;
+
+  /// True only in the state after the guide page could not be opened.
+  final bool guideFailed;
   final MailPasswordNotice passwordNotice;
   final SettingsFolderStatus folderStatus;
 
@@ -114,6 +123,8 @@ class SettingsEditorState extends Equatable {
     bool? hasStoredPassword,
     MailTestStatus? mailTest,
     int? mailTestCode,
+    MailStage? mailTestStage,
+    bool? guideFailed,
     MailPasswordNotice? passwordNotice,
     SettingsFolderStatus? folderStatus,
     bool? folderAccessLost,
@@ -132,6 +143,8 @@ class SettingsEditorState extends Equatable {
       hasStoredPassword: hasStoredPassword ?? this.hasStoredPassword,
       mailTest: mailTest ?? this.mailTest,
       mailTestCode: mailTestCode ?? this.mailTestCode,
+      mailTestStage: mailTestStage ?? this.mailTestStage,
+      guideFailed: guideFailed ?? false,
       passwordNotice: passwordNotice ?? MailPasswordNotice.none,
       folderStatus: folderStatus ?? this.folderStatus,
       folderAccessLost: folderAccessLost ?? this.folderAccessLost,
@@ -155,6 +168,8 @@ class SettingsEditorState extends Equatable {
     hasStoredPassword,
     mailTest,
     mailTestCode,
+    mailTestStage,
+    guideFailed,
     passwordNotice,
     folderStatus,
     folderAccessLost,
