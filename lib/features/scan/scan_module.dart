@@ -8,7 +8,8 @@ import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/recognize_pages.dart';
 import '../../domain/ports/open_pdf.dart';
 import '../../domain/usecases/store_scan_pages.dart';
-import '../../domain/usecases/store_scan_pdf.dart';
+import '../../domain/usecases/discard_scan.dart';
+import '../../domain/usecases/scan_and_send.dart';
 import '../../services/camera/camera_service.dart';
 import '../../services/scan_files/scan_temp_store.dart';
 import '../../services/storage_folder/storage_folder_picker.dart';
@@ -18,7 +19,7 @@ import 'mail_send_cubit.dart';
 import 'scan_cubit.dart';
 import 'scan_page.dart';
 import 'scan_result_args.dart';
-import 'scan_result_cubit.dart';
+import 'scan_flow_cubit.dart';
 import 'scan_result_page.dart';
 
 /// Feature module: owns its DI registrations and its routes.
@@ -34,12 +35,13 @@ void registerScanModule(GetIt sl) {
       logger: sl<AppLogger>(),
     ),
   );
-  sl.registerFactoryParam<ScanResultCubit, ScanResultArgs, void>(
-    (args, _) => ScanResultCubit(
+  sl.registerFactoryParam<ScanFlowCubit, ScanResultArgs, void>(
+    (args, _) => ScanFlowCubit(
       scan: args.result,
       session: args.ocr,
       loadSettings: sl<LoadSettings>(),
-      storePdf: sl<StoreScanPdf>(),
+      scanAndSend: sl<ScanAndSend>(),
+      discardScan: sl<DiscardScan>(),
       openPdf: sl<OpenPdf>(),
       logger: sl<AppLogger>(),
     ),
@@ -79,8 +81,8 @@ List<RouteBase> scanRoutes(GetIt sl) {
           value: sl<ScanTempStore>(),
           child: MultiBlocProvider(
             providers: [
-              BlocProvider<ScanResultCubit>(
-                create: (_) => sl<ScanResultCubit>(param1: args)..start(),
+              BlocProvider<ScanFlowCubit>(
+                create: (_) => sl<ScanFlowCubit>(param1: args)..start(),
               ),
               BlocProvider<MailSendCubit>(create: (_) => sl<MailSendCubit>()),
             ],

@@ -2,8 +2,11 @@
 # Runs the Phase 4 integration test of the mail layer on the Claude Code
 # emulator, with no human help.
 #
-#   tool/run_mail_integration_test.sh <device-id>
+#   tool/run_mail_integration_test.sh <device-id> [test-file]
 #   tool/run_mail_integration_test.sh emulator-5554
+#   tool/run_mail_integration_test.sh emulator-5554 integration_test/one_click_flow_test.dart
+#
+# The test file defaults to the Phase 4 mail test; Phase 5 passes its own.
 #
 # It starts the test SMTP server of tool/smtp_test_server.dart on this
 # computer (loopback only; the emulator reaches it as 10.0.2.2), passes its
@@ -18,11 +21,12 @@ EXPECTED_AVD="Claude_Code_Test"
 SMTP_PORT=25251
 CONTROL_PORT=25252
 
-if [ $# -ne 1 ]; then
-  echo "usage: $0 <device-id>" >&2
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+  echo "usage: $0 <device-id> [test-file]" >&2
   exit 2
 fi
 DEVICE="$1"
+TEST="${2:-integration_test/mail_flow_test.dart}"
 
 AVD="$(adb -s "$DEVICE" emu avd name 2>/dev/null | head -n 1 | tr -d '\r')"
 if [ "$AVD" != "$EXPECTED_AVD" ]; then
@@ -61,6 +65,6 @@ echo "$(grep -o 'READY smtp=.*' "$LOG")"
 ) &
 GRANTER=$!
 
-flutter test integration_test/mail_flow_test.dart -d "$DEVICE" \
+flutter test "$TEST" -d "$DEVICE" \
   --dart-define=MAIL_SMTP_PORT="$SMTP_PORT" \
   --dart-define=MAIL_CONTROL_PORT="$CONTROL_PORT"

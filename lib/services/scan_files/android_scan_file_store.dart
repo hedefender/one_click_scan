@@ -76,6 +76,11 @@ class AndroidScanFileStore implements ScanFileStore {
     });
   }
 
+  @override
+  Future<void> deleteByUri(String uri) {
+    return _invoke<void>('deleteDocument', <String, String>{'uri': uri});
+  }
+
   Future<T?> _invoke<T>(String method, Map<String, String> arguments) async {
     try {
       return await _channel.invokeMethod<T>(method, arguments);

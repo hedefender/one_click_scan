@@ -645,4 +645,96 @@ class AppStringsEn extends AppStrings {
   @override
   String get mailDraftFailed =>
       'The PDF could not be handed to the e-mail app.';
+
+  @override
+  String get flowTitle => 'How should a scan work?';
+
+  @override
+  String get flowBody =>
+      'With One Click, a scan is processed and sent as soon as it is taken. There is no preview. With preview, you first see the pages, then you send or discard the scan. You can change this later in Settings.';
+
+  @override
+  String get flowOneClick => 'One Click (no preview)';
+
+  @override
+  String get flowOneClickNote => 'Sent right away, nothing to confirm.';
+
+  @override
+  String get flowPreview => 'With preview';
+
+  @override
+  String get flowPreviewNote => 'See the pages first, then send or discard.';
+
+  @override
+  String get flowRequired => 'Choose one to continue.';
+
+  @override
+  String get settingsFlowTitle => 'Scanning';
+
+  @override
+  String get settingsOneClickToggle => 'One Click mode (no preview)';
+
+  @override
+  String get settingsFlowNote =>
+      'When on, a scan is processed and sent as soon as it is taken, with no preview. When off, you see the pages first and then send or discard the scan.';
+
+  @override
+  String get flowCancel => 'Cancel';
+
+  @override
+  String get flowSharing => 'Opening the e-mail app…';
+
+  @override
+  String get flowCancelledReading =>
+      'Cancelled. The pictures are saved in your folder. No PDF was made.';
+
+  @override
+  String get flowCancelledSending =>
+      'Cancelled. The scan and the PDF are saved. Nothing was sent.';
+
+  @override
+  String get flowNotSent => 'Not sent';
+
+  @override
+  String get flowNotSentNote =>
+      'The scan and the PDF are saved. You can try again.';
+
+  @override
+  String get previewTitle => 'Check the scan';
+
+  @override
+  String get previewHint => 'Look at the pages, then send or discard the scan.';
+
+  @override
+  String get previewDiscard => 'Discard';
+
+  @override
+  String get discardConfirmTitle => 'Delete this scan?';
+
+  @override
+  String get discardConfirmBody =>
+      'The pictures, the PDF and the Gallery copy of this whole scan will be deleted. This cannot be undone.';
+
+  @override
+  String get discardConfirmYes => 'Delete';
+
+  @override
+  String get discardConfirmNo => 'Keep it';
+
+  @override
+  String get discardRunning => 'Deleting…';
+
+  @override
+  String get discardDone => 'The scan was deleted.';
+
+  @override
+  String discardPartial(int pictures, bool pdf, int gallery) {
+    final left = <String>[
+      if (pictures > 0) pictures == 1 ? '1 picture' : '$pictures pictures',
+      if (pdf) 'the PDF',
+      if (gallery > 0)
+        gallery == 1 ? '1 Gallery copy' : '$gallery Gallery copies',
+    ];
+    return 'Not everything was deleted. Still there: ${left.join(', ')}.';
+  }
 }

@@ -65,6 +65,12 @@ class DirectoryScanFileStore implements ScanFileStore {
   }
 
   @override
+  Future<void> deleteByUri(String uri) async {
+    final target = File.fromUri(Uri.parse(uri));
+    if (target.existsSync()) target.deleteSync();
+  }
+
+  @override
   Future<void> deleteFile({
     required StorageFolder folder,
     required String subfolder,

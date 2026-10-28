@@ -82,3 +82,5 @@ written for this project in Dart (`lib/services/ocr/paddle/`). The layout of the
 hidden words (`lib/domain/pdf/`) and the PDF code in `lib/services/pdf/` are
 written for this project; nothing is imported from `spikes/`. The tests use
 invented documents only.
+
+Phase 5: `gal` is no longer used to write the Gallery copy (that is native MediaStore code in `ScanFilesHandler.kt`, which returns the URI a discard needs). It is kept only for the storage permission that Android 9 and older ask before a write.

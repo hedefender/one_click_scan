@@ -58,6 +58,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tapKey(FirstRunKeys.next); // mail
+    await tapKey(FirstRunKeys.next); // gallery
+    await tapKey(FirstRunKeys.flowPreview);
     await tapKey(FirstRunKeys.next); // finish
     expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
 
@@ -71,6 +73,8 @@ void main() {
       find.byKey(SettingsKeys.sender),
       'changed@example.com',
     );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(SettingsKeys.save));
     await tester.pumpAndSettle();
     await tapKey(SettingsKeys.save);
     expect(find.text('Settings saved.'), findsOneWidget);

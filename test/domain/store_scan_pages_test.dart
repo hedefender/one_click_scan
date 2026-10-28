@@ -57,6 +57,41 @@ void main() {
     ]);
   });
 
+  group('what a discard needs (ADR-027)', () {
+    test('every picture records the URI of its file in the folder', () async {
+      final result = await run();
+
+      expect(result.pictures.map((p) => p.uri), [
+        'content://com.example.test/tree/Scans/document/pictures%2F2026-10-21_19-05-12_1.jpg',
+        'content://com.example.test/tree/Scans/document/pictures%2F2026-10-21_19-05-12_2.jpg',
+      ]);
+      expect(result.pictures.every((p) => p.galleryUri == null), isTrue);
+    });
+
+    test('every saved Gallery copy records its own URI', () async {
+      final result = await run(gallery: true);
+
+      expect(result.pictures.map((p) => p.galleryUri), [
+        'content://media/external/images/media/1',
+        'content://media/external/images/media/2',
+      ]);
+    });
+
+    test('a failed Gallery copy records no URI', () async {
+      gallery.fail = true;
+
+      final result = await run(gallery: true);
+
+      expect(
+        result.pictures.every(
+          (p) => p.gallery == GalleryCopyStatus.failed && p.galleryUri == null,
+        ),
+        isTrue,
+      );
+      expect(result.pictures.every((p) => p.uri != null), isTrue);
+    });
+  });
+
   group('.nomedia marker', () {
     test('is created before the first picture is copied', () async {
       await run();

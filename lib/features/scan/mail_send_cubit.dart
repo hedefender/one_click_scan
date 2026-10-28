@@ -5,6 +5,7 @@ import '../../domain/entities/mail_send_mode.dart';
 import '../../domain/entities/pdf_page_input.dart';
 import '../../domain/mail/mail_cancellation.dart';
 import '../../domain/mail/mail_outcome.dart';
+import '../../domain/scan/scan_flow.dart';
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/send_scan_pdf.dart';
 import '../../domain/usecases/update_settings.dart';
@@ -40,6 +41,30 @@ class MailSendCubit extends Cubit<MailSendState> {
   Future<void> attach(StoredPdf pdf) async {
     _pdf = pdf;
     await start();
+  }
+
+  /// Takes over the delivery that the One Click flow already did (ADR-025), so
+  /// the mail section shows how it ended and its "try again", "backup way" and
+  /// "open the e-mail app" buttons work on the same PDF.
+  Future<void> adopt(StoredPdf pdf, ScanDelivery delivery) async {
+    _pdf = pdf;
+    final settings = await _loadSettings();
+    if (isClosed) return;
+    emit(switch (delivery) {
+      DeliverySent() => MailSendState(
+        phase: MailPhase.sent,
+        mode: settings.mailSendMode,
+      ),
+      DeliveryShared(:final result) => MailSendState(
+        mode: settings.mailSendMode,
+        draft: result,
+      ),
+      DeliveryNotSent(:final outcome) => MailSendState(
+        phase: MailPhase.failed,
+        mode: settings.mailSendMode,
+        outcome: outcome,
+      ),
+    });
   }
 
   /// Reads the mode of Settings, so the button says the right thing.

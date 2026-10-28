@@ -63,7 +63,7 @@ class StoreScanPages {
     try {
       for (var index = 0; index < ordered.length; index++) {
         final fileName = naming.pictureName(stem, index + 1);
-        await fileStore.copyToFolder(
+        final uri = await fileStore.copyToFolder(
           folder: folder,
           subfolder: picturesFolder,
           fileName: fileName,
@@ -72,7 +72,11 @@ class StoreScanPages {
         );
         written.add(fileName);
         pictures.add(
-          StoredPicture(fileName: fileName, sourcePath: ordered[index].path),
+          StoredPicture(
+            fileName: fileName,
+            sourcePath: ordered[index].path,
+            uri: uri,
+          ),
         );
       }
     } catch (_) {
@@ -104,8 +108,9 @@ class StoreScanPages {
   Future<StoredPicture> _copyToGallery(StoredPicture picture) async {
     final date = galleryNaming.today();
     final number = galleryCounter.nextNumber(date);
+    final String galleryUri;
     try {
-      await gallery.saveImage(
+      galleryUri = await gallery.saveImage(
         picture.sourcePath,
         fileName: galleryNaming.fileName(date, number),
       );
@@ -118,7 +123,10 @@ class StoreScanPages {
     } catch (error, stackTrace) {
       logger.error('Gallery counter not saved', error, stackTrace);
     }
-    return picture.copyWith(gallery: GalleryCopyStatus.saved);
+    return picture.copyWith(
+      gallery: GalleryCopyStatus.saved,
+      galleryUri: galleryUri,
+    );
   }
 
   Future<void> _rollback(StorageFolder folder, List<String> written) async {

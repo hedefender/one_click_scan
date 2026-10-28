@@ -551,6 +551,50 @@ the emulator reaches the PC as `10.0.2.2`) and inside the release smoke
 (`integration_test/support/mail_smoke.dart`). The `testLocal` provider exists
 only in those tests.
 
+## 8g. The flow: One Click and preview (Phase 5)
+
+Decisions: ADR-025 (the flow), ADR-026 (failures and cancel), ADR-027 (discard).
+
+### Layers
+```
+features/scan/   ScanCubit            camera, pictures stored (capture + save), as before
+                 ScanFlowCubit        shows ScanFlowState, cancel, retry PDF, open, discard
+                 MailSendCubit        manual send / retry / backup way; adopt(delivery)
+                 ScanResultPage       sections: PDF, flow, mail, discard
+domain/usecases/ ScanAndSend          text -> PDF -> delivery, Stream<ScanFlowState>
+                 DiscardScan          deletes by recorded URI, DiscardOutcome
+domain/scan/     scan_flow.dart       sealed ScanFlowState, ScanDelivery, ScanFlowCancellation
+domain/ports/    ScanFileStore.deleteByUri, GalleryService.saveImage -> URI / deleteImage
+services/        MediaStoreGalleryService (+ ScanFilesHandler.kt: saveToGallery, deleteGalleryItem, deleteDocument)
+```
+
+### Flow
+```
+Home -> Scan screen -> shot(s) -> ScanCubit.save()  (pictures + Gallery copy, URIs recorded)
+     -> ScanFlowCubit.start() -> ScanAndSend.run()
+          FlowRecognizing(read,total) -> FlowBuildingPdf
+          preview:  FlowAwaitingDecision(pdf)  -> user: Send (MailSendCubit) | Discard (DiscardScan)
+          oneClick: FlowSending | FlowSharing  -> FlowFinished(pdf, DeliverySent | DeliveryShared | DeliveryNotSent)
+          any time: FlowPdfFailed(reason) | FlowCancelled(stage)
+```
+`ScanFlowCubit` hands `FlowAwaitingDecision`, `FlowFinished` and a cancelled send to
+`MailSendCubit` (`attach` / `adopt`), so the existing mail section shows the state
+and its buttons (try again, backup way, open the e-mail app, Settings) work on the
+same PDF.
+
+### Settings and wizard
+`AppSettings.scanFlowMode` (nullable; null = preview). Wizard step `flow` is the
+last one and sets `firstRunCompleted`. Settings switch `oneClickSwitch`.
+
+### Testing
+Unit: `scan_and_send_test` (preview, One Click by SMTP and by share, no password,
+no network, throwing sender, cancel at each stage, OCR failure, PDF failure,
+no session, logs), `discard_scan_test` (full, partial, only recorded URIs),
+`scan_flow_mode_settings_test` (old store -> preview). Cubit and widget tests:
+`scan_flow_cubit_test`, `scan_flow_widget_test`, wizard and Settings. Integration
+on the emulator: `one_click_flow_test.dart` with the test SMTP server of Phase 4
+(`tool/run_mail_integration_test.sh <device> integration_test/one_click_flow_test.dart`).
+
 ## 9. Testing strategy
 
 | Level | What | Where |

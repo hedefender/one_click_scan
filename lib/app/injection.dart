@@ -23,6 +23,8 @@ import '../domain/ports/link_opener.dart';
 import '../domain/ports/mail_app_finder.dart';
 import '../domain/ports/mail_credential_store.dart';
 import '../domain/ports/mail_sender.dart';
+import '../domain/usecases/discard_scan.dart';
+import '../domain/usecases/scan_and_send.dart';
 import '../domain/usecases/send_scan_pdf.dart';
 import '../domain/usecases/prepare_image_for_ocr.dart';
 import '../domain/usecases/recognize_pages.dart';
@@ -144,6 +146,22 @@ Future<GetIt> buildContainer({
       sharer: sl<DraftSharer>(),
       finder: sl<MailAppFinder>(),
       providers: sl<MailProviderRegistry>(),
+    ),
+  );
+  sl.registerLazySingleton<ScanAndSend>(
+    () => ScanAndSend(
+      loadSettings: sl<LoadSettings>(),
+      storePdf: sl<StoreScanPdf>(),
+      send: sl<SendScanPdf>(),
+      share: sl<ShareScanPdfDraft>(),
+      logger: sl<AppLogger>(),
+    ),
+  );
+  sl.registerLazySingleton<DiscardScan>(
+    () => DiscardScan(
+      fileStore: sl<ScanFileStore>(),
+      gallery: sl<GalleryService>(),
+      logger: sl<AppLogger>(),
     ),
   );
   sl.registerLazySingleton<OpenProviderGuide>(

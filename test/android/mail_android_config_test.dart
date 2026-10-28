@@ -130,6 +130,51 @@ void main() {
       }
     });
 
+    test('discard (ADR-027): delete by URI, only inside what was granted', () {
+      for (final method in [
+        'deleteDocument',
+        'saveToGallery',
+        'deleteGalleryItem',
+      ]) {
+        expect(kotlin, contains('"$method"'), reason: method);
+      }
+      // A document is deleted only under a folder the user granted, and an
+      // already deleted one counts as deleted.
+      expect(kotlin, contains('persistedUriPermissions.any'));
+      expect(kotlin, contains('startsWith(it.uri.toString() + "/")'));
+      expect(kotlin, contains('DocumentsContract.deleteDocument'));
+      expect(kotlin, contains('java.io.FileNotFoundException'));
+      // A Gallery entry is deleted only if it is a MediaStore image URI, by the
+      // exact URI, never by a query on a name or a folder.
+      expect(kotlin, contains('MediaStore.Images.Media.EXTERNAL_CONTENT_URI'));
+      expect(kotlin, contains('contentResolver.delete(uri, null, null)'));
+      expect(kotlin, isNot(contains('DISPLAY_NAME + " =')));
+      expect(kotlin, isNot(contains('selection')));
+      expect(kotlin, isNot(contains('LIKE')));
+    });
+
+    test('the Gallery copy: pending while written, then visible', () {
+      expect(kotlin, contains('MediaStore.Images.Media.IS_PENDING'));
+      expect(kotlin, contains('RELATIVE_PATH'));
+      expect(kotlin, contains('Environment.DIRECTORY_PICTURES'));
+      // A half written entry is removed again.
+      expect(kotlin, contains('Never leave a half entry in the Gallery'));
+    });
+
+    test('no new permission for Phase 5: the storage permission is the one '
+        'that was already declared, for Android 10 and older', () {
+      final manifest = read('android/app/src/main/AndroidManifest.xml');
+      final permissions = RegExp(r'<uses-permission[^>]*android:name="([^"]+)"')
+          .allMatches(manifest)
+          .map((m) => m.group(1))
+          .toSet();
+      expect(permissions, {
+        'android.permission.CAMERA',
+        'android.permission.INTERNET',
+        'android.permission.WRITE_EXTERNAL_STORAGE',
+      });
+    });
+
     test('a link opens only if it is https, as a browsable view', () {
       expect(kotlin, contains('uri.scheme != "https"'));
       expect(kotlin, contains('Intent.ACTION_VIEW, uri'));

@@ -499,3 +499,110 @@ the body and the PDF), and asked for the e-mail app to open directly.
   uses no socket, so `no_network_test.dart` still holds (it now also checks that
   there is no `url_launcher` and that only the native link opener sends
   `openLink`).
+
+## ADR-025 One Click or preview: a choice of the user, made in the wizard; the flow after the capture is one use case
+Phase 5 connects the pieces of Phases 1 to 4 into one flow. Two ways exist and
+the user chooses (`ScanFlowMode`: `oneClick`, `preview`).
+
+- **One Click:** the scan is stored, read, made into a PDF and delivered by the
+  mode of Settings (`sendNow` or `shareDraft`, ADR-022) with no further tap. There
+  is no preview. In `shareDraft` the e-mail app opens at once (ADR-024).
+- **Preview:** the flow stops once the PDF is stored. The screen shows the pages
+  (thumbnails), the PDF (open it), **Send** and **Discard**. Send is the manual send
+  of Phase 4 (`MailSendCubit`).
+- **The choice** is `AppSettings.scanFlowMode`, nullable, key
+  `settings.scan.flowMode`. The wizard has a **new last step** with an
+  explanation and two options, **no default**, and "Next" disabled until one is
+  chosen; `firstRunCompleted` is now set by that step, not by the Gallery step (the
+  existing steps are unchanged otherwise). Settings has a switch "One Click mode
+  (no preview)" with the same explanation, saved at once.
+- **Installs from before Phase 5** never saw the step and have no value. Null means
+  the **preview** (`effectiveScanFlowMode`); the Settings switch shows off. The
+  user keeps seeing the pages first until they choose. A test reads an old store.
+- **Where the flow lives.** `ScanAndSend` (`domain/usecases/scan_and_send.dart`)
+  takes over after the pictures are stored: wait for the text of every page, make
+  and store the PDF (`StoreScanPdf`), then in One Click deliver (`SendScanPdf` or
+  `ShareScanPdfDraft`). It returns a stream of sealed `ScanFlowState`
+  (`FlowRecognizing`, `FlowBuildingPdf`, `FlowAwaitingDecision`, `FlowSending`,
+  `FlowSharing`, and the final `FlowFinished`, `FlowPdfFailed`, `FlowCancelled`) and
+  never throws. `ScanFlowCubit` shows the states and starts what the user asks
+  for; the widgets hold no flow logic.
+  **Deviation from the request:** capturing and storing stay in `ScanCubit`
+  (camera, retry of a failed save, rollback), where they already were. They are its
+  states `capturing` and `saving`, shown before the flow starts. Pulling them into
+  the use case would have moved the camera port into `domain/` for no gain.
+- **Single and Multi.** Single: the shot starts the flow. Multi: the scan goes on
+  page by page (the OCR of each page already runs while the next is shot) and
+  "Done" starts the flow.
+- **Progress** is text of the stage and a bar that moves when a page is done, no
+  spinner that runs all the time (Phase 2 measured that an animation slows the
+  OCR).
+- **Manual actions stay manual.** A mail that did not leave is retried by the
+  user's tap (`MailSendCubit`, which takes over the result with `adopt`), never
+  by the app on its own, and nothing is queued (V1.5).
+
+## ADR-026 What each stage leaves on the disk when it fails, and how the flow stops
+The rule: **a scan is never lost because of a later stage.** The pictures are
+stored before anything else; nothing after them deletes them.
+
+| Stage | If it fails or is cancelled | On the disk | The screen says |
+|---|---|---|---|
+| Capture | Nothing is stored yet; the shots stay in the cache | cache only | the camera screen as before (retry, or discard with a question) |
+| Store the pictures | All or nothing: written pictures are rolled back | nothing | "could not be saved, kept for a retry" (Phase 1) |
+| OCR of a page: failed, or the 45 s limit | The page goes in **without text**; the flow goes on | pictures, PDF | "N pages without text" |
+| Reading, cancelled by the user | The pages not read are cancelled; **no PDF is made** | pictures | "Cancelled. The pictures are saved. No PDF was made." |
+| Make or store the PDF | `FlowPdfFailed(reason)`; the readings are kept, "Try again" repeats only the PDF | pictures | the reason and "Try again" |
+| Settings or password missing | The PDF is stored; the mail is not tried | pictures, PDF | "Not sent", the way to Settings |
+| Sending: no network, refused, too large | `DeliveryNotSent`; **no automatic retry** | pictures, PDF | "Not sent", the reason, "Try again", the backup way |
+| Sending, cancelled by the user | The send stops | pictures, PDF | "Cancelled. Saved. Nothing was sent." and the manual Send |
+| `shareDraft`: no e-mail app, or a failed hand-over | `DeliveryShared(result)` with the result | pictures, PDF | the text of that result |
+| Gallery copy | Never fails the scan (Phase 1) | pictures, PDF | "Gallery copy failed" on the picture |
+
+- **Cancel** exists while the text is read and while the mail is sent, as an
+  explicit button. It does not exist while the PDF is written (short, and a half
+  PDF is worse than waiting). Leaving the screen is locked while work runs
+  (`PopScope`), like Phase 4.
+- **The app is killed inside the flow.** Nothing is solved here. The user finds the
+  pictures stored (they were first), no PDF if it was not made yet, and the mail not
+  sent. The cache is purged at the next start. The repeat is by hand: scan again, or
+  use the pictures. A stored PDF is already in `./pdf`.
+
+## ADR-027 Discard deletes only what the scan created, by recorded URI, and says what is left
+"Discard" (preview only) deletes the whole scan after a question that says the
+deletion cannot be undone.
+
+- **By URI only, never by name or by folder.** `StoredPicture.uri` (document URI
+  of the picture in `./pictures`, which `copyToFolder` already returned and
+  `StoreScanPages` threw away), `StoredPdf.uri`, and `StoredPicture.galleryUri` are
+  recorded when the files are written. `DiscardScan` deletes exactly those.
+  Another scan of the user, in the same folders, cannot be touched. A picture
+  without a recorded URI counts as **left**, it is not searched for.
+- **Deleting a document** (`ScanFileStore.deleteByUri`, Kotlin `deleteDocument`):
+  only a URI under a folder the user granted (`persistedUriPermissions`); a missing
+  document counts as deleted; any other failure is an error.
+- **Gallery.** The plugin `gal` returns no URI, so the Gallery copy is now written
+  by `ScanFilesHandler.kt` into MediaStore (`Pictures/`, pending while written) and
+  its URI is returned; `GalleryService.deleteImage(uri)` deletes that one entry.
+  `gal` stays for one thing only, the storage permission that Android 9 and older
+  need (it asks only when a copy is requested, as before). **No new permission**:
+  `WRITE_EXTERNAL_STORAGE` was already declared for Android 10 and older.
+- **What the Android documentation says** (checked 2026-10-27,
+  <https://developer.android.com/training/data-storage/shared/media>): from
+  Android 10 an app needs no storage permission to access and modify media files
+  **it owns**; to delete files of **other apps** the user has to agree
+  (`MediaStore.createDeleteRequest`). The page does not say in so many words that
+  `ContentResolver.delete()` of an owned entry succeeds with no checks. **Seen on the
+  emulator (Android 16, 2026-10-28):** deleting an entry the app created works with
+  no permission (`one_click_flow_test`, preview and Discard, `gallery_copy_test`).
+  Deleting an entry that is already gone does **not** return zero rows there, it
+  throws `SecurityException`, so `deleteGalleryItem` checks whether the entry still
+  exists and counts a missing one as deleted (a retry of Discard must not stay
+  "left" for ever). **Not yet seen on a real phone**, see `PHASE_5_VALIDATION.md`. A Gallery
+  entry written by an earlier install of the app may belong to nobody the app
+  can delete for; then the outcome counts it as left, and the screen says so.
+- **The outcome counts what is left per category** (`DiscardOutcome`: pictures,
+  PDF, Gallery copies). The screen says "The scan was deleted" **only when all
+  three are zero**; otherwise it names what stayed and the Discard button stays, so
+  the user can try again (deleting what is already gone is not an error).
+- **Not offered after the choice is made:** once the message is sent, being sent,
+  or the e-mail app got the PDF, Discard disappears. In One Click there is no Discard.

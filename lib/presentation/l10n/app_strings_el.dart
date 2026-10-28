@@ -660,4 +660,101 @@ class AppStringsEl extends AppStrings {
   @override
   String get mailDraftFailed =>
       'Το PDF δεν μπόρεσε να δοθεί στην εφαρμογή email.';
+
+  @override
+  String get flowTitle => 'Πώς θέλεις να δουλεύει η σάρωση;';
+
+  @override
+  String get flowBody =>
+      'Με το One Click, η σάρωση επεξεργάζεται και στέλνεται αμέσως μόλις τραβηχτεί. Δεν υπάρχει προεπισκόπηση. Με προεπισκόπηση, βλέπεις πρώτα τις σελίδες και μετά στέλνεις ή απορρίπτεις τη σάρωση. Μπορείς να το αλλάξεις αργότερα στις Ρυθμίσεις.';
+
+  @override
+  String get flowOneClick => 'One Click (χωρίς προεπισκόπηση)';
+
+  @override
+  String get flowOneClickNote => 'Στέλνεται αμέσως, χωρίς επιβεβαίωση.';
+
+  @override
+  String get flowPreview => 'Με προεπισκόπηση';
+
+  @override
+  String get flowPreviewNote =>
+      'Βλέπεις πρώτα τις σελίδες, μετά στέλνεις ή απορρίπτεις.';
+
+  @override
+  String get flowRequired => 'Διάλεξε μία επιλογή για να συνεχίσεις.';
+
+  @override
+  String get settingsFlowTitle => 'Σάρωση';
+
+  @override
+  String get settingsOneClickToggle =>
+      'Λειτουργία One Click (χωρίς προεπισκόπηση)';
+
+  @override
+  String get settingsFlowNote =>
+      'Όταν είναι ενεργό, η σάρωση επεξεργάζεται και στέλνεται αμέσως μόλις τραβηχτεί, χωρίς προεπισκόπηση. Όταν είναι ανενεργό, βλέπεις πρώτα τις σελίδες και μετά στέλνεις ή απορρίπτεις τη σάρωση.';
+
+  @override
+  String get flowCancel => 'Ακύρωση';
+
+  @override
+  String get flowSharing => 'Άνοιγμα της εφαρμογής email…';
+
+  @override
+  String get flowCancelledReading =>
+      'Ακυρώθηκε. Οι εικόνες είναι αποθηκευμένες στον φάκελό σου. Δεν δημιουργήθηκε PDF.';
+
+  @override
+  String get flowCancelledSending =>
+      'Ακυρώθηκε. Η σάρωση και το PDF είναι αποθηκευμένα. Δεν στάλθηκε τίποτα.';
+
+  @override
+  String get flowNotSent => 'Δεν στάλθηκε';
+
+  @override
+  String get flowNotSentNote =>
+      'Η σάρωση και το PDF είναι αποθηκευμένα. Μπορείς να δοκιμάσεις ξανά.';
+
+  @override
+  String get previewTitle => 'Έλεγχος της σάρωσης';
+
+  @override
+  String get previewHint =>
+      'Δες τις σελίδες και μετά στείλε ή απόρριψε τη σάρωση.';
+
+  @override
+  String get previewDiscard => 'Απόρριψη';
+
+  @override
+  String get discardConfirmTitle => 'Να διαγραφεί η σάρωση;';
+
+  @override
+  String get discardConfirmBody =>
+      'Θα διαγραφούν οι εικόνες, το PDF και το αντίγραφο στη Gallery ολόκληρης της σάρωσης. Η διαγραφή δεν αναιρείται.';
+
+  @override
+  String get discardConfirmYes => 'Διαγραφή';
+
+  @override
+  String get discardConfirmNo => 'Κράτησέ τη';
+
+  @override
+  String get discardRunning => 'Διαγραφή…';
+
+  @override
+  String get discardDone => 'Η σάρωση διαγράφηκε.';
+
+  @override
+  String discardPartial(int pictures, bool pdf, int gallery) {
+    final left = <String>[
+      if (pictures > 0) pictures == 1 ? '1 εικόνα' : '$pictures εικόνες',
+      if (pdf) 'το PDF',
+      if (gallery > 0)
+        gallery == 1
+            ? '1 αντίγραφο στη Gallery'
+            : '$gallery αντίγραφα στη Gallery',
+    ];
+    return 'Δεν διαγράφηκαν όλα. Έμειναν: ${left.join(', ')}.';
+  }
 }

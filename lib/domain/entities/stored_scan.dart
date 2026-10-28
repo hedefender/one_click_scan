@@ -14,6 +14,8 @@ class StoredPicture extends Equatable {
     required this.fileName,
     required this.sourcePath,
     this.gallery = GalleryCopyStatus.notRequested,
+    this.uri,
+    this.galleryUri,
   });
 
   /// File name inside `./pictures/` (for example `2026-10-21_19-05-12_1.jpg`).
@@ -25,16 +27,25 @@ class StoredPicture extends Equatable {
 
   final GalleryCopyStatus gallery;
 
-  StoredPicture copyWith({GalleryCopyStatus? gallery}) {
+  /// Document URI of the file in `./pictures`. What a discard deletes by: a
+  /// file is never found again by its name or its folder (ADR-027).
+  final String? uri;
+
+  /// URI of the Gallery copy, when one was saved.
+  final String? galleryUri;
+
+  StoredPicture copyWith({GalleryCopyStatus? gallery, String? galleryUri}) {
     return StoredPicture(
       fileName: fileName,
       sourcePath: sourcePath,
       gallery: gallery ?? this.gallery,
+      uri: uri,
+      galleryUri: galleryUri ?? this.galleryUri,
     );
   }
 
   @override
-  List<Object?> get props => [fileName, sourcePath, gallery];
+  List<Object?> get props => [fileName, sourcePath, gallery, uri, galleryUri];
 }
 
 /// Result of storing a whole scan.

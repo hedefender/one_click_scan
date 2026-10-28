@@ -214,6 +214,36 @@ abstract class AppStrings {
   String get mailDraftNoApp;
   String get mailDraftFailed;
   String get mailDraftOpenedGeneric;
+
+  // Phase 5: One Click or preview, cancel, discard
+  String get flowTitle;
+  String get flowBody;
+  String get flowOneClick;
+  String get flowOneClickNote;
+  String get flowPreview;
+  String get flowPreviewNote;
+  String get flowRequired;
+  String get settingsFlowTitle;
+  String get settingsOneClickToggle;
+  String get settingsFlowNote;
+  String get flowCancel;
+  String get flowSharing;
+  String get flowCancelledReading;
+  String get flowCancelledSending;
+  String get flowNotSent;
+  String get flowNotSentNote;
+  String get previewTitle;
+  String get previewHint;
+  String get previewDiscard;
+  String get discardConfirmTitle;
+  String get discardConfirmBody;
+  String get discardConfirmYes;
+  String get discardConfirmNo;
+  String get discardRunning;
+  String get discardDone;
+
+  /// What a discard left behind (only the non-empty parts are named).
+  String discardPartial(int pictures, bool pdf, int gallery);
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

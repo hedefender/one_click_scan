@@ -6,6 +6,7 @@ import '../../domain/entities/app_language.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/entities/mail_send_mode.dart';
+import '../../domain/entities/scan_flow_mode.dart';
 import '../../domain/mail/mail_provider.dart';
 import '../../domain/ocr/ocr_language_pack_registry.dart';
 import '../../domain/validation/mail_settings_validation.dart';
@@ -83,6 +84,8 @@ class SettingsPage extends StatelessWidget {
                         _MailSection(state: state),
                         const SizedBox(height: 32),
                         _GallerySection(state: state),
+                        const SizedBox(height: 32),
+                        _FlowSection(state: state),
                         const SizedBox(height: 32),
                         _OcrSection(state: state),
                         const SizedBox(height: 32),
@@ -426,6 +429,40 @@ class _GallerySection extends StatelessWidget {
           title: Text(strings.galleryToggle),
           value: state.saved!.saveToGallery,
           onChanged: cubit.setSaveToGallery,
+        ),
+      ],
+    );
+  }
+}
+
+/// One Click (no preview) or with preview. An install that never chose shows
+/// the switch off, which is what the app does for it: the preview (ADR-025).
+class _FlowSection extends StatelessWidget {
+  const _FlowSection({required this.state});
+
+  final SettingsEditorState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final cubit = context.read<SettingsEditorCubit>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(strings.settingsFlowTitle),
+        Text(
+          strings.settingsFlowNote,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        SwitchListTile(
+          key: SettingsKeys.oneClickSwitch,
+          contentPadding: EdgeInsets.zero,
+          title: Text(strings.settingsOneClickToggle),
+          value: state.saved!.effectiveScanFlowMode == ScanFlowMode.oneClick,
+          onChanged: (on) => cubit.selectScanFlowMode(
+            on ? ScanFlowMode.oneClick : ScanFlowMode.preview,
+          ),
         ),
       ],
     );

@@ -6,6 +6,7 @@ import '../../core/navigation/route_paths.dart';
 import '../../domain/entities/app_language.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/entities/scan_flow_mode.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../presentation/l10n/mail_provider_labels.dart';
 import 'first_run_cubit.dart';
@@ -26,7 +27,7 @@ class FirstRunPage extends StatelessWidget {
       builder: (context, state) {
         final cubit = context.read<FirstRunCubit>();
         final isFirst = state.step == FirstRunStep.welcome;
-        final isLast = state.step == FirstRunStep.gallery;
+        final isLast = state.step == FirstRunStep.flow;
         final busy = state.folderStatus == FolderPickStatus.picking;
 
         return Scaffold(
@@ -49,6 +50,7 @@ class FirstRunPage extends StatelessWidget {
                       FirstRunStep.folder => _FolderStep(state: state),
                       FirstRunStep.mail => _MailStep(state: state),
                       FirstRunStep.gallery => _GalleryStep(state: state),
+                      FirstRunStep.flow => _FlowStep(state: state),
                     },
                   ),
                 ),
@@ -65,7 +67,9 @@ class FirstRunPage extends StatelessWidget {
                       const Spacer(),
                       FilledButton(
                         key: FirstRunKeys.next,
-                        onPressed: busy ? null : cubit.next,
+                        onPressed: busy || (isLast && state.flowMode == null)
+                            ? null
+                            : cubit.next,
                         child: Text(
                           isLast ? strings.actionFinish : strings.actionNext,
                         ),
@@ -338,6 +342,60 @@ class _GalleryStep extends StatelessWidget {
           value: state.saveToGallery,
           onChanged: cubit.setSaveToGallery,
         ),
+      ],
+    );
+  }
+}
+
+/// One Click or with preview. No option is selected at first and "Next" stays
+/// disabled until the user picks one (ADR-025).
+class _FlowStep extends StatelessWidget {
+  const _FlowStep({required this.state});
+
+  final FirstRunState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final cubit = context.read<FirstRunCubit>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _StepTitle(strings.flowTitle, strings.flowBody),
+        RadioGroup<ScanFlowMode>(
+          groupValue: state.flowMode,
+          onChanged: (mode) {
+            if (mode != null) cubit.selectFlowMode(mode);
+          },
+          child: Column(
+            children: [
+              RadioListTile<ScanFlowMode>(
+                key: FirstRunKeys.flowOneClick,
+                contentPadding: EdgeInsets.zero,
+                value: ScanFlowMode.oneClick,
+                title: Text(strings.flowOneClick),
+                subtitle: Text(strings.flowOneClickNote),
+              ),
+              RadioListTile<ScanFlowMode>(
+                key: FirstRunKeys.flowPreview,
+                contentPadding: EdgeInsets.zero,
+                value: ScanFlowMode.preview,
+                title: Text(strings.flowPreview),
+                subtitle: Text(strings.flowPreviewNote),
+              ),
+            ],
+          ),
+        ),
+        if (state.flowMode == null)
+          Padding(
+            key: FirstRunKeys.flowError,
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              strings.flowRequired,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
       ],
     );
   }

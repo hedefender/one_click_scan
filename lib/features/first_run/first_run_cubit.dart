@@ -4,6 +4,7 @@ import '../../core/logging/app_logger.dart';
 import '../../domain/entities/app_language.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/entities/scan_flow_mode.dart';
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/update_settings.dart';
 import '../../services/storage_folder/storage_folder_picker.dart';
@@ -74,6 +75,10 @@ class FirstRunCubit extends Cubit<FirstRunState> {
     emit(state.copyWith(saveToGallery: value));
   }
 
+  void selectFlowMode(ScanFlowMode mode) {
+    emit(state.copyWith(flowMode: mode));
+  }
+
   void back() {
     final index = state.step.index;
     if (index == 0) return;
@@ -94,7 +99,7 @@ class FirstRunCubit extends Cubit<FirstRunState> {
     await _persist(snapshot);
     if (isClosed) return;
 
-    if (snapshot.step == FirstRunStep.gallery) {
+    if (snapshot.step == FirstRunStep.flow) {
       emit(state.copyWith(completed: true, showErrors: false));
       return;
     }
@@ -129,8 +134,13 @@ class FirstRunCubit extends Cubit<FirstRunState> {
         );
       case FirstRunStep.gallery:
         await _updateSettings(
+          (current) => current.copyWith(saveToGallery: snapshot.saveToGallery),
+        );
+      case FirstRunStep.flow:
+        // The last step: the wizard is complete only when the user has chosen.
+        await _updateSettings(
           (current) => current.copyWith(
-            saveToGallery: snapshot.saveToGallery,
+            scanFlowMode: snapshot.flowMode,
             firstRunCompleted: true,
           ),
         );

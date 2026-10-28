@@ -9,6 +9,7 @@ abstract final class SettingsKeys {
   static const customDestination = Key('settings.customDestination');
   static const save = Key('settings.save');
   static const gallerySwitch = Key('settings.gallerySwitch');
+  static const oneClickSwitch = Key('settings.oneClickSwitch');
   static const licenses = Key('settings.licenses');
   static const password = Key('settings.mail.password');
   static const passwordToggle = Key('settings.mail.passwordToggle');

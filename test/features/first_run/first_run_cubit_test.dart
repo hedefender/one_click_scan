@@ -3,6 +3,7 @@ import 'package:one_click_scan/core/errors/app_exceptions.dart';
 import 'package:one_click_scan/domain/entities/app_language.dart';
 import 'package:one_click_scan/domain/entities/destination_mode.dart';
 import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
+import 'package:one_click_scan/domain/entities/scan_flow_mode.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
 import 'package:one_click_scan/domain/usecases/load_settings.dart';
 import 'package:one_click_scan/features/first_run/first_run_cubit.dart';
@@ -201,15 +202,63 @@ void main() {
 
         cubit.setSaveToGallery(true);
         await cubit.next();
+        // The gallery step is no longer the last one (ADR-025).
+        expect(cubit.state.step, FirstRunStep.flow);
+        expect(cubit.state.completed, isFalse);
+        expect((await LoadSettings(repository)()).firstRunCompleted, isFalse);
+
+        cubit.selectFlowMode(ScanFlowMode.oneClick);
+        await cubit.next();
 
         expect(cubit.state.completed, isTrue);
         final saved = await LoadSettings(repository)();
         expect(saved.firstRunCompleted, isTrue);
+        expect(saved.scanFlowMode, ScanFlowMode.oneClick);
         expect(saved.saveToGallery, isTrue);
         expect(saved.storageFolder, testFolder);
         expect(saved.mailProvider, MailProviderId.gmail);
       },
     );
+
+    test('the flow step has no default and blocks until a choice', () async {
+      await completeFolderStep();
+      await completeMailStep();
+      await cubit.next(); // gallery -> flow
+
+      expect(cubit.state.flowMode, isNull);
+      expect(cubit.state.errorsFor(FirstRunStep.flow), {
+        FirstRunError.flowMissing,
+      });
+
+      await cubit.next();
+
+      expect(cubit.state.completed, isFalse);
+      expect(cubit.state.showErrors, isTrue);
+      final saved = await LoadSettings(repository)();
+      expect(saved.firstRunCompleted, isFalse);
+      expect(saved.scanFlowMode, isNull);
+    });
+
+    test('both choices are stored', () async {
+      for (final mode in ScanFlowMode.values) {
+        final container = await buildTestContainer();
+        final fresh = container<FirstRunCubit>();
+        await fresh.start();
+        await fresh.next();
+        await fresh.pickFolder();
+        await fresh.next();
+        fresh.selectProvider(MailProviderId.gmail);
+        fresh.setSenderAccount('sender@example.com');
+        await fresh.next();
+        await fresh.next(); // gallery
+        fresh.selectFlowMode(mode);
+        await fresh.next();
+
+        final saved = await LoadSettings(container<SettingsRepository>())();
+        expect(saved.scanFlowMode, mode);
+        await fresh.close();
+      }
+    });
 
     test('Gallery copies are off unless the user turns them on', () async {
       await completeFolderStep();

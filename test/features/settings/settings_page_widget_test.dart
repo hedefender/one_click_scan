@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:one_click_scan/domain/entities/scan_flow_mode.dart';
 import 'package:one_click_scan/app/app.dart';
 import 'package:one_click_scan/domain/entities/app_language.dart';
 import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
@@ -156,6 +157,39 @@ void main() {
     await tester.pumpAndSettle();
 
     expect((await repository.load()).saveToGallery, isTrue);
+  });
+
+  testWidgets('the One Click switch shows the explanation and is saved', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    await openSettings(tester);
+
+    await tester.ensureVisible(find.byKey(SettingsKeys.oneClickSwitch));
+    expect(find.text('Scanning'), findsOneWidget);
+    expect(find.text('One Click mode (no preview)'), findsOneWidget);
+    expect(find.textContaining('with no preview'), findsOneWidget);
+    // An install that never chose shows it off: the app then shows the preview.
+    expect(
+      tester
+          .widget<SwitchListTile>(find.byKey(SettingsKeys.oneClickSwitch))
+          .value,
+      isFalse,
+    );
+
+    await tester.tap(find.byKey(SettingsKeys.oneClickSwitch));
+    await tester.pumpAndSettle();
+    expect((await repository.load()).scanFlowMode, ScanFlowMode.oneClick);
+    expect(
+      tester
+          .widget<SwitchListTile>(find.byKey(SettingsKeys.oneClickSwitch))
+          .value,
+      isTrue,
+    );
+
+    await tester.tap(find.byKey(SettingsKeys.oneClickSwitch));
+    await tester.pumpAndSettle();
+    expect((await repository.load()).scanFlowMode, ScanFlowMode.preview);
   });
 
   testWidgets('changing the folder updates settings and home', (tester) async {

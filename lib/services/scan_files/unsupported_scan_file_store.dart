@@ -46,6 +46,11 @@ class UnsupportedScanFileStore implements ScanFileStore {
   }) {
     throw _failure;
   }
+
+  @override
+  Future<void> deleteByUri(String uri) {
+    throw _failure;
+  }
 }
 
 class NoopScanTempStore implements ScanTempStore {

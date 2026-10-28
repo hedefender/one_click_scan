@@ -8,4 +8,7 @@ abstract final class FirstRunKeys {
   static const sender = Key('firstRun.sender');
   static const customDestination = Key('firstRun.customDestination');
   static const gallerySwitch = Key('firstRun.gallerySwitch');
+  static const flowOneClick = Key('firstRun.flow.oneClick');
+  static const flowPreview = Key('firstRun.flow.preview');
+  static const flowError = Key('firstRun.flow.error');
 }

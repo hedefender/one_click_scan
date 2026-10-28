@@ -3,6 +3,7 @@ import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/entities/mail_send_mode.dart';
+import '../../domain/entities/scan_flow_mode.dart';
 import '../../domain/entities/storage_folder.dart';
 import '../../domain/ocr/ocr_language_pack_registry.dart';
 import 'key_value_store.dart';
@@ -31,6 +32,7 @@ class SettingsLocalDataSource {
   static const keySaveToGallery = 'settings.gallery.save';
   static const keyOcrPack = 'settings.ocr.pack';
   static const keyMailSendMode = 'settings.mail.sendMode';
+  static const keyScanFlowMode = 'settings.scan.flowMode';
 
   final KeyValueStore _store;
   final int schemaVersion;
@@ -75,6 +77,12 @@ class SettingsLocalDataSource {
       mailSendMode:
           _enumByName(MailSendMode.values, _store.getString(keyMailSendMode)) ??
           MailSendMode.sendNow,
+      // Absent or unknown: the user has not chosen (an install from before
+      // Phase 5). It stays null, and the app then shows the preview.
+      scanFlowMode: _enumByName(
+        ScanFlowMode.values,
+        _store.getString(keyScanFlowMode),
+      ),
     );
   }
 
@@ -91,6 +99,7 @@ class SettingsLocalDataSource {
     await _store.setBool(keySaveToGallery, settings.saveToGallery);
     await _store.setString(keyOcrPack, settings.ocrPackId);
     await _store.setString(keyMailSendMode, settings.mailSendMode.name);
+    await _setOrRemove(keyScanFlowMode, settings.scanFlowMode?.name);
   }
 
   Future<void> _setOrRemove(String key, String? value) {

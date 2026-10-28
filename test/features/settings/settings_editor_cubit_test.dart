@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:one_click_scan/domain/entities/app_language.dart';
 import 'package:one_click_scan/domain/entities/destination_mode.dart';
 import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
+import 'package:one_click_scan/domain/entities/scan_flow_mode.dart';
 import 'package:one_click_scan/domain/entities/storage_folder.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
 import 'package:one_click_scan/domain/validation/mail_settings_validation.dart';
@@ -41,6 +42,16 @@ void main() {
     expect(state.hasChanges, isFalse);
     expect(state.canSave, isFalse);
     expect(state.folderAccessLost, isFalse);
+  });
+
+  test('the One Click choice is saved at once, both ways', () async {
+    await cubit.selectScanFlowMode(ScanFlowMode.oneClick);
+    expect((await repository.load()).scanFlowMode, ScanFlowMode.oneClick);
+    expect(cubit.state.saved!.scanFlowMode, ScanFlowMode.oneClick);
+
+    await cubit.selectScanFlowMode(ScanFlowMode.preview);
+    expect((await repository.load()).scanFlowMode, ScanFlowMode.preview);
+    expect(cubit.state.hasChanges, isFalse); // not part of the e-mail draft
   });
 
   test('editing the draft marks changes without persisting', () async {

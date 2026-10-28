@@ -7,6 +7,7 @@ import 'package:one_click_scan/domain/entities/mail_send_mode.dart';
 import 'package:one_click_scan/domain/entities/pdf_page_input.dart';
 import 'package:one_click_scan/domain/mail/mail_outcome.dart';
 import 'package:one_click_scan/domain/ports/draft_sharer.dart';
+import 'package:one_click_scan/domain/scan/scan_flow.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
 import 'package:one_click_scan/features/scan/mail_send_cubit.dart';
 import 'package:one_click_scan/features/scan/mail_send_state.dart';
@@ -48,6 +49,65 @@ void main() {
   });
 
   tearDown(() => cubit.close());
+
+  group('adopt: the One Click flow already did the delivery', () {
+    test('sent: the section says sent', () async {
+      await cubit.adopt(pdf, const DeliverySent());
+
+      expect(cubit.state.phase, MailPhase.sent);
+      expect(mail.sender.sent, isEmpty); // adopting sends nothing
+    });
+
+    test(
+      'not sent: the failure is shown and "try again" sends by hand',
+      () async {
+        await cubit.adopt(pdf, const DeliveryNotSent(MailNetworkError()));
+
+        expect(cubit.state.phase, MailPhase.failed);
+        expect(cubit.state.outcome, isA<MailNetworkError>());
+        expect(mail.sender.sent, isEmpty);
+
+        await cubit.send();
+
+        expect(mail.sender.sent, hasLength(1));
+        expect(cubit.state.phase, MailPhase.sent);
+      },
+    );
+
+    test('not configured: the screen leads to Settings', () async {
+      await cubit.adopt(
+        pdf,
+        const DeliveryNotSent(
+          MailNotConfigured(MailNotConfiguredReason.password),
+        ),
+      );
+
+      expect(cubit.state.needsSettings, isTrue);
+    });
+
+    test(
+      'shared: the e-mail app result is kept, and a second open works',
+      () async {
+        await cubit.adopt(
+          pdf,
+          const DeliveryShared(DraftShareResult.openedGeneric),
+        );
+
+        expect(cubit.state.draft, DraftShareResult.openedGeneric);
+        expect(cubit.state.phase, MailPhase.idle);
+
+        await cubit.openMailApp();
+
+        expect(mail.sharer.shared, hasLength(1));
+      },
+    );
+
+    test('a failed One Click mail offers the backup way as before', () async {
+      await cubit.adopt(pdf, const DeliveryNotSent(MailAuthFailed(code: 535)));
+
+      expect(cubit.state.offersFallback(MailProviderId.gmail), isTrue);
+    });
+  });
 
   test('nothing happens before the PDF is known', () async {
     await cubit.send();

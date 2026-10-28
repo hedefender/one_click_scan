@@ -6,6 +6,7 @@ import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/entities/mail_send_mode.dart';
+import '../../domain/entities/scan_flow_mode.dart';
 import '../../domain/mail/mail_outcome.dart';
 import '../../domain/ports/mail_credential_store.dart';
 import '../../domain/usecases/send_scan_pdf.dart';
@@ -64,6 +65,11 @@ class SettingsEditorCubit extends Cubit<SettingsEditorState> {
   /// How a scan leaves by e-mail. Saved at once, like the language.
   Future<void> selectSendMode(MailSendMode mode) {
     return _applyImmediately((current) => current.copyWith(mailSendMode: mode));
+  }
+
+  /// One Click (no preview) or with preview. Saved at once, like the language.
+  Future<void> selectScanFlowMode(ScanFlowMode mode) {
+    return _applyImmediately((current) => current.copyWith(scanFlowMode: mode));
   }
 
   Future<void> changeFolder() async {

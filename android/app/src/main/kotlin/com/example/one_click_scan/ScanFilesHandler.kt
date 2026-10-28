@@ -1,13 +1,17 @@
 package com.example.one_click_scan
 
 import android.content.ActivityNotFoundException
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -63,6 +67,37 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
                         mainHandler.post { result.success(null) }
                     } catch (e: Exception) {
                         mainHandler.post { result.error("unreadable", e.javaClass.simpleName, null) }
+                    }
+                }
+                return@setMethodCallHandler
+            }
+            // Discard (ADR-027): delete by URI only, never by name or folder.
+            // Not tied to a folder argument, so they come before `handle`.
+            if (call.method == "deleteDocument" ||
+                call.method == "saveToGallery" ||
+                call.method == "deleteGalleryItem"
+            ) {
+                executor.execute {
+                    try {
+                        val value: Any? = when (call.method) {
+                            "deleteDocument" -> {
+                                deleteDocument(requireArgument(call, "uri"))
+                                null
+                            }
+                            "saveToGallery" -> saveToGallery(
+                                requireArgument(call, "sourcePath"),
+                                requireArgument(call, "fileName")
+                            )
+                            else -> {
+                                deleteGalleryItem(requireArgument(call, "uri"))
+                                null
+                            }
+                        }
+                        mainHandler.post { result.success(value) }
+                    } catch (e: ScanFilesException) {
+                        mainHandler.post { result.error(e.code, e.message, null) }
+                    } catch (e: Exception) {
+                        mainHandler.post { result.error("unknown", e.javaClass.simpleName, null) }
                     }
                 }
                 return@setMethodCallHandler
@@ -449,6 +484,120 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
             )
         } catch (e: Exception) {
             throw ScanFilesException("write_failed", "Could not delete file")
+        }
+    }
+
+    /**
+     * Deletes one document of the user's folder, by the URI that
+     * [copyToFolder] returned. Only a URI under a folder the user granted is
+     * accepted, so nothing outside it can be deleted. A document that is
+     * already gone counts as deleted; a failure is an error, never a silent
+     * success.
+     */
+    private fun deleteDocument(uriText: String) {
+        val uri = Uri.parse(uriText)
+        val granted = context.contentResolver.persistedUriPermissions.any {
+            it.isWritePermission && uri.toString().startsWith(it.uri.toString() + "/")
+        }
+        if (!granted) throw ScanFilesException("no_access", "Not inside the granted folder")
+        try {
+            if (!DocumentsContract.deleteDocument(context.contentResolver, uri)) {
+                throw ScanFilesException("write_failed", "Could not delete file")
+            }
+        } catch (e: java.io.FileNotFoundException) {
+            // Already gone.
+        } catch (e: ScanFilesException) {
+            throw e
+        } catch (e: SecurityException) {
+            throw ScanFilesException("no_access", "No access to the file")
+        } catch (e: Exception) {
+            throw ScanFilesException("write_failed", "Could not delete file")
+        }
+    }
+
+    /**
+     * Copies a picture into the Gallery (MediaStore, `Pictures/`) under the
+     * given name and returns the URI of the entry, which is what a discard
+     * deletes it by. From Android 10 on the entry belongs to this app, so it
+     * needs no permission to delete it again; before that the storage
+     * permission that the `gal` plugin asks for is needed.
+     */
+    private fun saveToGallery(sourcePath: String, fileName: String): String {
+        val source = File(sourcePath)
+        if (!source.isFile) throw ScanFilesException("source_missing", "Source file is missing")
+        val resolver = context.contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            } else {
+                @Suppress("DEPRECATION")
+                val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                directory.mkdirs()
+                @Suppress("DEPRECATION")
+                put(MediaStore.Images.Media.DATA, File(directory, fileName).absolutePath)
+            }
+        }
+        val uri = try {
+            resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        } catch (e: SecurityException) {
+            throw ScanFilesException("no_access", "No permission for the Gallery")
+        } ?: throw ScanFilesException("write_failed", "Could not create the Gallery entry")
+        try {
+            val output = resolver.openOutputStream(uri, "w")
+                ?: throw ScanFilesException("write_failed", "Could not open the Gallery entry")
+            output.use { out -> FileInputStream(source).use { input -> input.copyTo(out) } }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+                resolver.update(uri, done, null, null)
+            }
+        } catch (e: Exception) {
+            // Never leave a half entry in the Gallery.
+            try {
+                resolver.delete(uri, null, null)
+            } catch (ignored: Exception) {
+            }
+            if (e is ScanFilesException) throw e
+            throw ScanFilesException("write_failed", "Could not write the Gallery entry")
+        }
+        return uri.toString()
+    }
+
+    /**
+     * Deletes one Gallery entry by the URI [saveToGallery] returned. Only a
+     * MediaStore image URI is accepted. Zero rows (already gone) counts as
+     * deleted; a refusal is an error.
+     */
+    private fun deleteGalleryItem(uriText: String) {
+        val uri = Uri.parse(uriText)
+        if (uri.scheme != "content" || uri.authority != MediaStore.AUTHORITY ||
+            !uri.toString().startsWith(MediaStore.Images.Media.EXTERNAL_CONTENT_URI.toString() + "/")
+        ) {
+            throw ScanFilesException("no_access", "Not a Gallery image")
+        }
+        try {
+            context.contentResolver.delete(uri, null, null)
+        } catch (e: SecurityException) {
+            // Android 16 answers a delete of an entry that no longer exists with a
+            // SecurityException, not with zero rows. The app always sees its own
+            // entries, so an entry it cannot find is already gone.
+            if (galleryEntryExists(uri)) {
+                throw ScanFilesException("no_access", "No access to the Gallery entry")
+            }
+        } catch (e: Exception) {
+            throw ScanFilesException("write_failed", "Could not delete the Gallery entry")
+        }
+    }
+
+    private fun galleryEntryExists(uri: Uri): Boolean {
+        return try {
+            context.contentResolver.query(
+                uri, arrayOf(MediaStore.Images.Media._ID), null, null, null,
+            )?.use { it.moveToFirst() } ?: false
+        } catch (e: Exception) {
+            true
         }
     }
 

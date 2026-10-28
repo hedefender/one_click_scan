@@ -5,6 +5,7 @@ import 'destination_mode.dart';
 import '../ocr/ocr_language_pack_registry.dart';
 import 'mail_provider_id.dart';
 import 'mail_send_mode.dart';
+import 'scan_flow_mode.dart';
 import 'storage_folder.dart';
 
 const Object _unset = Object();
@@ -21,6 +22,7 @@ class AppSettings extends Equatable {
     this.saveToGallery = false,
     this.ocrPackId = OcrPackIds.latin,
     this.mailSendMode = MailSendMode.sendNow,
+    this.scanFlowMode,
   });
 
   final AppLanguage language;
@@ -45,6 +47,15 @@ class AppSettings extends Equatable {
   /// Send the PDF from the app over SMTP, or open the e-mail app with it.
   final MailSendMode mailSendMode;
 
+  /// One Click (no preview) or with preview. Null until the user has chosen:
+  /// the wizard has no default, and an install that passed the wizard before
+  /// this choice existed keeps null, which means [effectiveScanFlowMode].
+  final ScanFlowMode? scanFlowMode;
+
+  /// What a scan does now: the choice, or the preview when there is none.
+  ScanFlowMode get effectiveScanFlowMode =>
+      scanFlowMode ?? ScanFlowMode.preview;
+
   /// Address documents are delivered to, according to [destinationMode].
   String? get effectiveDestination {
     return switch (destinationMode) {
@@ -65,6 +76,7 @@ class AppSettings extends Equatable {
     bool? saveToGallery,
     String? ocrPackId,
     MailSendMode? mailSendMode,
+    Object? scanFlowMode = _unset,
   }) {
     return AppSettings(
       language: language ?? this.language,
@@ -85,6 +97,9 @@ class AppSettings extends Equatable {
       saveToGallery: saveToGallery ?? this.saveToGallery,
       ocrPackId: ocrPackId ?? this.ocrPackId,
       mailSendMode: mailSendMode ?? this.mailSendMode,
+      scanFlowMode: identical(scanFlowMode, _unset)
+          ? this.scanFlowMode
+          : scanFlowMode as ScanFlowMode?,
     );
   }
 
@@ -100,5 +115,6 @@ class AppSettings extends Equatable {
     saveToGallery,
     ocrPackId,
     mailSendMode,
+    scanFlowMode,
   ];
 }

@@ -153,6 +153,24 @@ class FakeScanFileStore implements ScanFileStore {
     return 'content://com.example.test/tree/Scans/document/$subfolder%2F$fileName';
   }
 
+  /// URIs deleted by [deleteByUri], in order.
+  final List<String> deletedUris = <String>[];
+
+  /// URIs whose deletion fails (a file that could not be deleted).
+  final Set<String> failDeleteUris = <String>{};
+
+  @override
+  Future<void> deleteByUri(String uri) async {
+    if (failDeleteUris.contains(uri)) {
+      throw const ScanStoreException(ScanStoreFailure.writeFailed);
+    }
+    deletedUris.add(uri);
+    // The fake URI ends with `<subfolder>%2F<fileName>`.
+    final tail = uri.split('/document/').last;
+    final parts = tail.split('%2F');
+    if (parts.length == 2) files(parts[0]).remove(parts[1]);
+  }
+
   @override
   Future<void> deleteFile({
     required StorageFolder folder,
@@ -174,12 +192,27 @@ class FakeGalleryService implements GalleryService {
   /// Called after each saved image (lets a test move the clock).
   void Function()? onSave;
 
+  /// Gallery URIs deleted by [deleteImage], in order.
+  final List<String> deletedUris = <String>[];
+
+  /// Gallery URIs whose deletion fails.
+  final Set<String> failDeleteUris = <String>{};
+
   @override
-  Future<void> saveImage(String path, {required String fileName}) async {
+  Future<String> saveImage(String path, {required String fileName}) async {
     if (fail) throw const GalleryException('fake failure');
     saved.add(path);
     savedNames.add(fileName);
     onSave?.call();
+    return 'content://media/external/images/media/${saved.length}';
+  }
+
+  @override
+  Future<void> deleteImage(String uri) async {
+    if (failDeleteUris.contains(uri)) {
+      throw const GalleryException('fake delete failure');
+    }
+    deletedUris.add(uri);
   }
 }
 

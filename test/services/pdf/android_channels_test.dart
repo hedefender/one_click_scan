@@ -82,6 +82,51 @@ void main() {
     });
   });
 
+  group('AndroidScanFileStore.deleteByUri', () {
+    test('sends the URI to the native side and nothing else', () async {
+      reply((_) => null);
+
+      await AndroidScanFileStore().deleteByUri(
+        'content://com.android.externalstorage.documents/tree/x/document/x%2Fa.jpg',
+      );
+
+      expect(calls.single.method, 'deleteDocument');
+      expect(calls.single.arguments, {
+        'uri': 'content://com.android.externalstorage.documents/tree/x/document/x%2Fa.jpg',
+      });
+    });
+
+    test('a refusal is an error with the failure of the handler', () async {
+      reply((_) => throw PlatformException(code: 'write_failed'));
+
+      await expectLater(
+        AndroidScanFileStore().deleteByUri('content://x/document/1'),
+        throwsA(
+          isA<ScanStoreException>().having(
+            (e) => e.failure,
+            'failure',
+            ScanStoreFailure.writeFailed,
+          ),
+        ),
+      );
+    });
+
+    test('a URI outside the granted folder is no_access', () async {
+      reply((_) => throw PlatformException(code: 'no_access'));
+
+      await expectLater(
+        AndroidScanFileStore().deleteByUri('content://other/document/1'),
+        throwsA(
+          isA<ScanStoreException>().having(
+            (e) => e.failure,
+            'failure',
+            ScanStoreFailure.noAccess,
+          ),
+        ),
+      );
+    });
+  });
+
   group('AndroidScanFileStore.copyToFolder returns the document URI', () {
     const folder = StorageFolder(uri: 'content://tree/1', name: 'Scans');
 

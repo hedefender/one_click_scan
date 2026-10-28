@@ -34,4 +34,10 @@ abstract interface class ScanFileStore {
     required String subfolder,
     required String fileName,
   });
+
+  /// Deletes the document behind [uri], a URI that [copyToFolder] returned.
+  /// Used to discard a scan: only what the scan itself created, never found by
+  /// name or by folder. Does nothing when the file is already gone; throws
+  /// `ScanStoreException` when it is still there and could not be deleted.
+  Future<void> deleteByUri(String uri);
 }

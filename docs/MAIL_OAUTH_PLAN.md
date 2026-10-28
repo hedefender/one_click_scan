@@ -235,3 +235,87 @@ one-click flow (Phase 5) because SMTP with an app password is enough for the
 development of Phase 5 to 7, but its long-lead items (package id, signing key,
 privacy policy, Google verification) are not code and should be started in
 parallel from now on. `ROADMAP.md` carries this milestone.
+
+
+---
+
+# Update 2026-10-27: what the app and the process need (Phase 8 work breakdown)
+
+Added while Phase 5 was built. Same rule as above: "NOT CONFIRMED" means looked
+for and not found on an official page.
+
+## 7. New facts from the official pages (2026-10-27)
+- **Verification time for a sensitive scope.** The Google Cloud FAQ
+  (<https://support.google.com/cloud/answer/13463817>) lists sensitive scope
+  verification separately from restricted, with an expected time of **10 business
+  days**. This is better than the "several months" of section 1 (that page speaks of
+  the data requested in general). Both numbers are Google's; plan for the longer one.
+- **No security assessment for a sensitive scope only**
+  (<https://support.google.com/cloud/answer/13807380>).
+- **SMTP.** The same FAQ says that to continue verification an app has to move off
+  SMTP and use the sensitive scope `gmail.send`. This confirms the proposal of
+  section 1: Gmail API, not SMTP XOAUTH2.
+- **Using a scope before approval** gives the "unverified app" screen and the
+  100 user limit (Gmail scopes page, <https://developers.google.com/workspace/gmail/api/auth/scopes>).
+- **Android client:** package name and SHA-1 per client, and a new client for
+  production (<https://developer.android.com/identity/authorization>; the page found
+  in this search was old, so re-read it when Phase 8 starts).
+
+## 8. What the app needs (code)
+1. **Auth kind in the domain.** `MailAuth` is already sealed with `AppPasswordAuth`.
+   Add `OAuthAuth` (provider, account, a way to get an access token), and
+   `MailAuthKind.oauth` is already listed in `MailProvider.authKinds`.
+2. **A token source behind a port** (`domain/ports/oauth_token_source.dart`):
+   `signIn(provider)`, `accessToken(account)` (silent), `signOut(account)`. Two Kotlin
+   classes behind the existing style of method channel: Google `AuthorizationClient`,
+   Microsoft MSAL. The Dart side only ever sees an access token.
+3. **Two new `MailSender`s:** `GmailApiMailSender` (REST `messages.send`, MIME as
+   base64url `raw`; the size limit is NOT CONFIRMED) and `OutlookMailSender` (Graph
+   `sendMail`, or SMTP XOAUTH2 with the existing `mailer` code). The registry
+   chooses the sender by `MailProvider` and the stored auth kind; `SendScanPdf`
+   changes only where it builds the auth.
+4. **Credential store.** `StoredMailSecret` holds a password today. It needs a
+   second shape: the account and, for Microsoft, a refresh token (Keystore, outside
+   backups, like ADR-021). Access tokens in memory only. A canary test for tokens.
+5. **Outcomes.** New `MailOutcome` cases are probably not needed: "sign-in needed
+   again" is `MailAuthFailed`. A distinct `MailNeedsSignIn` lets the screen show a
+   "Sign in again" button instead of the app password guide (decide in Phase 8).
+6. **Settings screen.** Provider chosen -> its own sign-in opens; then "Connected as
+   ..." and a **Disconnect** (revoke the token, delete it). The app password field
+   stays for Yahoo and as a fallback. The wizard gets no password field (as today).
+7. **Android manifest.** Google needs nothing for `AuthorizationClient`. MSAL needs
+   an intent filter for the `msauth://<package>/<signature>` redirect and the
+   `<queries>` for the browser. The `INTERNET` permission is already there.
+   `network_security_config` is not needed (HTTPS only).
+8. **Dependencies.** `play-services-auth` and `com.microsoft.identity.client:msal`
+   (Gradle, not Dart packages). Each needs a licence review for
+   `THIRD_PARTY_NOTICES.md` and a size check (the APK is 122 MB now).
+9. **`no_network_test`.** It allows the network only in `services/mail/`. The OAuth
+   token classes are a second place that talks to the network (Google and
+   Microsoft); the test needs a named exception, written down in an ADR.
+10. **Tests without real accounts:** fake token source, a local test server that
+    speaks the Gmail and Graph request shapes (like `tool/smtp_test_server.dart`).
+    A real Google or Microsoft account is not used in automatic tests; the real
+    sign-in is a check by the user on a phone.
+11. **Phase 5 is not affected.** The flow works with `MailSender` and
+    `MailAuth`; One Click, preview, Discard and the manual retry do not change when
+    OAuth arrives.
+
+## 9. What the process needs (not code), in the order that unblocks the rest
+1. **Final package id and the signing keys** (debug, upload, Play signing). Every
+   client below is bound to them. The id is still `com.example.one_click_scan`.
+2. **A public domain** with a homepage and a **privacy policy** (the app runs no
+   server; the scan goes from the phone to the user's provider only).
+3. **Google Cloud project:** consent screen (External), scope `gmail.send`, Android
+   clients for each SHA-1, test users while in Testing (refresh token of 7 days).
+4. **Microsoft Entra registration:** personal accounts supported, `Mail.Send` and
+   `offline_access`, the `msauth://` redirect with the release signature.
+5. **Google verification:** scope justification, demo video of the whole flow,
+   published app. Start before the code (item 1 to 3 first).
+6. **Decision needed from the user:** Microsoft by Graph `sendMail` (3 MB rule for
+   attachments, upload session above it) or by SMTP XOAUTH2 (reuses the `mailer`
+   code, no size rule beyond the server's).
+7. **Yahoo:** stays on app password and the share route (no OAuth for mail
+   confirmed).
+8. **Decision needed from the user:** whether the first public release waits for
+   the Google verification, or ships with the app password and the share route.

@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'camera/camera_service.dart';
 import 'camera/plugin_camera_service.dart';
 import 'camera/unsupported_camera_service.dart';
-import 'gallery/gal_gallery_service.dart';
+import 'gallery/media_store_gallery_service.dart';
 import '../domain/ports/gallery_service.dart';
 import 'scan_files/android_scan_file_store.dart';
 import 'scan_files/io_scan_temp_store.dart';
@@ -40,13 +40,14 @@ Future<ScanServices> createPlatformScanServices() async {
   }
   final cache = await getTemporaryDirectory();
   final pages = Directory('${cache.path}${Platform.pathSeparator}scan_pages');
-  final galleryCopies = Directory(
+  final staleGalleryCopies = Directory(
     '${cache.path}${Platform.pathSeparator}gallery_copies',
   );
   return ScanServices(
     camera: PluginCameraService(cacheDirectory: pages),
     fileStore: AndroidScanFileStore(),
-    gallery: GalGalleryService(workDirectory: galleryCopies),
-    tempStore: IoScanTempStore(pages, alsoPurge: [galleryCopies]),
+    gallery: MediaStoreGalleryService(),
+    // Leftovers of the old copy-under-a-name step (before Phase 5).
+    tempStore: IoScanTempStore(pages, alsoPurge: [staleGalleryCopies]),
   );
 }
