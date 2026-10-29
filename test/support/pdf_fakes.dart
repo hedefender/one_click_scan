@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:one_click_scan/core/errors/app_exceptions.dart';
 import 'package:one_click_scan/domain/entities/pdf_page_input.dart';
 import 'package:one_click_scan/domain/ports/open_pdf.dart';
@@ -10,6 +12,9 @@ class FakePdfBuilder implements PdfBuilder {
   /// Thrown by [build] when set.
   ScanPdfException? failWith;
 
+  /// When set, [build] waits for it (the writer cannot be interrupted).
+  Completer<void>? gate;
+
   final List<List<PdfPageInput>> builds = [];
   final List<String> discarded = [];
   int purgeCalls = 0;
@@ -17,6 +22,7 @@ class FakePdfBuilder implements PdfBuilder {
 
   @override
   Future<BuiltPdf> build(List<PdfPageInput> pages) async {
+    await gate?.future;
     final failure = failWith;
     if (failure != null) throw failure;
     builds.add(pages);

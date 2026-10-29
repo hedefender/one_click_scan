@@ -22,6 +22,15 @@ class ScanStoreException implements Exception {
   String toString() => 'ScanStoreException: ${failure.name} $message';
 }
 
+/// The user stopped the storing of the pictures. What was written is already
+/// rolled back when this is thrown (Phase 5.1, ADR-028).
+class ScanStoreCancelled implements Exception {
+  const ScanStoreCancelled();
+
+  @override
+  String toString() => 'ScanStoreCancelled';
+}
+
 /// Why the PDF of a scan could not be made or stored. The photos are stored
 /// before the PDF, so none of these loses a photo.
 enum ScanPdfFailure {

@@ -595,6 +595,26 @@ no session, logs), `discard_scan_test` (full, partial, only recorded URIs),
 on the emulator: `one_click_flow_test.dart` with the test SMTP server of Phase 4
 (`tool/run_mail_integration_test.sh <device> integration_test/one_click_flow_test.dart`).
 
+### 8h. Cancel in every stage and the automatic return (Phase 5.1)
+
+Decision: ADR-028.
+```
+ScanCubit        cancelSaving()   -> StoreScanPages(cancellation) -> rollback -> ScanStoreCancelled
+                                      -> phase ready + saveCancelled (Multi keeps shots, Single drops it)
+ScanAndSend      cancel in recognizing | buildingPdf | sending -> FlowCancelled(stage)
+                 buildingPdf: stop shown at once; the late PDF is deleted by URI (ScanFileStore)
+ScanFlowCubit    cancel(); ScanFlowViewState.canCancel true in all three stages
+ScanResultPage   Back / system Back -> confirmStop() -> cancel (flow or manual send)
+ScanPage         Back while saving -> confirmStop() -> cancelSaving
+AutoReturnCubit  start() on MailPhase.sent; tick 1 s; stop() on any touch; due -> go home
+```
+The question dialog is `confirmStop` (`stop_dialog.dart`), shared by both screens.
+Tests: `store_scan_pages_test` (cancel), `scan_and_send_test` (PDF stage),
+`scan_cubit_test`, `auto_return_cubit_test`, `scan_flow_widget_test` and
+`scan_page_widget_test` (Phase 5.1 groups), and on the emulator the Phase 5.1 cases
+of `one_click_flow_test`. `processing_measure_test` measures 5 and 21 pages
+(nothing asserted; the numbers feed Phase 6).
+
 ## 9. Testing strategy
 
 | Level | What | Where |

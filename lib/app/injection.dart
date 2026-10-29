@@ -154,6 +154,7 @@ Future<GetIt> buildContainer({
       storePdf: sl<StoreScanPdf>(),
       send: sl<SendScanPdf>(),
       share: sl<ShareScanPdfDraft>(),
+      fileStore: sl<ScanFileStore>(),
       logger: sl<AppLogger>(),
     ),
   );

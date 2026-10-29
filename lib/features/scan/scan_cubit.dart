@@ -6,6 +6,7 @@ import '../../core/errors/app_exceptions.dart';
 import '../../core/logging/app_logger.dart';
 import '../../domain/entities/scan_mode.dart';
 import '../../domain/entities/storage_folder.dart';
+import '../../domain/scan/scan_flow.dart' show ScanFlowCancellation;
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/recognize_pages.dart';
 import '../../domain/usecases/store_scan_pages.dart';
@@ -45,6 +46,9 @@ class ScanCubit extends Cubit<ScanState> {
   /// The models were loaded ahead of time and nobody has used them yet.
   var _preloaded = false;
 
+  /// Stops the storing of the pictures while it runs (ADR-028).
+  ScanFlowCancellation? _saving;
+
   /// Entry point (and "try again" after a denied permission or a missing
   /// folder). Nothing starts without an accessible folder.
   Future<void> start() async {
@@ -68,7 +72,13 @@ class ScanCubit extends Cubit<ScanState> {
 
   Future<void> capture() async {
     if (!state.canCapture) return;
-    emit(state.copyWith(phase: ScanPhase.capturing, captureFailed: false));
+    emit(
+      state.copyWith(
+        phase: ScanPhase.capturing,
+        captureFailed: false,
+        saveCancelled: false,
+      ),
+    );
     try {
       final page = await _camera.capture(order: state.pages.length + 1);
       if (isClosed) {
@@ -96,6 +106,7 @@ class ScanCubit extends Cubit<ScanState> {
       state.copyWith(
         pages: state.pages.sublist(0, state.pages.length - 1),
         captureFailed: false,
+        saveCancelled: false,
       ),
     );
     await _ocr?.remove(removed.path);
@@ -117,7 +128,8 @@ class ScanCubit extends Cubit<ScanState> {
             state.phase == ScanPhase.capturing ||
             state.phase == ScanPhase.saveFailed);
     if (!canRun) return;
-    emit(state.copyWith(phase: ScanPhase.saving));
+    emit(state.copyWith(phase: ScanPhase.saving, saveCancelled: false));
+    final cancellation = _saving = ScanFlowCancellation();
 
     try {
       final settings = await _loadSettings();
@@ -131,11 +143,15 @@ class ScanCubit extends Cubit<ScanState> {
         pages: state.pages,
         folder: folder,
         saveToGallery: settings.saveToGallery,
+        cancellation: cancellation,
       );
       if (isClosed) return;
       await _camera.close();
       _ocr?.close();
       emit(state.copyWith(phase: ScanPhase.saved, result: stored, ocr: _ocr));
+    } on ScanStoreCancelled {
+      if (isClosed) return;
+      await _afterSaveCancelled();
     } on ScanStoreException catch (error, stackTrace) {
       _logger.error('Storing the scan failed', error, stackTrace);
       if (isClosed) return;
@@ -148,7 +164,38 @@ class ScanCubit extends Cubit<ScanState> {
       _logger.error('Storing the scan failed unexpectedly', error, stackTrace);
       if (isClosed) return;
       emit(state.copyWith(phase: ScanPhase.saveFailed));
+    } finally {
+      _saving = null;
     }
+  }
+
+  /// "Cancel" (or Back) while the pictures are written. The store rolls back
+  /// what it wrote; the shots stay in the cache and the camera screen returns.
+  void cancelSaving() {
+    if (!state.canCancelSaving) return;
+    _saving?.cancel();
+  }
+
+  /// Back to the camera after a cancelled save. Multi keeps its shots; Single
+  /// drops the one shot (it was taken only to be saved).
+  Future<void> _afterSaveCancelled() async {
+    if (state.mode == ScanMode.single) {
+      final paths = [for (final page in state.pages) page.path];
+      for (final path in paths) {
+        await _ocr?.remove(path);
+      }
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          phase: ScanPhase.ready,
+          pages: const [],
+          saveCancelled: true,
+        ),
+      );
+      await _tempStore.delete(paths);
+      return;
+    }
+    emit(state.copyWith(phase: ScanPhase.ready, saveCancelled: true));
   }
 
   /// "Try again" from the folder warning, after the user fixed the folder in

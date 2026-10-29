@@ -699,11 +699,44 @@ class AppStringsEl extends AppStrings {
   String get flowCancel => 'Ακύρωση';
 
   @override
+  String get stopTitle => 'Να σταματήσει η επεξεργασία;';
+
+  @override
+  String get stopBodyWriting =>
+      'Δεν θα αποθηκευτεί τίποτα. Οι λήψεις σου μένουν στην κάμερα.';
+
+  @override
+  String get stopBodyProcessing =>
+      'Οι φωτογραφίες που έχουν ήδη αποθηκευτεί μένουν. Δεν θα δημιουργηθεί PDF και δεν θα σταλεί τίποτα.';
+
+  @override
+  String get stopBodySending =>
+      'Η σάρωση και το PDF μένουν αποθηκευμένα. Δεν θα σταλεί τίποτα.';
+
+  @override
+  String get stopContinue => 'Συνέχισε';
+
+  @override
+  String get stopConfirm => 'Σταμάτα';
+
+  @override
+  String get scanSaveCancelledMulti =>
+      'Η αποθήκευση σταμάτησε. Τίποτα δεν αποθηκεύτηκε και οι λήψεις σου είναι ακόμα εδώ.';
+
+  @override
+  String get scanSaveCancelledSingle =>
+      'Η αποθήκευση σταμάτησε. Τίποτα δεν αποθηκεύτηκε και η λήψη διαγράφηκε.';
+
+  @override
+  String autoReturnCountdown(int seconds) =>
+      'Επιστροφή στην αρχική σε $seconds s';
+
+  @override
   String get flowSharing => 'Άνοιγμα της εφαρμογής email…';
 
   @override
   String get flowCancelledReading =>
-      'Ακυρώθηκε. Οι εικόνες είναι αποθηκευμένες στον φάκελό σου. Δεν δημιουργήθηκε PDF.';
+      'Η επεξεργασία σταμάτησε. Οι φωτογραφίες αποθηκεύτηκαν, δεν δημιουργήθηκε PDF.';
 
   @override
   String get flowCancelledSending =>

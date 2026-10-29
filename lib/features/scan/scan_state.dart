@@ -32,6 +32,7 @@ class ScanState extends Equatable {
     this.pages = const <CapturedPage>[],
     this.result,
     this.captureFailed = false,
+    this.saveCancelled = false,
     this.ocr,
   });
 
@@ -44,6 +45,10 @@ class ScanState extends Equatable {
 
   /// The last shot failed (shown as a message, the user can shoot again).
   final bool captureFailed;
+
+  /// The user stopped the saving. Nothing was written (it was rolled back);
+  /// in Multi the shots are still here, in Single the shot was dropped.
+  final bool saveCancelled;
 
   /// The background reading of the pages, set when [phase] is
   /// [ScanPhase.saved]. The result screen owns it from then on.
@@ -60,6 +65,9 @@ class ScanState extends Equatable {
   bool get canFinish =>
       mode == ScanMode.multi && hasPages && phase == ScanPhase.ready;
 
+  /// The pictures are being written to the folder and the user can stop it.
+  bool get canCancelSaving => phase == ScanPhase.saving;
+
   /// Unsaved pages would be lost by leaving.
   bool get hasUnsavedPages => hasPages && phase != ScanPhase.saved;
 
@@ -69,6 +77,7 @@ class ScanState extends Equatable {
     List<CapturedPage>? pages,
     StoredScan? result,
     bool? captureFailed,
+    bool? saveCancelled,
     OcrSession? ocr,
   }) {
     return ScanState(
@@ -77,10 +86,19 @@ class ScanState extends Equatable {
       pages: pages ?? this.pages,
       result: result ?? this.result,
       captureFailed: captureFailed ?? this.captureFailed,
+      saveCancelled: saveCancelled ?? this.saveCancelled,
       ocr: ocr ?? this.ocr,
     );
   }
 
   @override
-  List<Object?> get props => [phase, mode, pages, result, captureFailed, ocr];
+  List<Object?> get props => [
+    phase,
+    mode,
+    pages,
+    result,
+    captureFailed,
+    saveCancelled,
+    ocr,
+  ];
 }

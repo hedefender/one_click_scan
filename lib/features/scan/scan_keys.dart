@@ -3,6 +3,11 @@ import 'package:flutter/widgets.dart';
 /// Widget keys used by widget and integration tests.
 abstract final class ScanKeys {
   static const modeSelector = Key('scan.mode');
+  static const stopContinue = Key('scan.stop.continue');
+  static const stopConfirm = Key('scan.stop.confirm');
+  static const saveCancel = Key('scan.save.cancel');
+  static const saveCancelled = Key('scan.save.cancelled');
+  static const autoReturn = Key('scan.result.autoReturn');
   static const preview = Key('scan.preview');
   static const capture = Key('scan.capture');
   static const done = Key('scan.done');

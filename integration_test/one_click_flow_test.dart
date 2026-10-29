@@ -13,7 +13,9 @@ import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
 import 'package:one_click_scan/domain/entities/scan_flow_mode.dart';
 import 'package:one_click_scan/domain/mail/mail_provider.dart';
 import 'package:one_click_scan/domain/ocr/ocr_language_pack_registry.dart';
+import 'package:one_click_scan/domain/entities/pdf_page_input.dart';
 import 'package:one_click_scan/domain/ports/mail_credential_store.dart';
+import 'package:one_click_scan/domain/ports/pdf_builder.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
 import 'package:one_click_scan/features/home/home_keys.dart';
 import 'package:one_click_scan/features/scan/scan_keys.dart';
@@ -135,6 +137,7 @@ void main() {
     WidgetTester tester, {
     required ScanFlowMode? mode,
     int pagesInScan = 1,
+    Duration pdfDelay = Duration.zero,
   }) async {
     tester.view.physicalSize = const Size(800, 2400);
     tester.view.devicePixelRatio = 1;
@@ -149,7 +152,12 @@ void main() {
       scanTempStore: FakeScanTempStore(),
       gallery: MediaStoreGalleryService(),
       ocr: ocr,
-      pdf: PdfServices(builder: pdf.builder, opener: FakeOpenPdf()),
+      pdf: PdfServices(
+        builder: pdfDelay == Duration.zero
+            ? pdf.builder
+            : _SlowPdfBuilder(pdf.builder, pdfDelay),
+        opener: FakeOpenPdf(),
+      ),
       mail: realMail(),
     );
     final repository = container<SettingsRepository>();
@@ -367,6 +375,103 @@ void main() {
     );
   }, timeout: const Timeout(Duration(minutes: 4)));
 
+  testWidgets('Phase 5.1: Cancel while the text is read (many pages): the '
+      'pictures stay, no PDF, no message', (tester) async {
+    await startApp(tester, mode: ScanFlowMode.oneClick);
+    await tester.tap(find.text('Multi page'));
+    await tester.pumpAndSettle();
+    // Shoot faster than the OCR reads, so the reading is still running.
+    for (var i = 0; i < 8; i++) {
+      await tester.tap(find.byKey(ScanKeys.capture));
+      await tester.pump(const Duration(milliseconds: 150));
+    }
+    await pumpUntil(tester, find.byKey(ScanKeys.done));
+    await tester.tap(find.byKey(ScanKeys.done));
+    await tester.pump();
+    await pumpUntil(tester, find.byKey(ScanKeys.flowCancel));
+
+    await tester.tap(find.byKey(ScanKeys.flowCancel));
+    await pumpUntil(tester, find.byKey(ScanKeys.flowCancelled));
+
+    expect(pictures(), hasLength(8));
+    expect(folder.files('pdf'), isEmpty);
+    expect(await receivedMails(), isEmpty);
+    expect(find.byKey(ScanKeys.mailSend), findsNothing);
+    report('cancel while reading: 8 pictures stay, 0 PDFs, 0 messages');
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
+  testWidgets('Phase 5.1: Cancel while the PDF is made: no PDF is left, even '
+      'when the writer finishes later', (tester) async {
+    await startApp(
+      tester,
+      mode: ScanFlowMode.oneClick,
+      pdfDelay: const Duration(seconds: 6),
+    );
+
+    await tester.tap(find.byKey(ScanKeys.capture));
+    await tester.pump();
+    await pumpUntil(tester, find.byKey(ScanKeys.pdfStatus));
+    // The PDF stage shows its Cancel button.
+    await pumpUntil(tester, find.text('Creating the PDF…'));
+    await tester.tap(find.byKey(ScanKeys.flowCancel));
+    await pumpUntil(tester, find.byKey(ScanKeys.flowCancelled));
+    expect(find.byKey(ScanKeys.mailSend), findsNothing);
+
+    // Give the (delayed) writer time to finish; its file must be deleted again.
+    final end = DateTime.now().add(const Duration(seconds: 20));
+    while (DateTime.now().isBefore(end)) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+
+    expect(pictures(), hasLength(1));
+    expect(folder.files('pdf'), isEmpty);
+    final pdfDir = Directory('${work.path}/user_folder/pdf');
+    expect(
+      pdfDir.existsSync()
+          ? pdfDir.listSync().where(
+              (e) => e.path.endsWith('.tmp') || e.path.endsWith('.pdf'),
+            )
+          : const <FileSystemEntity>[],
+      isEmpty,
+    );
+    expect(await receivedMails(), isEmpty);
+    report('cancel while the PDF is made: 1 picture stays, 0 PDFs, 0 .tmp');
+  }, timeout: const Timeout(Duration(minutes: 4)));
+
+  testWidgets('Phase 5.1: after a successful send the screen goes home by '
+      'itself, and a touch stops that', (tester) async {
+    await startApp(tester, mode: ScanFlowMode.oneClick);
+    await tester.tap(find.byKey(ScanKeys.capture));
+    await tester.pump();
+    await pumpUntil(tester, find.text(sentText));
+    expect(find.byKey(ScanKeys.autoReturn), findsOneWidget);
+
+    final clock = Stopwatch()..start();
+    await pumpUntil(
+      tester,
+      find.byKey(HomeKeys.scanAndSend),
+      timeout: const Duration(seconds: 25),
+    );
+    clock.stop();
+    expect(clock.elapsed, greaterThan(const Duration(seconds: 6)));
+    report('auto return: home after ${clock.elapsedMilliseconds} ms (of 10 s)');
+
+    // A second scan: a touch keeps the user on the result screen.
+    await tester.tap(find.byKey(HomeKeys.scanAndSend));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ScanKeys.capture));
+    await tester.pump();
+    await pumpUntil(tester, find.byKey(ScanKeys.autoReturn));
+    await tester.tap(find.byKey(ScanKeys.resultSummary));
+    await tester.pump();
+    final end = DateTime.now().add(const Duration(seconds: 13));
+    while (DateTime.now().isBefore(end)) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    expect(find.byKey(ScanKeys.resultSummary), findsOneWidget);
+    expect(find.byKey(ScanKeys.autoReturn), findsNothing);
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
   test('nothing of the user is in the logs of all of the above', () {
     for (final text in [password, account, 'One Click Scan - 2026']) {
       expect(logger.all, isNot(contains(text)), reason: text);
@@ -387,4 +492,25 @@ class _SyntheticCamera extends FakeCameraService {
     final file = writeJpeg('${dir.path}/shot_${_n++}.jpg', page);
     return CapturedPage(path: file.path, order: order);
   }
+}
+
+/// The real PDF writer, started late: it makes the PDF stage long enough for a
+/// test to press Cancel in it, and the writer still finishes afterwards.
+class _SlowPdfBuilder implements PdfBuilder {
+  _SlowPdfBuilder(this._inner, this._delay);
+
+  final PdfBuilder _inner;
+  final Duration _delay;
+
+  @override
+  Future<BuiltPdf> build(List<PdfPageInput> pages) async {
+    await Future<void>.delayed(_delay);
+    return _inner.build(pages);
+  }
+
+  @override
+  Future<void> discard(String path) => _inner.discard(path);
+
+  @override
+  Future<void> purgeAll() => _inner.purgeAll();
 }

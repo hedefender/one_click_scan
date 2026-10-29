@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:one_click_scan/core/errors/app_exceptions.dart';
 import 'package:one_click_scan/domain/entities/captured_page.dart';
@@ -126,6 +128,13 @@ class FakeScanFileStore implements ScanFileStore {
   /// after the listing (two scans racing for a name).
   (String, String)? raceOnFirstCopy;
 
+  /// Called after each copy with the 1-based number of the copy (lets a test
+  /// cancel in the middle of a save).
+  void Function(int copyNumber)? onCopied;
+
+  /// When set, every `copyToFolder` waits for it (a save that takes time).
+  Completer<void>? copyGate;
+
   @override
   Future<String> copyToFolder({
     required StorageFolder folder,
@@ -135,6 +144,7 @@ class FakeScanFileStore implements ScanFileStore {
     required String sourcePath,
   }) async {
     _checkAll();
+    await copyGate?.future;
     calls.add('copy:$fileName');
     copyCalls++;
     if (failOnCopyNumber == copyCalls) throw ScanStoreException(failure);
@@ -150,6 +160,7 @@ class FakeScanFileStore implements ScanFileStore {
     }
     list.add(fileName);
     copies.add((subfolder, fileName, sourcePath));
+    onCopied?.call(copyCalls);
     return 'content://com.example.test/tree/Scans/document/$subfolder%2F$fileName';
   }
 

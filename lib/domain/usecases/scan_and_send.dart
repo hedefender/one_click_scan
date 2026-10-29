@@ -8,6 +8,7 @@ import '../entities/pdf_page_input.dart';
 import '../entities/scan_flow_mode.dart';
 import '../entities/stored_scan.dart';
 import '../mail/mail_outcome.dart';
+import '../ports/scan_file_store.dart';
 import '../scan/scan_flow.dart';
 import 'load_settings.dart';
 import 'recognize_pages.dart';
@@ -30,6 +31,7 @@ class ScanAndSend {
     required this.storePdf,
     required this.send,
     required this.share,
+    required this.fileStore,
     required this.logger,
   });
 
@@ -37,6 +39,9 @@ class ScanAndSend {
   final StoreScanPdf storePdf;
   final SendScanPdf send;
   final ShareScanPdfDraft share;
+
+  /// Only to delete a PDF that finished after the user had stopped the flow.
+  final ScanFileStore fileStore;
   final AppLogger logger;
 
   /// From the stored pictures to the delivery (One Click) or to the decision
@@ -70,15 +75,26 @@ class ScanAndSend {
         return;
       }
       out.add(const FlowBuildingPdf());
-      final StoredPdf pdf;
+      final StoredPdf? pdf;
+      final pending = _makePdf(scan, session, done);
       try {
-        pdf = await _makePdf(scan, session, done);
+        pdf = await Future.any<StoredPdf?>([
+          pending,
+          cancellation.whenCancelled.then<StoredPdf?>((_) => null),
+        ]);
       } on ScanPdfException catch (error) {
         out.add(FlowPdfFailed(error.failure));
         return;
       } catch (error, stackTrace) {
         logger.error('Making the PDF failed unexpectedly', error, stackTrace);
         out.add(const FlowPdfFailed(ScanPdfFailure.buildFailed));
+        return;
+      }
+      if (pdf == null || cancellation.isCancelled) {
+        // The stop is shown at once; the writer cannot be interrupted, so what
+        // it finishes later is deleted again, never left without a scan (ADR-028).
+        out.add(const FlowCancelled(ScanFlowStage.buildingPdf));
+        await _discardLate(pending);
         return;
       }
       final settings = await loadSettings();
@@ -107,6 +123,22 @@ class ScanAndSend {
       out.add(const FlowPdfFailed(ScanPdfFailure.buildFailed));
     } finally {
       await out.close();
+    }
+  }
+
+  /// Waits for a PDF the user no longer wants and deletes it by its URI. The
+  /// cache copy is already deleted by `StoreScanPdf`. Never throws.
+  Future<void> _discardLate(Future<StoredPdf> pending) async {
+    try {
+      final pdf = await pending;
+      await fileStore.deleteByUri(pdf.uri);
+    } catch (error, stackTrace) {
+      // Nothing was stored (the writer failed), or the delete failed.
+      logger.error(
+        'A cancelled PDF was not cleaned up',
+        error.runtimeType,
+        stackTrace,
+      );
     }
   }
 

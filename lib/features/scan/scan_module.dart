@@ -15,6 +15,7 @@ import '../../services/scan_files/scan_temp_store.dart';
 import '../../services/storage_folder/storage_folder_picker.dart';
 import '../../domain/usecases/send_scan_pdf.dart';
 import '../../domain/usecases/update_settings.dart';
+import 'auto_return_cubit.dart';
 import 'mail_send_cubit.dart';
 import 'scan_cubit.dart';
 import 'scan_page.dart';
@@ -85,6 +86,7 @@ List<RouteBase> scanRoutes(GetIt sl) {
                 create: (_) => sl<ScanFlowCubit>(param1: args)..start(),
               ),
               BlocProvider<MailSendCubit>(create: (_) => sl<MailSendCubit>()),
+              BlocProvider<AutoReturnCubit>(create: (_) => AutoReturnCubit()),
             ],
             child: ScanResultPage(args: args),
           ),

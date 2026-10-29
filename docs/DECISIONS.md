@@ -559,9 +559,9 @@ stored before anything else; nothing after them deletes them.
 | Gallery copy | Never fails the scan (Phase 1) | pictures, PDF | "Gallery copy failed" on the picture |
 
 - **Cancel** exists while the text is read and while the mail is sent, as an
-  explicit button. It does not exist while the PDF is written (short, and a half
-  PDF is worse than waiting). Leaving the screen is locked while work runs
-  (`PopScope`), like Phase 4.
+  explicit button. *(Phase 5.1, ADR-028: it now exists in every stage, also while
+  the pictures are written and while the PDF is made, and Back asks and then
+  cancels.)* Leaving the screen is locked while work runs (`PopScope`).
 - **The app is killed inside the flow.** Nothing is solved here. The user finds the
   pictures stored (they were first), no PDF if it was not made yet, and the mail not
   sent. The cache is purged at the next start. The repeat is by hand: scan again, or
@@ -606,3 +606,70 @@ deletion cannot be undone.
   the user can try again (deleting what is already gone is not an error).
 - **Not offered after the choice is made:** once the message is sent, being sent,
   or the e-mail app got the PDF, Discard disappears. In One Click there is no Discard.
+
+## ADR-028 Cancel in every stage, Back is Cancel, and the screen goes home by itself after a sent message (Phase 5.1)
+The phone check of Phase 5 found that between "Done" and the send there was no way
+to stop (21 shots: writing the pictures, the reading and the PDF had no button, and
+the Back arrow did nothing, without a word). This replaces the line of ADR-026 that
+said Cancel "does not exist while the PDF is written".
+
+**What each control does, by stage** (found in the code before the change):
+
+| Stage | Back arrow / system Back | Undo arrow | Cancel button |
+|---|---|---|---|
+| Shooting (Single or Multi) | Asks "Stay / Discard" when there are shots (they are only in the cache, so Discard really deletes them); leaves at once with none | on in Multi when ready, off while a shot is taken | none needed |
+| Writing the pictures (after "Done", or the shot in Single) | **before:** ignored in silence. **now:** asks "Stop the processing?" and then stops | off (it is not in the screen's `ready` phase) | **new** |
+| Reading the text (OCR) | **before:** ignored in silence. **now:** same question, then Cancel | gone (the camera screen is left) | existed |
+| Making the PDF | **before:** ignored in silence. **now:** same question, then Cancel | gone | **new** |
+| Sending (One Click, or the Send of the preview) | **before:** ignored in silence. **now:** same question, then Cancel | gone | existed |
+| Preview, or the end | leaves, no question (nothing runs; the scan stays saved) | gone | none |
+
+**The two questions are different and the texts say so.** While shooting, "Discard"
+deletes shots that were never saved. After "Done" the pictures are in the folder, so
+"Stop the processing?" says what stays (the texts are in `AppStrings`, `stopBody*`).
+Pictures are written at "Done" (in Single, right after the shot), never during the
+shooting.
+
+**What stopping leaves (decided with the user, 2026-10-28):**
+- *While the pictures are written:* **rollback, back to the camera.** The store was
+  already all-or-nothing (ADR-026); a cancel is treated like a failure. It stops
+  between two pictures, deletes the pictures and the Gallery copies written so far
+  (by name and by recorded URI), throws `ScanStoreCancelled`. The shots stay in the
+  cache; in Multi the screen returns to the camera with the shots ("Saving stopped.
+  Nothing was saved and your shots are still here."); in Single the one shot is
+  dropped (it was taken only to be saved) and the message says so. No half scan is
+  ever left. This differs from the first idea of the request ("pictures already
+  stored stay"), because a scan with 7 of 21 pages is worse than none.
+- *While the text is read:* the pictures stay (folder and Gallery), no PDF, nothing
+  sent. "Processing stopped. The photos are saved, no PDF was made." and one tap
+  home. The reading stops at once through the existing cancel of the session.
+- *While the PDF is made:* the screen stops at once (`FlowCancelled(buildingPdf)`);
+  the writer (an isolate of the PDF plugin) **cannot be interrupted**, so
+  `ScanAndSend` waits for it in the background, and what it finishes is deleted by
+  its URI (`ScanFileStore.deleteByUri`); the cache copy is already deleted by
+  `StoreScanPdf`. The stream ends only after that clean-up. A writer that fails
+  after the stop leaves nothing. A PDF is never left without a finished scan, and no
+  `.tmp` stays. If the app is killed in that short time the PDF can remain; this is
+  the same "killed inside the flow" case of ADR-026.
+- *While sending:* as in ADR-026 (scan and PDF saved, nothing sent, manual Send).
+
+**Back is Cancel.** The Back arrow and the system Back (`PopScope`) ask once, "Stop
+the processing?" with "Continue" and "Stop", and "Stop" does exactly what the Cancel
+button does. They never leave, or stop, in silence. The existing question while
+shooting is unchanged.
+
+**After Discard** the preview's own parts disappear (the "Check the scan" text, the
+Send section) after any discard attempt. One state decides it (`discard == done`).
+In a *partial* discard the "Discard" button stays, as the way to try again (ADR-027).
+(The request asked that it go too; it is kept because without it the leftovers could
+not be removed from the screen. Say so if you want it hidden.)
+
+**Automatic return.** After a message that really left (`MailPhase.sent`: One Click,
+or the Send of the preview, or its retry) the result screen counts down from
+`autoReturnSeconds` (10, one constant in `auto_return_cubit.dart`) with "Back to home
+in N s" and goes home at zero. **Any touch** stops the count for good (a `Listener` at
+the top of the screen); the "Back to home" button is the manual way out. Not
+started when the send failed, when only the e-mail app was opened (`shareDraft`), or
+while anything runs. One update a second, no animation. `AutoReturnCubit` takes the
+clock as an injected stream so a test drives time by hand; its subscription ends at
+zero, at the touch and in `close`, so nothing navigates after the user left.

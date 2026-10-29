@@ -4,6 +4,7 @@ import 'package:one_click_scan/data/datasources/key_value_gallery_counter_store.
 import 'package:one_click_scan/domain/entities/captured_page.dart';
 import 'package:one_click_scan/domain/entities/stored_scan.dart';
 import 'package:one_click_scan/domain/scan/gallery_naming.dart';
+import 'package:one_click_scan/domain/scan/scan_flow.dart';
 import 'package:one_click_scan/domain/scan/scan_naming.dart';
 import 'package:one_click_scan/domain/usecases/store_scan_pages.dart';
 
@@ -334,6 +335,69 @@ void main() {
 
       expect(result.pictures.single.gallery, GalleryCopyStatus.saved);
       expect(logger.messages, contains('Gallery counter not saved'));
+    });
+  });
+  group('cancel (ADR-028)', () {
+    Future<StoredScan> runCancellable(
+      ScanFlowCancellation cancellation, {
+      bool toGallery = false,
+    }) {
+      return useCase(
+        pages: pages,
+        folder: testFolder,
+        saveToGallery: toGallery,
+        cancellation: cancellation,
+      );
+    }
+
+    test('before the first picture: nothing is written', () async {
+      final cancellation = ScanFlowCancellation()..cancel();
+
+      await expectLater(
+        runCancellable(cancellation),
+        throwsA(isA<ScanStoreCancelled>()),
+      );
+
+      expect(store.files('pictures'), isEmpty);
+    });
+
+    test('between two pictures: the first one is rolled back', () async {
+      final cancellation = ScanFlowCancellation();
+      store.onCopied = (n) {
+        if (n == 1) cancellation.cancel();
+      };
+
+      await expectLater(
+        runCancellable(cancellation),
+        throwsA(isA<ScanStoreCancelled>()),
+      );
+
+      expect(store.files('pictures'), isEmpty);
+      expect(store.copyCalls, 1);
+    });
+
+    test(
+      'in the Gallery copies: pictures and copies are rolled back',
+      () async {
+        final cancellation = ScanFlowCancellation();
+        gallery.onSave = cancellation.cancel;
+
+        await expectLater(
+          runCancellable(cancellation, toGallery: true),
+          throwsA(isA<ScanStoreCancelled>()),
+        );
+
+        expect(store.files('pictures'), isEmpty);
+        expect(gallery.saved, isNotEmpty);
+        expect(gallery.deletedUris.length, gallery.saved.length);
+      },
+    );
+
+    test('an uncancelled run is unchanged', () async {
+      final result = await runCancellable(ScanFlowCancellation());
+
+      expect(result.pictures, hasLength(2));
+      expect(store.files('pictures'), hasLength(2));
     });
   });
 }

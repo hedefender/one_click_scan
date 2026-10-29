@@ -15,11 +15,13 @@ import '../../domain/usecases/recognize_pages.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../presentation/state/settings_cubit.dart';
 import '../../services/scan_files/scan_temp_store.dart';
+import 'auto_return_cubit.dart';
 import 'mail_send_cubit.dart';
 import 'mail_send_state.dart';
 import 'scan_keys.dart';
 import 'scan_page.dart' show PageThumbnail;
 import 'scan_result_args.dart';
+import 'stop_dialog.dart';
 import 'scan_flow_cubit.dart';
 import 'scan_flow_state.dart';
 
@@ -57,6 +59,28 @@ class _ScanResultPageState extends State<ScanResultPage> {
     super.dispose();
   }
 
+  /// Back arrow and system Back while work runs: the same as the Cancel button,
+  /// after a question (ADR-028). It never leaves, or stops, in silence.
+  Future<void> _onBack() async {
+    final flow = context.read<ScanFlowCubit>();
+    final mail = context.read<MailSendCubit>();
+    final String body;
+    final VoidCallback stop;
+    if (flow.state.canCancel) {
+      body = flow.state.flow is FlowSending
+          ? AppStrings.of(context).stopBodySending
+          : AppStrings.of(context).stopBodyProcessing;
+      stop = flow.cancel;
+    } else if (mail.state.phase == MailPhase.sending) {
+      body = AppStrings.of(context).stopBodySending;
+      stop = mail.cancel;
+    } else {
+      return;
+    }
+    final yes = await confirmStop(context, body);
+    if (yes) stop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -78,102 +102,130 @@ class _ScanResultPageState extends State<ScanResultPage> {
     // While the PDF is being made, leaving would lose it: the reading and the
     // working copies end with this screen. While a mail is being sent, leaving
     // would cancel it: the Cancel button of the mail section is the way out.
-    return BlocListener<ScanFlowCubit, ScanFlowViewState>(
-      listenWhen: (previous, current) => previous.flow != current.flow,
-      listener: (context, state) {
-        final mail = context.read<MailSendCubit>();
-        switch (state.flow) {
-          case FlowAwaitingDecision(:final pdf):
-            mail.attach(pdf);
-          case FlowFinished(:final pdf, :final delivery):
-            mail.adopt(pdf, delivery);
-          case FlowCancelled(:final pdf) when pdf != null:
-            mail.attach(pdf);
-          case _:
-            break;
-        }
-      },
-      child: PopScope(
-        canPop: !busy,
-        child: Scaffold(
-          appBar: AppBar(title: Text(strings.scanResultTitle)),
-          body: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    discarded
-                        ? strings.discardDone
-                        : strings.scanResultSummary(
-                            pictures.length,
-                            folderName,
-                          ),
-                    key: ScanKeys.resultSummary,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                Expanded(
-                  child: ListView(
-                    key: ScanKeys.resultList,
-                    children: [
-                      const _PdfSection(),
-                      const _FlowSection(),
-                      const _MailSection(),
-                      const _DiscardSection(),
-                      if (!discarded)
-                        for (final picture in pictures)
-                          ListTile(
-                            key: ScanKeys.resultFile(picture.fileName),
-                            leading: SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: PageThumbnail(path: picture.sourcePath),
-                              ),
-                            ),
-                            title: Text(picture.fileName),
-                            subtitle: _gallerySubtitle(context, picture),
-                          ),
-                    ],
-                  ),
-                ),
-                if (widget.ocr != null && !discarded)
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<ScanFlowCubit, ScanFlowViewState>(
+          listenWhen: (previous, current) => previous.flow != current.flow,
+          listener: (context, state) {
+            final mail = context.read<MailSendCubit>();
+            switch (state.flow) {
+              case FlowAwaitingDecision(:final pdf):
+                mail.attach(pdf);
+              case FlowFinished(:final pdf, :final delivery):
+                mail.adopt(pdf, delivery);
+              case FlowCancelled(:final pdf) when pdf != null:
+                mail.attach(pdf);
+              case _:
+                break;
+            }
+          },
+        ),
+        // A message that really left (One Click, or the Send of the preview):
+        // the screen goes home by itself unless the user touches it.
+        BlocListener<MailSendCubit, MailSendState>(
+          listenWhen: (previous, current) =>
+              previous.phase != MailPhase.sent &&
+              current.phase == MailPhase.sent,
+          listener: (context, _) => context.read<AutoReturnCubit>().start(),
+        ),
+        BlocListener<AutoReturnCubit, AutoReturnState>(
+          listenWhen: (previous, current) =>
+              previous.phase != AutoReturnPhase.due &&
+              current.phase == AutoReturnPhase.due,
+          listener: (context, _) => context.go(RoutePaths.home),
+        ),
+      ],
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => context.read<AutoReturnCubit>().stop(),
+        child: PopScope(
+          canPop: !busy,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _onBack();
+          },
+          child: Scaffold(
+            appBar: AppBar(title: Text(strings.scanResultTitle)),
+            body: SafeArea(
+              child: Column(
+                children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      discarded
+                          ? strings.discardDone
+                          : strings.scanResultSummary(
+                              pictures.length,
+                              folderName,
+                            ),
+                      key: ScanKeys.resultSummary,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      key: ScanKeys.resultList,
+                      children: [
+                        const _PdfSection(),
+                        const _FlowSection(),
+                        const _MailSection(),
+                        const _DiscardSection(),
+                        if (!discarded)
+                          for (final picture in pictures)
+                            ListTile(
+                              key: ScanKeys.resultFile(picture.fileName),
+                              leading: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: PageThumbnail(
+                                    path: picture.sourcePath,
+                                  ),
+                                ),
+                              ),
+                              title: Text(picture.fileName),
+                              subtitle: _gallerySubtitle(context, picture),
+                            ),
+                      ],
+                    ),
+                  ),
+                  if (widget.ocr != null && !discarded)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          key: ScanKeys.resultOcr,
+                          onPressed: () => context.push(
+                            RoutePaths.ocrResult,
+                            extra: widget.ocr,
+                          ),
+                          child: Text(strings.ocrOpenResult),
+                        ),
+                      ),
+                    ),
+                  const _AutoReturnNotice(),
+                  Padding(
+                    padding: const EdgeInsets.all(24),
                     child: SizedBox(
                       width: double.infinity,
-                      child: OutlinedButton(
-                        key: ScanKeys.resultOcr,
-                        onPressed: () => context.push(
-                          RoutePaths.ocrResult,
-                          extra: widget.ocr,
+                      child: FilledButton(
+                        key: ScanKeys.resultBack,
+                        onPressed: busy
+                            ? null
+                            : () => context.go(RoutePaths.home),
+                        child: Text(
+                          pdfBusy
+                              ? strings.pdfWait
+                              : mailBusy
+                              ? strings.mailSending
+                              : strings.scanBackHome,
                         ),
-                        child: Text(strings.ocrOpenResult),
                       ),
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      key: ScanKeys.resultBack,
-                      onPressed: busy
-                          ? null
-                          : () => context.go(RoutePaths.home),
-                      child: Text(
-                        pdfBusy
-                            ? strings.pdfWait
-                            : mailBusy
-                            ? strings.mailSending
-                            : strings.scanBackHome,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -192,6 +244,30 @@ class _ScanResultPageState extends State<ScanResultPage> {
         style: TextStyle(color: scheme.error),
       ),
     };
+  }
+}
+
+/// "Back to home in N s" while the countdown of the automatic return runs. One
+/// update a second; nothing here animates.
+class _AutoReturnNotice extends StatelessWidget {
+  const _AutoReturnNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return BlocBuilder<AutoReturnCubit, AutoReturnState>(
+      builder: (context, state) {
+        if (!state.counting) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+          child: Text(
+            key: ScanKeys.autoReturn,
+            strings.autoReturnCountdown(state.remaining),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -337,6 +413,9 @@ class _FlowSection extends StatelessWidget {
     final theme = Theme.of(context);
     return BlocBuilder<ScanFlowCubit, ScanFlowViewState>(
       builder: (context, state) {
+        // After a discard the preview's own texts are gone, whatever the
+        // outcome; the discard section says what happened.
+        if (state.discard == DiscardPhase.done) return const SizedBox.shrink();
         final cubit = context.read<ScanFlowCubit>();
         final children = <Widget>[];
         switch (state.flow) {
@@ -500,6 +579,7 @@ class _MailSection extends StatelessWidget {
     final saved = context.select<ScanFlowCubit, bool>(
       (cubit) =>
           cubit.state.pdfStored &&
+          cubit.state.discard != DiscardPhase.done &&
           switch (cubit.state.flow) {
             FlowAwaitingDecision() || FlowFinished() => true,
             FlowCancelled(:final pdf) => pdf != null,

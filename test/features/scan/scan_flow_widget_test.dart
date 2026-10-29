@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:one_click_scan/app/app.dart';
@@ -344,14 +345,267 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text(
-          'Cancelled. The pictures are saved in your folder. No PDF was made.',
-        ),
+        find.text('Processing stopped. The photos are saved, no PDF was made.'),
         findsOneWidget,
       );
       expect(store.files('pictures'), hasLength(1));
       expect(store.files('pdf'), isEmpty);
       expect(mail.sender.sent, isEmpty);
+    });
+  });
+
+  /// The system Back button (the same path as the arrow of the app bar).
+  Future<void> systemBack(WidgetTester tester) async {
+    final message = const JSONMethodCodec().encodeMethodCall(
+      const MethodCall('popRoute'),
+    );
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+      'flutter/navigation',
+      message,
+      (_) {},
+    );
+    await tester.pumpAndSettle();
+  }
+
+  group('Phase 5.1: Cancel in every stage, Back = Cancel', () {
+    Future<void> startWithPdfHeld(WidgetTester tester) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.oneClick, capture: false);
+      pdf.builder.gate = Completer<void>();
+      await tester.tap(find.byKey(ScanKeys.capture));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    testWidgets('while the PDF is made: Cancel stops at once, no PDF stays', (
+      tester,
+    ) async {
+      await startWithPdfHeld(tester);
+
+      expect(find.byKey(ScanKeys.pdfStatus), findsOneWidget);
+      expect(find.byKey(ScanKeys.flowCancel), findsOneWidget);
+      await tester.tap(find.byKey(ScanKeys.flowCancel));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text('Processing stopped. The photos are saved, no PDF was made.'),
+        findsOneWidget,
+      );
+      pdf.builder.gate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(store.files('pdf'), isEmpty);
+      expect(store.files('pictures'), hasLength(1));
+      expect(mail.sender.sent, isEmpty);
+      expect(find.byKey(ScanKeys.mailSend), findsNothing);
+      // One tap back home.
+      await tester.tap(find.byKey(ScanKeys.resultBack));
+      await tester.pumpAndSettle();
+      expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
+    });
+
+    testWidgets('the Back arrow asks, "Continue" changes nothing', (
+      tester,
+    ) async {
+      await startWithPdfHeld(tester);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.text('Stop the processing?'), findsOneWidget);
+      await tester.tap(find.byKey(ScanKeys.stopContinue));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Stop the processing?'), findsNothing);
+      expect(find.byKey(ScanKeys.flowCancel), findsOneWidget);
+      expect(find.byKey(ScanKeys.resultSummary), findsOneWidget);
+
+      pdf.builder.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(store.files('pdf'), hasLength(1)); // it went on
+    });
+
+    testWidgets('the system Back with "Stop" is the Cancel button', (
+      tester,
+    ) async {
+      await startWithPdfHeld(tester);
+
+      await systemBack(tester);
+      expect(find.text('Stop the processing?'), findsOneWidget);
+      await tester.tap(find.byKey(ScanKeys.stopConfirm));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text('Processing stopped. The photos are saved, no PDF was made.'),
+        findsOneWidget,
+      );
+      pdf.builder.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(store.files('pdf'), isEmpty);
+      expect(find.byKey(ScanKeys.resultSummary), findsOneWidget); // not left
+    });
+
+    testWidgets('Back while reading asks and stops the reading', (
+      tester,
+    ) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.oneClick, capture: false);
+      rig.engine.gate = Completer<void>();
+      await tester.tap(find.byKey(ScanKeys.capture));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await systemBack(tester);
+      await tester.tap(find.byKey(ScanKeys.stopConfirm));
+      await tester.pumpAndSettle();
+
+      expect(store.files('pictures'), hasLength(1));
+      expect(store.files('pdf'), isEmpty);
+      expect(mail.sender.sent, isEmpty);
+    });
+
+    testWidgets('Back while sending asks and stops the send', (tester) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.oneClick, capture: false);
+      mail.sender.hold = Completer<MailOutcome>();
+      await tester.tap(find.byKey(ScanKeys.capture));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await systemBack(tester);
+      expect(find.text('Stop the processing?'), findsOneWidget);
+      await tester.tap(find.byKey(ScanKeys.stopConfirm));
+      await tester.pumpAndSettle();
+
+      expect(store.files('pdf'), hasLength(1));
+      expect(find.byKey(ScanKeys.flowCancelled), findsOneWidget);
+    });
+
+    testWidgets('when nothing runs, Back leaves without a question', (
+      tester,
+    ) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.preview);
+
+      await systemBack(tester);
+
+      expect(find.text('Stop the processing?'), findsNothing);
+      expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
+    });
+  });
+
+  group('Phase 5.1: the screen after Discard', () {
+    testWidgets('a complete discard leaves no preview text or button', (
+      tester,
+    ) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.preview);
+
+      await tapKey(tester, ScanKeys.discard);
+      await tapKey(tester, ScanKeys.discardConfirm);
+
+      expect(find.text('The scan was deleted.'), findsOneWidget);
+      expect(find.text('Check the scan'), findsNothing);
+      expect(find.byKey(ScanKeys.flowStatus), findsNothing); // the hint
+      expect(find.byKey(ScanKeys.mailSend), findsNothing);
+      expect(find.byKey(ScanKeys.discard), findsNothing);
+      expect(find.byKey(ScanKeys.flowCancel), findsNothing);
+    });
+
+    testWidgets('a partial discard says what is left; no hint, no Send', (
+      tester,
+    ) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.preview);
+      store.failDeleteUris.add(pdfUri);
+
+      await tapKey(tester, ScanKeys.discard);
+      await tapKey(tester, ScanKeys.discardConfirm);
+
+      expect(
+        find.text('Not everything was deleted. Still there: the PDF.'),
+        findsOneWidget,
+      );
+      expect(find.text('Check the scan'), findsNothing);
+      expect(find.byKey(ScanKeys.flowStatus), findsNothing);
+      expect(find.byKey(ScanKeys.mailSend), findsNothing);
+    });
+  });
+
+  group('Phase 5.1: the automatic return', () {
+    testWidgets('after a successful send it counts down and goes home', (
+      tester,
+    ) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.oneClick);
+
+      expect(find.text('Back to home in 10 s'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Back to home in 9 s'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 9));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
+      expect(find.byKey(ScanKeys.resultSummary), findsNothing);
+    });
+
+    testWidgets('any touch stops it; the manual button still works', (
+      tester,
+    ) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.oneClick);
+      await tester.pump(const Duration(seconds: 3));
+
+      await tester.tap(find.byKey(ScanKeys.resultSummary));
+      await tester.pump();
+      expect(find.byKey(ScanKeys.autoReturn), findsNothing);
+      await tester.pump(const Duration(seconds: 30));
+
+      expect(find.byKey(ScanKeys.resultSummary), findsOneWidget);
+      await tester.tap(find.byKey(ScanKeys.resultBack));
+      await tester.pumpAndSettle();
+      expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
+    });
+
+    testWidgets('the preview counts after its Send, not before', (
+      tester,
+    ) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.preview);
+      expect(find.byKey(ScanKeys.autoReturn), findsNothing);
+      await tester.pump(const Duration(seconds: 15));
+      expect(find.byKey(ScanKeys.resultSummary), findsOneWidget);
+
+      await tapKey(tester, ScanKeys.mailSend);
+
+      expect(find.text('Back to home in 10 s'), findsOneWidget);
+    });
+
+    testWidgets('no countdown when the message did not leave', (tester) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.oneClick, capture: false);
+      mail.sender.outcome = const MailNetworkError();
+      await tester.tap(find.byKey(ScanKeys.capture));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(ScanKeys.flowNotSent), findsOneWidget);
+      expect(find.byKey(ScanKeys.autoReturn), findsNothing);
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.byKey(ScanKeys.resultSummary), findsOneWidget);
+    });
+
+    testWidgets('no countdown when the e-mail app was opened', (tester) async {
+      await pumpScan(
+        tester,
+        flowMode: ScanFlowMode.oneClick,
+        sendMode: MailSendMode.shareDraft,
+      );
+
+      expect(find.byKey(ScanKeys.autoReturn), findsNothing);
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.byKey(ScanKeys.resultSummary), findsOneWidget);
+    });
+
+    testWidgets('leaving early leaves no timer behind', (tester) async {
+      await pumpScan(tester, flowMode: ScanFlowMode.oneClick);
+      await tester.pump(const Duration(seconds: 2));
+
+      await tester.tap(find.byKey(ScanKeys.resultBack));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 30));
+
+      expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }

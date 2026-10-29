@@ -7,6 +7,7 @@ import '../entities/captured_page.dart';
 import '../entities/storage_folder.dart';
 import '../entities/stored_scan.dart';
 import '../scan/gallery_naming.dart';
+import '../scan/scan_flow.dart' show ScanFlowCancellation;
 import '../scan/scan_naming.dart';
 
 /// Copies the captured pages into `./pictures` of the user's folder and,
@@ -16,6 +17,10 @@ import '../scan/scan_naming.dart';
 /// already written are removed again and the error is rethrown, so a retry
 /// starts clean and no half scan is left in the user's folder. A failing
 /// Gallery copy never fails the scan; it is reported per picture.
+///
+/// A cancel (ADR-028) is treated like a failure: everything written so far, the
+/// pictures and the Gallery copies, is deleted again by its recorded name or
+/// URI and `ScanStoreCancelled` is thrown, so a stopped save leaves nothing.
 class StoreScanPages {
   const StoreScanPages({
     required this.fileStore,
@@ -37,11 +42,13 @@ class StoreScanPages {
   final GalleryCounterStore galleryCounter;
   final AppLogger logger;
 
-  /// Throws `ScanStoreException` when the folder cannot be written.
+  /// Throws `ScanStoreException` when the folder cannot be written and
+  /// `ScanStoreCancelled` when [cancellation] was cancelled (nothing is left).
   Future<StoredScan> call({
     required List<CapturedPage> pages,
     required StorageFolder folder,
     required bool saveToGallery,
+    ScanFlowCancellation? cancellation,
   }) async {
     if (pages.isEmpty) {
       throw ArgumentError.value(pages, 'pages', 'must not be empty');
@@ -62,6 +69,9 @@ class StoreScanPages {
     var pictures = <StoredPicture>[];
     try {
       for (var index = 0; index < ordered.length; index++) {
+        if (cancellation?.isCancelled ?? false) {
+          throw const ScanStoreCancelled();
+        }
         final fileName = naming.pictureName(stem, index + 1);
         final uri = await fileStore.copyToFolder(
           folder: folder,
@@ -83,11 +93,27 @@ class StoreScanPages {
       await _rollback(folder, written);
       rethrow;
     }
+    if (cancellation?.isCancelled ?? false) {
+      await _rollback(folder, written);
+      throw const ScanStoreCancelled();
+    }
 
     if (saveToGallery) {
-      pictures = [
-        for (final picture in pictures) await _copyToGallery(picture),
-      ];
+      final copied = <StoredPicture>[];
+      for (final picture in pictures) {
+        if (cancellation?.isCancelled ?? false) {
+          await _rollbackGallery(copied);
+          await _rollback(folder, written);
+          throw const ScanStoreCancelled();
+        }
+        copied.add(await _copyToGallery(picture));
+      }
+      pictures = copied;
+    }
+    if (cancellation?.isCancelled ?? false) {
+      await _rollbackGallery(pictures);
+      await _rollback(folder, written);
+      throw const ScanStoreCancelled();
     }
     return StoredScan(stem: stem, pictures: pictures);
   }
@@ -127,6 +153,18 @@ class StoreScanPages {
       gallery: GalleryCopyStatus.saved,
       galleryUri: galleryUri,
     );
+  }
+
+  Future<void> _rollbackGallery(List<StoredPicture> pictures) async {
+    for (final picture in pictures) {
+      final uri = picture.galleryUri;
+      if (picture.gallery != GalleryCopyStatus.saved || uri == null) continue;
+      try {
+        await gallery.deleteImage(uri);
+      } catch (error, stackTrace) {
+        logger.error('Rollback of a Gallery copy failed', error, stackTrace);
+      }
+    }
   }
 
   Future<void> _rollback(StorageFolder folder, List<String> written) async {

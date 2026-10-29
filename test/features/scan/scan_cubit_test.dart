@@ -382,4 +382,78 @@ void main() {
       expect(camera.closeCalls, 0);
     });
   });
+  group('cancel while the pictures are written (ADR-028)', () {
+    test('Multi: nothing stays, the shots stay, back to the camera', () async {
+      await setUpWith(saveToGallery: true);
+      await cubit.start();
+      cubit.setMode(ScanMode.multi);
+      await cubit.capture();
+      await cubit.capture();
+      store.onCopied = (n) {
+        if (n == 1) cubit.cancelSaving();
+      };
+
+      await cubit.finish();
+
+      expect(cubit.state.phase, ScanPhase.ready);
+      expect(cubit.state.saveCancelled, isTrue);
+      expect(cubit.state.pages, hasLength(2));
+      expect(store.files('pictures'), isEmpty);
+      expect(gallery.saved, isEmpty);
+      expect(temp.deleted, isEmpty);
+      expect(camera.isOpen, isTrue);
+    });
+
+    test('Multi: the same shots can be saved afterwards', () async {
+      await setUpWith();
+      await cubit.start();
+      cubit.setMode(ScanMode.multi);
+      await cubit.capture();
+      store.onCopied = (_) => cubit.cancelSaving();
+      await cubit.finish();
+      store.onCopied = null;
+
+      await cubit.finish();
+
+      expect(cubit.state.phase, ScanPhase.saved);
+      expect(store.files('pictures'), hasLength(1));
+    });
+
+    test('Single: nothing stays and the one shot is dropped', () async {
+      await setUpWith();
+      await cubit.start();
+      store.onCopied = (_) => cubit.cancelSaving();
+
+      await cubit.capture();
+
+      expect(cubit.state.phase, ScanPhase.ready);
+      expect(cubit.state.saveCancelled, isTrue);
+      expect(cubit.state.pages, isEmpty);
+      expect(store.files('pictures'), isEmpty);
+      expect(temp.deleted, ['cache/fake_page_1.jpg']);
+    });
+
+    test('the undo arrow is off while the pictures are written', () async {
+      await setUpWith();
+      await cubit.start();
+      cubit.setMode(ScanMode.multi);
+      await cubit.capture();
+      await cubit.capture();
+      store.onCopied = (_) => cubit.deleteLast();
+
+      await cubit.finish();
+
+      expect(cubit.state.phase, ScanPhase.saved);
+      expect(store.files('pictures'), hasLength(2));
+    });
+
+    test('a cancel outside the saving does nothing', () async {
+      await setUpWith();
+      await cubit.start();
+      cubit.cancelSaving();
+
+      expect(cubit.state.phase, ScanPhase.ready);
+      expect(cubit.state.saveCancelled, isFalse);
+    });
+  });
 }

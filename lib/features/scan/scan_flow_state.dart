@@ -46,9 +46,11 @@ class ScanFlowViewState extends Equatable {
         _ => false,
       };
 
-  /// The user can stop the flow (not while the PDF is written).
+  /// The user can stop the flow in every stage (ADR-028).
   bool get canCancel => switch (flow) {
-    FlowRecognizing() || FlowSending() => discard != DiscardPhase.running,
+    FlowRecognizing() ||
+    FlowBuildingPdf() ||
+    FlowSending() => discard != DiscardPhase.running,
     _ => false,
   };
 

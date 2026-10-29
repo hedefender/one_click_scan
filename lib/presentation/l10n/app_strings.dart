@@ -227,6 +227,15 @@ abstract class AppStrings {
   String get settingsOneClickToggle;
   String get settingsFlowNote;
   String get flowCancel;
+  String get stopTitle;
+  String get stopBodyWriting;
+  String get stopBodyProcessing;
+  String get stopBodySending;
+  String get stopContinue;
+  String get stopConfirm;
+  String get scanSaveCancelledMulti;
+  String get scanSaveCancelledSingle;
+  String autoReturnCountdown(int seconds);
   String get flowSharing;
   String get flowCancelledReading;
   String get flowCancelledSending;

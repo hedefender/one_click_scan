@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:one_click_scan/app/app.dart';
@@ -458,5 +461,85 @@ void main() {
       find.text('Αποθηκεύτηκε 1 αρχείο στο "Scans/pictures"'),
       findsOneWidget,
     );
+  });
+  group('Phase 5.1: cancel while the pictures are written', () {
+    Future<void> doneWithStoreHeld(WidgetTester tester) async {
+      await pumpHome(tester);
+      await openScan(tester);
+      await selectMulti(tester);
+      await tapKey(tester, ScanKeys.capture);
+      await tapKey(tester, ScanKeys.capture);
+      store.copyGate = Completer<void>();
+      await tester.tap(find.byKey(ScanKeys.done));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    Future<void> systemBack(WidgetTester tester) async {
+      final message = const JSONMethodCodec().encodeMethodCall(
+        const MethodCall('popRoute'),
+      );
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        'flutter/navigation',
+        message,
+        (_) {},
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    testWidgets('Cancel: nothing is stored, the shots and the camera stay', (
+      tester,
+    ) async {
+      await doneWithStoreHeld(tester);
+
+      expect(find.byKey(ScanKeys.saving), findsOneWidget);
+      // The undo arrow is off while the work runs.
+      final undo = tester.widget<IconButton>(find.byKey(ScanKeys.deleteLast));
+      expect(undo.onPressed, isNull);
+      await tester.tap(find.byKey(ScanKeys.saveCancel));
+      store.copyGate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(ScanKeys.saving), findsNothing);
+      expect(find.byKey(ScanKeys.saveCancelled), findsOneWidget);
+      expect(
+        find.text(
+          'Saving stopped. Nothing was saved and your shots are still here.',
+        ),
+        findsOneWidget,
+      );
+      expect(store.files('pictures'), isEmpty);
+      expect(find.byKey(ScanKeys.capture), findsOneWidget);
+      expect(find.text('Pages: 2'), findsOneWidget);
+    });
+
+    testWidgets('Back asks first; "Continue" lets the saving finish', (
+      tester,
+    ) async {
+      await doneWithStoreHeld(tester);
+
+      await systemBack(tester);
+      expect(find.text('Stop the processing?'), findsOneWidget);
+      await tester.tap(find.byKey(ScanKeys.stopContinue));
+      await tester.pump(const Duration(milliseconds: 100));
+      store.copyGate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(store.files('pictures'), hasLength(2));
+      expect(find.byKey(ScanKeys.resultSummary), findsOneWidget);
+    });
+
+    testWidgets('Back with "Stop" is the Cancel button', (tester) async {
+      await doneWithStoreHeld(tester);
+
+      await systemBack(tester);
+      await tester.tap(find.byKey(ScanKeys.stopConfirm));
+      await tester.pump(const Duration(milliseconds: 100));
+      store.copyGate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(ScanKeys.saveCancelled), findsOneWidget);
+      expect(store.files('pictures'), isEmpty);
+      expect(find.byKey(ScanKeys.capture), findsOneWidget); // not left
+    });
   });
 }

@@ -682,11 +682,43 @@ class AppStringsEn extends AppStrings {
   String get flowCancel => 'Cancel';
 
   @override
+  String get stopTitle => 'Stop the processing?';
+
+  @override
+  String get stopBodyWriting =>
+      'Nothing will be saved. Your shots stay in the camera.';
+
+  @override
+  String get stopBodyProcessing =>
+      'The photos already saved stay. No PDF will be made and nothing will be sent.';
+
+  @override
+  String get stopBodySending =>
+      'The scan and the PDF stay saved. Nothing will be sent.';
+
+  @override
+  String get stopContinue => 'Continue';
+
+  @override
+  String get stopConfirm => 'Stop';
+
+  @override
+  String get scanSaveCancelledMulti =>
+      'Saving stopped. Nothing was saved and your shots are still here.';
+
+  @override
+  String get scanSaveCancelledSingle =>
+      'Saving stopped. Nothing was saved and the shot was deleted.';
+
+  @override
+  String autoReturnCountdown(int seconds) => 'Back to home in $seconds s';
+
+  @override
   String get flowSharing => 'Opening the e-mail app…';
 
   @override
   String get flowCancelledReading =>
-      'Cancelled. The pictures are saved in your folder. No PDF was made.';
+      'Processing stopped. The photos are saved, no PDF was made.';
 
   @override
   String get flowCancelledSending =>

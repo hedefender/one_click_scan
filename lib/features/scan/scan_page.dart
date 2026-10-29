@@ -13,6 +13,7 @@ import 'scan_cubit.dart';
 import 'scan_keys.dart';
 import 'scan_result_args.dart';
 import 'scan_state.dart';
+import 'stop_dialog.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -74,6 +75,13 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     if (mounted) context.pop();
   }
 
+  /// Back while the pictures are written: the same as the Cancel button.
+  Future<void> _confirmStopSaving() async {
+    final cubit = context.read<ScanCubit>();
+    final body = AppStrings.of(context).stopBodyWriting;
+    if (await confirmStop(context, body)) cubit.cancelSaving();
+  }
+
   Future<void> _openSettings() async {
     final cubit = context.read<ScanCubit>();
     await context.push<void>(RoutePaths.settings);
@@ -96,7 +104,12 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         return PopScope(
           canPop: !state.hasUnsavedPages && !saving,
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop && !saving) _confirmLeave();
+            if (didPop) return;
+            if (saving) {
+              _confirmStopSaving();
+            } else {
+              _confirmLeave();
+            }
           },
           // Camera-app layout: the preview fills the screen and every control
           // floats above it, so nothing shrinks the picture.
@@ -228,6 +241,16 @@ class _Viewfinder extends StatelessWidget {
                   strings.scanSaving,
                   style: const TextStyle(color: Colors.white),
                 ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  key: ScanKeys.saveCancel,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                  ),
+                  onPressed: cubit.cancelSaving,
+                  child: Text(strings.flowCancel),
+                ),
               ],
             ),
           ),
@@ -279,6 +302,32 @@ class _Viewfinder extends StatelessWidget {
                 child: Text(strings.scanRetry),
               ),
             ],
+          ),
+        if (state.saveCancelled)
+          Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              key: ScanKeys.saveCancelled,
+              margin: EdgeInsets.fromLTRB(
+                12,
+                MediaQuery.paddingOf(context).top + kToolbarHeight + 12,
+                12,
+                12,
+              ),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                state.mode == ScanMode.single
+                    ? strings.scanSaveCancelledSingle
+                    : strings.scanSaveCancelledMulti,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ),
           ),
         if (state.captureFailed)
           Align(

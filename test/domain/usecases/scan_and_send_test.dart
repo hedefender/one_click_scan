@@ -362,6 +362,70 @@ void main() {
       expect(store.files('pdf'), hasLength(1));
     });
 
+    test('while the PDF is made: stops at once, no PDF is left', () async {
+      await setUpRig(flowMode: ScanFlowMode.oneClick, pages: 3);
+      pdf.builder.gate = Completer<void>();
+      final states = <ScanFlowState>[];
+      final done = flow
+          .run(scan: scan, session: session, cancellation: cancellation)
+          .forEach(states.add);
+      await pumpEventQueue();
+      expect(states.last, isA<FlowBuildingPdf>());
+
+      cancellation.cancel();
+      await pumpEventQueue();
+      // The stop is shown before the writer has finished.
+      final cancelled = states.last as FlowCancelled;
+      expect(cancelled.stage, ScanFlowStage.buildingPdf);
+      expect(cancelled.pdf, isNull);
+
+      pdf.builder.gate!.complete();
+      await done;
+
+      // What the writer finished later is deleted again, with its cache copy.
+      expect(store.files('pdf'), isEmpty);
+      expect(store.deletedUris, hasLength(1));
+      expect(pdf.builder.discarded, hasLength(1));
+      expect(mail.sender.sent, isEmpty);
+      expect(states.whereType<FlowSending>(), isEmpty);
+    });
+
+    test('while the PDF is made (preview): no decision is offered', () async {
+      await setUpRig(flowMode: ScanFlowMode.preview);
+      pdf.builder.gate = Completer<void>();
+      final states = <ScanFlowState>[];
+      final done = flow
+          .run(scan: scan, session: session, cancellation: cancellation)
+          .forEach(states.add);
+      await pumpEventQueue();
+
+      cancellation.cancel();
+      pdf.builder.gate!.complete();
+      await done;
+
+      expect(states.last, isA<FlowCancelled>());
+      expect(states.whereType<FlowAwaitingDecision>(), isEmpty);
+      expect(store.files('pdf'), isEmpty);
+    });
+
+    test('a writer that fails after the stop leaves nothing', () async {
+      await setUpRig(flowMode: ScanFlowMode.oneClick);
+      pdf.builder.gate = Completer<void>();
+      pdf.builder.failWith = const ScanPdfException(ScanPdfFailure.buildFailed);
+      final states = <ScanFlowState>[];
+      final done = flow
+          .run(scan: scan, session: session, cancellation: cancellation)
+          .forEach(states.add);
+      await pumpEventQueue();
+
+      cancellation.cancel();
+      pdf.builder.gate!.complete();
+      await done;
+
+      expect(states.last, isA<FlowCancelled>());
+      expect(store.files('pdf'), isEmpty);
+    });
+
     test('cancelled before the delivery: nothing is sent', () async {
       await setUpRig(flowMode: ScanFlowMode.oneClick);
       cancellation.cancel();
