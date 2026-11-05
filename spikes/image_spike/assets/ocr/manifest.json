@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "notes": "PP-OCRv5 mobile, ONNX conversions by third-party mirrors (Apache-2.0). Pinned by commit. To be rebuilt from the official weights with paddle2onnx before public release (docs/OCR_LANGUAGE_PACKS.md).",
+  "files": [
+    {
+      "name": "det_mobile.onnx",
+      "bytes": 4826518,
+      "sha256": "1eb7b4f7ab657ebd1c66d5f79bca7497f29768a2e3c15e52daecbba1a8e4a039",
+      "url": "https://huggingface.co/ilaylow/PP_OCRv5_mobile_onnx/resolve/f97b337b3ac256f9dffcac5fc53955082d919d58/ppocrv5_det.onnx"
+    },
+    {
+      "name": "rec_greek.onnx",
+      "bytes": 7791200,
+      "sha256": "13373f736dbb229e96945fc41c2573403d91503b0775c7b7294839e0c5f3a7a3",
+      "url": "https://huggingface.co/monkt/paddleocr-onnx/resolve/7b02d0a30a07ba2b92ad1ff5a8941ae2c633de65/languages/greek/rec.onnx"
+    },
+    {
+      "name": "dict_greek.txt",
+      "bytes": 1103,
+      "sha256": "31defc62c0c3ad3674a82da6192226a2ba98ef4ff014a7045cb88d59f9c3de31",
+      "url": "https://huggingface.co/monkt/paddleocr-onnx/resolve/7b02d0a30a07ba2b92ad1ff5a8941ae2c633de65/languages/greek/dict.txt"
+    },
+    {
+      "name": "rec_latin.onnx",
+      "bytes": 7862832,
+      "sha256": "614ffc2d6d3902d360fad7f1b0dd455ee45e877069d14c4e51a99dc4ef144409",
+      "url": "https://huggingface.co/monkt/paddleocr-onnx/resolve/7b02d0a30a07ba2b92ad1ff5a8941ae2c633de65/languages/latin/rec.onnx"
+    },
+    {
+      "name": "dict_latin.txt",
+      "bytes": 1634,
+      "sha256": "3c0a8a79b612653c25f765271714f71281e4e955962c153e272b7b8c1d2b13ff",
+      "url": "https://huggingface.co/monkt/paddleocr-onnx/resolve/7b02d0a30a07ba2b92ad1ff5a8941ae2c633de65/languages/latin/dict.txt"
+    }
+  ]
+}

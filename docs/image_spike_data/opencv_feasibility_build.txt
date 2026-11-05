@@ -1,0 +1,6 @@
+opencv_dart 2.2.2, nearly empty Flutter app that references canny, findContours,
+getPerspectiveTransform2f, warpPerspective, createCLAHE.
+flutter build apk --release --target-platform android-arm64
+Gradle task assembleRelease: 312.1 s (real 5 min 15 s), first build, OpenCV compiled from source
+app-release.apk: 26,043,372 bytes (24.8 MB)
+Date: 2026-10-30. No baseline (empty Flutter APK, same ABI) measured yet.

@@ -1,0 +1,2250 @@
+[
+ {
+  "id": "frontal_00",
+  "category": "frontal",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1935.5,
+  "truth": {
+   "points": [
+    [
+     195.825,
+     108.775
+    ],
+    [
+     572.175,
+     108.775
+    ],
+    [
+     572.175,
+     915.225
+    ],
+    [
+     195.825,
+     915.225
+    ]
+   ]
+  }
+ },
+ {
+  "id": "frontal_01",
+  "category": "frontal",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 2037.0,
+  "truth": {
+   "points": [
+    [
+     171.815,
+     87.625
+    ],
+    [
+     596.185,
+     87.625
+    ],
+    [
+     596.185,
+     936.375
+    ],
+    [
+     171.815,
+     936.375
+    ]
+   ]
+  }
+ },
+ {
+  "id": "frontal_02",
+  "category": "frontal",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1815.2,
+  "truth": {
+   "points": [
+    [
+     116.655,
+     133.835
+    ],
+    [
+     651.345,
+     133.835
+    ],
+    [
+     651.345,
+     890.165
+    ],
+    [
+     116.655,
+     890.165
+    ]
+   ]
+  }
+ },
+ {
+  "id": "frontal_03",
+  "category": "frontal",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1914.55,
+  "truth": {
+   "points": [
+    [
+     102.025,
+     113.14
+    ],
+    [
+     665.975,
+     113.14
+    ],
+    [
+     665.975,
+     910.86
+    ],
+    [
+     102.025,
+     910.86
+    ]
+   ]
+  }
+ },
+ {
+  "id": "perspective_04",
+  "category": "perspective",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1965.05,
+  "truth": {
+   "points": [
+    [
+     187.95,
+     102.4
+    ],
+    [
+     583.52,
+     109.925
+    ],
+    [
+     552.275,
+     921.6
+    ],
+    [
+     184.48,
+     905.255
+    ]
+   ]
+  }
+ },
+ {
+  "id": "perspective_05",
+  "category": "perspective",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1933.55,
+  "truth": {
+   "points": [
+    [
+     204.005,
+     105.255
+    ],
+    [
+     597.33,
+     102.4
+    ],
+    [
+     570.735,
+     921.6
+    ],
+    [
+     170.67,
+     895.115
+    ]
+   ]
+  }
+ },
+ {
+  "id": "perspective_06",
+  "category": "perspective",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1939.3,
+  "truth": {
+   "points": [
+    [
+     76.8,
+     121.665
+    ],
+    [
+     691.2,
+     136.14
+    ],
+    [
+     636.305,
+     902.335
+    ],
+    [
+     103.73,
+     881.765
+    ]
+   ]
+  }
+ },
+ {
+  "id": "perspective_07",
+  "category": "perspective",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1868.5,
+  "truth": {
+   "points": [
+    [
+     130.1,
+     102.4
+    ],
+    [
+     651.62,
+     146.955
+    ],
+    [
+     631.875,
+     887.505
+    ],
+    [
+     116.38,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "perspective_08",
+  "category": "perspective",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 2227.6,
+  "truth": {
+   "points": [
+    [
+     142.84,
+     104.355
+    ],
+    [
+     625.16,
+     102.4
+    ],
+    [
+     564.79,
+     911.15
+    ],
+    [
+     173.15,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "perspective_09",
+  "category": "perspective",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1865.8,
+  "truth": {
+   "points": [
+    [
+     223.395,
+     102.4
+    ],
+    [
+     562.86,
+     144.335
+    ],
+    [
+     540.78,
+     882.405
+    ],
+    [
+     205.14,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rotation_10",
+  "category": "rotation",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1719.25,
+  "truth": {
+   "points": [
+    [
+     162.965,
+     133.12
+    ],
+    [
+     667.465,
+     177.26
+    ],
+    [
+     605.035,
+     890.88
+    ],
+    [
+     100.535,
+     846.74
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rotation_11",
+  "category": "rotation",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1719.25,
+  "truth": {
+   "points": [
+    [
+     100.535,
+     177.26
+    ],
+    [
+     605.035,
+     133.12
+    ],
+    [
+     667.465,
+     846.74
+    ],
+    [
+     162.965,
+     890.88
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rotation_12",
+  "category": "rotation",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1706.3,
+  "truth": {
+   "points": [
+    [
+     282.36,
+     133.12
+    ],
+    [
+     609.095,
+     190.73
+    ],
+    [
+     485.64,
+     890.88
+    ],
+    [
+     158.905,
+     833.27
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rotation_13",
+  "category": "rotation",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1697.05,
+  "truth": {
+   "points": [
+    [
+     148.515,
+     194.515
+    ],
+    [
+     496.695,
+     133.12
+    ],
+    [
+     619.485,
+     829.485
+    ],
+    [
+     271.305,
+     890.88
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rotation_14",
+  "category": "rotation",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1448.45,
+  "truth": {
+   "points": [
+    [
+     256.04,
+     165.31
+    ],
+    [
+     668.16,
+     275.74
+    ],
+    [
+     511.96,
+     858.69
+    ],
+    [
+     99.84,
+     748.26
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rotation_15",
+  "category": "rotation",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1448.45,
+  "truth": {
+   "points": [
+    [
+     99.84,
+     275.74
+    ],
+    [
+     511.96,
+     165.31
+    ],
+    [
+     668.16,
+     748.26
+    ],
+    [
+     256.04,
+     858.69
+    ]
+   ]
+  }
+ },
+ {
+  "id": "light_16",
+  "category": "light",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1929.8,
+  "truth": {
+   "points": [
+    [
+     175.225,
+     122.0
+    ],
+    [
+     542.205,
+     102.4
+    ],
+    [
+     592.775,
+     901.16
+    ],
+    [
+     210.02,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "light_17",
+  "category": "light",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1944.4,
+  "truth": {
+   "points": [
+    [
+     165.49,
+     118.96
+    ],
+    [
+     581.675,
+     102.4
+    ],
+    [
+     602.51,
+     905.925
+    ],
+    [
+     208.555,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "light_18",
+  "category": "light",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1937.05,
+  "truth": {
+   "points": [
+    [
+     122.175,
+     102.4
+    ],
+    [
+     680.725,
+     118.285
+    ],
+    [
+     669.95,
+     921.6
+    ],
+    [
+     87.275,
+     905.03
+    ]
+   ]
+  }
+ },
+ {
+  "id": "light_19",
+  "category": "light",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1974.35,
+  "truth": {
+   "points": [
+    [
+     85.275,
+     105.175
+    ],
+    [
+     682.725,
+     102.4
+    ],
+    [
+     671.05,
+     918.97
+    ],
+    [
+     104.535,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "light_20",
+  "category": "light",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1947.2,
+  "truth": {
+   "points": [
+    [
+     186.035,
+     110.495
+    ],
+    [
+     563.51,
+     102.4
+    ],
+    [
+     581.965,
+     913.46
+    ],
+    [
+     202.365,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "light_21",
+  "category": "light",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1909.1,
+  "truth": {
+   "points": [
+    [
+     158.19,
+     130.25
+    ],
+    [
+     560.88,
+     102.4
+    ],
+    [
+     609.81,
+     894.56
+    ],
+    [
+     218.77,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "low_contrast_22",
+  "category": "low_contrast",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1935.35,
+  "truth": {
+   "points": [
+    [
+     89.83,
+     115.41
+    ],
+    [
+     659.77,
+     102.4
+    ],
+    [
+     678.17,
+     908.59
+    ],
+    [
+     108.23,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "low_contrast_23",
+  "category": "low_contrast",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1919.25,
+  "truth": {
+   "points": [
+    [
+     87.355,
+     122.405
+    ],
+    [
+     652.345,
+     102.4
+    ],
+    [
+     680.645,
+     901.595
+    ],
+    [
+     115.655,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "low_contrast_24",
+  "category": "low_contrast",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1936.6,
+  "truth": {
+   "points": [
+    [
+     209.485,
+     102.4
+    ],
+    [
+     585.83,
+     115.15
+    ],
+    [
+     558.515,
+     921.6
+    ],
+    [
+     182.17,
+     908.85
+    ]
+   ]
+  }
+ },
+ {
+  "id": "low_contrast_25",
+  "category": "low_contrast",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1934.8,
+  "truth": {
+   "points": [
+    [
+     169.095,
+     115.875
+    ],
+    [
+     571.955,
+     102.4
+    ],
+    [
+     598.905,
+     908.125
+    ],
+    [
+     196.045,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "low_contrast_26",
+  "category": "low_contrast",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1928.55,
+  "truth": {
+   "points": [
+    [
+     88.785,
+     118.355
+    ],
+    [
+     656.645,
+     102.4
+    ],
+    [
+     679.215,
+     905.645
+    ],
+    [
+     111.355,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "crumple_27",
+  "category": "crumple",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1940.5,
+  "truth": {
+   "points": [
+    [
+     90.61,
+     113.195
+    ],
+    [
+     662.03,
+     102.4
+    ],
+    [
+     677.39,
+     910.8
+    ],
+    [
+     105.8,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "crumple_28",
+  "category": "crumple",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1938.45,
+  "truth": {
+   "points": [
+    [
+     179.315,
+     117.985
+    ],
+    [
+     563.265,
+     102.4
+    ],
+    [
+     588.685,
+     906.6
+    ],
+    [
+     219.145,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "crumple_29",
+  "category": "crumple",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1962.4,
+  "truth": {
+   "points": [
+    [
+     177.095,
+     104.85
+    ],
+    [
+     581.725,
+     102.4
+    ],
+    [
+     590.905,
+     919.1
+    ],
+    [
+     177.805,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "crumple_30",
+  "category": "crumple",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1975.8,
+  "truth": {
+   "points": [
+    [
+     99.9,
+     102.4
+    ],
+    [
+     669.095,
+     102.745
+    ],
+    [
+     681.7,
+     921.6
+    ],
+    [
+     86.3,
+     921.24
+    ]
+   ]
+  }
+ },
+ {
+  "id": "crumple_31",
+  "category": "crumple",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1934.8,
+  "truth": {
+   "points": [
+    [
+     89.355,
+     116.085
+    ],
+    [
+     654.67,
+     102.4
+    ],
+    [
+     678.645,
+     907.695
+    ],
+    [
+     104.38,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "crumple_32",
+  "category": "crumple",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1941.45,
+  "truth": {
+   "points": [
+    [
+     183.945,
+     113.0
+    ],
+    [
+     560.525,
+     102.4
+    ],
+    [
+     584.055,
+     910.96
+    ],
+    [
+     205.925,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "noisy_background_33",
+  "category": "noisy_background",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1946.15,
+  "truth": {
+   "points": [
+    [
+     171.335,
+     112.52
+    ],
+    [
+     581.97,
+     102.4
+    ],
+    [
+     596.665,
+     911.74
+    ],
+    [
+     196.525,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "noisy_background_34",
+  "category": "noisy_background",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1805.45,
+  "truth": {
+   "points": [
+    [
+     76.8,
+     170.075
+    ],
+    [
+     591.425,
+     110.595
+    ],
+    [
+     691.2,
+     850.675
+    ],
+    [
+     148.48,
+     913.405
+    ]
+   ]
+  }
+ },
+ {
+  "id": "noisy_background_35",
+  "category": "noisy_background",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1972.95,
+  "truth": {
+   "points": [
+    [
+     86.635,
+     104.105
+    ],
+    [
+     681.365,
+     102.4
+    ],
+    [
+     670.44,
+     919.97
+    ],
+    [
+     102.25,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "noisy_background_36",
+  "category": "noisy_background",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1907.65,
+  "truth": {
+   "points": [
+    [
+     169.54,
+     130.265
+    ],
+    [
+     543.555,
+     102.4
+    ],
+    [
+     598.46,
+     894.345
+    ],
+    [
+     232.58,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "noisy_background_37",
+  "category": "noisy_background",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1930.1,
+  "truth": {
+   "points": [
+    [
+     195.2,
+     102.4
+    ],
+    [
+     609.645,
+     128.265
+    ],
+    [
+     547.37,
+     921.6
+    ],
+    [
+     158.355,
+     897.325
+    ]
+   ]
+  }
+ },
+ {
+  "id": "noisy_background_38",
+  "category": "noisy_background",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1849.2,
+  "truth": {
+   "points": [
+    [
+     130.47,
+     107.25
+    ],
+    [
+     691.2,
+     160.13
+    ],
+    [
+     601.84,
+     916.75
+    ],
+    [
+     76.8,
+     867.235
+    ]
+   ]
+  }
+ },
+ {
+  "id": "hand_39",
+  "category": "hand",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1916.7,
+  "truth": {
+   "points": [
+    [
+     86.815,
+     123.84
+    ],
+    [
+     653.66,
+     102.4
+    ],
+    [
+     681.185,
+     900.36
+    ],
+    [
+     119.645,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "hand_40",
+  "category": "hand",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1899.15,
+  "truth": {
+   "points": [
+    [
+     165.7,
+     134.885
+    ],
+    [
+     538.08,
+     102.4
+    ],
+    [
+     602.3,
+     889.89
+    ],
+    [
+     238.81,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "hand_41",
+  "category": "hand",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1939.25,
+  "truth": {
+   "points": [
+    [
+     170.275,
+     114.135
+    ],
+    [
+     571.805,
+     102.4
+    ],
+    [
+     597.725,
+     909.725
+    ],
+    [
+     191.56,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "hand_42",
+  "category": "hand",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1893.5,
+  "truth": {
+   "points": [
+    [
+     79.67,
+     138.37
+    ],
+    [
+     623.025,
+     102.4
+    ],
+    [
+     688.33,
+     883.84
+    ],
+    [
+     117.95,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "dark_background_43",
+  "category": "dark_background",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1902.85,
+  "truth": {
+   "points": [
+    [
+     87.54,
+     145.9
+    ],
+    [
+     641.16,
+     102.4
+    ],
+    [
+     680.46,
+     911.215
+    ],
+    [
+     125.235,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "dark_background_44",
+  "category": "dark_background",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1921.85,
+  "truth": {
+   "points": [
+    [
+     219.83,
+     102.4
+    ],
+    [
+     590.505,
+     130.11
+    ],
+    [
+     549.035,
+     921.6
+    ],
+    [
+     177.495,
+     910.42
+    ]
+   ]
+  }
+ },
+ {
+  "id": "dark_background_45",
+  "category": "dark_background",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1909.2,
+  "truth": {
+   "points": [
+    [
+     212.135,
+     102.4
+    ],
+    [
+     605.95,
+     115.93
+    ],
+    [
+     554.375,
+     921.6
+    ],
+    [
+     162.05,
+     884.805
+    ]
+   ]
+  }
+ },
+ {
+  "id": "dark_background_46",
+  "category": "dark_background",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1936.2,
+  "truth": {
+   "points": [
+    [
+     108.475,
+     102.4
+    ],
+    [
+     677.1,
+     105.325
+    ],
+    [
+     659.105,
+     921.6
+    ],
+    [
+     90.9,
+     899.465
+    ]
+   ]
+  }
+ },
+ {
+  "id": "dark_background_47",
+  "category": "dark_background",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1918.3,
+  "truth": {
+   "points": [
+    [
+     91.645,
+     102.4
+    ],
+    [
+     649.275,
+     102.95
+    ],
+    [
+     676.355,
+     882.35
+    ],
+    [
+     120.11,
+     921.6
+    ]
+   ]
+  }
+ },
+ {
+  "id": "partial_48",
+  "category": "partial",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 2305.8,
+  "truth": {
+   "points": [
+    [
+     239.93,
+     38.01
+    ],
+    [
+     688.11,
+     25.6
+    ],
+    [
+     714.71,
+     985.99
+    ],
+    [
+     266.525,
+     998.4
+    ]
+   ]
+  }
+ },
+ {
+  "id": "partial_49",
+  "category": "partial",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 2281.95,
+  "truth": {
+   "points": [
+    [
+     1.345,
+     48.7
+    ],
+    [
+     476.195,
+     25.6
+    ],
+    [
+     522.395,
+     975.3
+    ],
+    [
+     47.545,
+     998.4
+    ]
+   ]
+  }
+ },
+ {
+  "id": "partial_50",
+  "category": "partial",
+  "document": "bill_el",
+  "partial": true,
+  "fillsFrame": false,
+  "focalPx": 2327.05,
+  "truth": {
+   "points": [
+    [
+     143.68,
+     28.81
+    ],
+    [
+     829.135,
+     25.6
+    ],
+    [
+     833.68,
+     995.19
+    ],
+    [
+     148.22,
+     998.4
+    ]
+   ]
+  }
+ },
+ {
+  "id": "partial_51",
+  "category": "partial",
+  "document": "leaflet_en",
+  "partial": true,
+  "fillsFrame": false,
+  "focalPx": 2255.15,
+  "truth": {
+   "points": [
+    [
+     27.965,
+     182.885
+    ],
+    [
+     691.37,
+     148.48
+    ],
+    [
+     740.035,
+     1086.875
+    ],
+    [
+     76.63,
+     1121.28
+    ]
+   ]
+  }
+ },
+ {
+  "id": "partial_52",
+  "category": "partial",
+  "document": "receipt_el",
+  "partial": true,
+  "fillsFrame": false,
+  "focalPx": 2268.65,
+  "truth": {
+   "points": [
+    [
+     195.715,
+     -97.28
+    ],
+    [
+     635.85,
+     -67.615
+    ],
+    [
+     572.285,
+     875.52
+    ],
+    [
+     132.15,
+     845.855
+    ]
+   ]
+  }
+ },
+ {
+  "id": "fills_frame_53",
+  "category": "fills_frame",
+  "document": "receipt_en",
+  "partial": true,
+  "fillsFrame": false,
+  "focalPx": 3390.75,
+  "truth": {
+   "points": [
+    [
+     26.165,
+     -192.075
+    ],
+    [
+     732.555,
+     -196.715
+    ],
+    [
+     741.835,
+     1216.075
+    ],
+    [
+     35.445,
+     1220.715
+    ]
+   ]
+  }
+ },
+ {
+  "id": "fills_frame_54",
+  "category": "fills_frame",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": true,
+  "focalPx": 3318.3,
+  "truth": {
+   "points": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     768.0,
+     0.0
+    ],
+    [
+     768.0,
+     1024.0
+    ],
+    [
+     0.0,
+     1024.0
+    ]
+   ]
+  }
+ },
+ {
+  "id": "fills_frame_55",
+  "category": "fills_frame",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": true,
+  "focalPx": 3307.05,
+  "truth": {
+   "points": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     768.0,
+     0.0
+    ],
+    [
+     768.0,
+     1024.0
+    ],
+    [
+     0.0,
+     1024.0
+    ]
+   ]
+  }
+ },
+ {
+  "id": "small_document_56",
+  "category": "small_document",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 669.1,
+  "truth": {
+   "points": [
+    [
+     440.665,
+     420.83
+    ],
+    [
+     571.46,
+     414.515
+    ],
+    [
+     584.055,
+     692.9
+    ],
+    [
+     454.935,
+     699.135
+    ]
+   ]
+  }
+ },
+ {
+  "id": "small_document_57",
+  "category": "small_document",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 838.5,
+  "truth": {
+   "points": [
+    [
+     432.33,
+     363.535
+    ],
+    [
+     609.785,
+     368.33
+    ],
+    [
+     597.59,
+     716.57
+    ],
+    [
+     425.705,
+     711.925
+    ]
+   ]
+  }
+ },
+ {
+  "id": "small_document_58",
+  "category": "small_document",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 777.7,
+  "truth": {
+   "points": [
+    [
+     215.335,
+     272.7
+    ],
+    [
+     439.75,
+     261.325
+    ],
+    [
+     460.56,
+     583.43
+    ],
+    [
+     227.205,
+     595.26
+    ]
+   ]
+  }
+ },
+ {
+  "id": "small_document_59",
+  "category": "small_document",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 625.55,
+  "truth": {
+   "points": [
+    [
+     258.52,
+     595.69
+    ],
+    [
+     441.75,
+     566.69
+    ],
+    [
+     481.25,
+     824.2
+    ],
+    [
+     300.47,
+     852.81
+    ]
+   ]
+  }
+ },
+ {
+  "id": "small_document_60",
+  "category": "small_document",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 847.4,
+  "truth": {
+   "points": [
+    [
+     399.015,
+     340.395
+    ],
+    [
+     563.525,
+     344.385
+    ],
+    [
+     555.19,
+     697.365
+    ],
+    [
+     390.245,
+     693.37
+    ]
+   ]
+  }
+ },
+ {
+  "id": "lines_background_61",
+  "category": "lines_background",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1373.9,
+  "truth": {
+   "points": [
+    [
+     259.935,
+     216.66
+    ],
+    [
+     546.4,
+     236.345
+    ],
+    [
+     506.26,
+     807.34
+    ],
+    [
+     221.6,
+     787.78
+    ]
+   ]
+  }
+ },
+ {
+  "id": "lines_background_62",
+  "category": "lines_background",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1571.65,
+  "truth": {
+   "points": [
+    [
+     137.39,
+     198.435
+    ],
+    [
+     611.53,
+     176.185
+    ],
+    [
+     630.61,
+     826.635
+    ],
+    [
+     179.31,
+     847.815
+    ]
+   ]
+  }
+ },
+ {
+  "id": "lines_background_63",
+  "category": "lines_background",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1455.25,
+  "truth": {
+   "points": [
+    [
+     153.555,
+     220.895
+    ],
+    [
+     578.22,
+     197.855
+    ],
+    [
+     614.445,
+     802.74
+    ],
+    [
+     182.98,
+     826.145
+    ]
+   ]
+  }
+ },
+ {
+  "id": "lines_background_64",
+  "category": "lines_background",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1851.05,
+  "truth": {
+   "points": [
+    [
+     199.37,
+     128.515
+    ],
+    [
+     568.63,
+     129.445
+    ],
+    [
+     557.605,
+     895.485
+    ],
+    [
+     206.55,
+     894.605
+    ]
+   ]
+  }
+ },
+ {
+  "id": "lines_background_65",
+  "category": "lines_background",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1561.2,
+  "truth": {
+   "points": [
+    [
+     260.315,
+     174.625
+    ],
+    [
+     576.705,
+     204.825
+    ],
+    [
+     522.81,
+     849.375
+    ],
+    [
+     191.295,
+     817.73
+    ]
+   ]
+  }
+ },
+ {
+  "id": "lines_background_66",
+  "category": "lines_background",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1691.5,
+  "truth": {
+   "points": [
+    [
+     108.045,
+     180.74
+    ],
+    [
+     608.755,
+     141.415
+    ],
+    [
+     659.955,
+     843.88
+    ],
+    [
+     167.15,
+     882.585
+    ]
+   ]
+  }
+ },
+ {
+  "id": "no_document_67",
+  "category": "no_document",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 0.0,
+  "truth": null
+ },
+ {
+  "id": "no_document_68",
+  "category": "no_document",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 0.0,
+  "truth": null
+ },
+ {
+  "id": "no_document_69",
+  "category": "no_document",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 0.0,
+  "truth": null
+ },
+ {
+  "id": "no_document_70",
+  "category": "no_document",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 0.0,
+  "truth": null
+ },
+ {
+  "id": "combined_71",
+  "category": "combined",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1701.7,
+  "truth": {
+   "points": [
+    [
+     93.32,
+     211.695
+    ],
+    [
+     622.89,
+     151.535
+    ],
+    [
+     674.68,
+     836.63
+    ],
+    [
+     206.405,
+     872.465
+    ]
+   ]
+  }
+ },
+ {
+  "id": "combined_72",
+  "category": "combined",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1935.3,
+  "truth": {
+   "points": [
+    [
+     130.11,
+     165.95
+    ],
+    [
+     514.79,
+     98.245
+    ],
+    [
+     637.89,
+     886.325
+    ],
+    [
+     284.775,
+     925.755
+    ]
+   ]
+  }
+ },
+ {
+  "id": "combined_73",
+  "category": "combined",
+  "document": "receipt_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1842.7,
+  "truth": {
+   "points": [
+    [
+     153.47,
+     175.835
+    ],
+    [
+     559.18,
+     139.63
+    ],
+    [
+     614.53,
+     875.085
+    ],
+    [
+     259.635,
+     884.37
+    ]
+   ]
+  }
+ },
+ {
+  "id": "combined_74",
+  "category": "combined",
+  "document": "bill_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1743.6,
+  "truth": {
+   "points": [
+    [
+     131.06,
+     136.635
+    ],
+    [
+     672.59,
+     188.065
+    ],
+    [
+     578.42,
+     887.365
+    ],
+    [
+     95.41,
+     834.455
+    ]
+   ]
+  }
+ },
+ {
+  "id": "combined_75",
+  "category": "combined",
+  "document": "leaflet_en",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1740.85,
+  "truth": {
+   "points": [
+    [
+     162.55,
+     117.65
+    ],
+    [
+     686.225,
+     188.98
+    ],
+    [
+     566.38,
+     906.35
+    ],
+    [
+     81.775,
+     817.755
+    ]
+   ]
+  }
+ },
+ {
+  "id": "combined_76",
+  "category": "combined",
+  "document": "receipt_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1778.85,
+  "truth": {
+   "points": [
+    [
+     166.385,
+     179.565
+    ],
+    [
+     528.585,
+     133.065
+    ],
+    [
+     601.615,
+     847.985
+    ],
+    [
+     275.915,
+     890.935
+    ]
+   ]
+  }
+ },
+ {
+  "id": "tilted_table_77",
+  "category": "tilted_table",
+  "document": "receipt_table_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1918.05,
+  "truth": {
+   "points": [
+    [
+     169.285,
+     112.64
+    ],
+    [
+     598.715,
+     112.64
+    ],
+    [
+     595.54,
+     911.36
+    ],
+    [
+     172.46,
+     911.36
+    ]
+   ]
+  }
+ },
+ {
+  "id": "tilted_table_78",
+  "category": "tilted_table",
+  "document": "receipt_table_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1838.45,
+  "truth": {
+   "points": [
+    [
+     214.06,
+     112.64
+    ],
+    [
+     620.88,
+     148.23
+    ],
+    [
+     554.29,
+     911.36
+    ],
+    [
+     147.12,
+     875.735
+    ]
+   ]
+  }
+ },
+ {
+  "id": "tilted_table_79",
+  "category": "tilted_table",
+  "document": "receipt_table_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1782.7,
+  "truth": {
+   "points": [
+    [
+     247.63,
+     112.64
+    ],
+    [
+     643.46,
+     182.435
+    ],
+    [
+     509.145,
+     911.36
+    ],
+    [
+     124.54,
+     843.545
+    ]
+   ]
+  }
+ },
+ {
+  "id": "tilted_table_80",
+  "category": "tilted_table",
+  "document": "receipt_table_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1736.45,
+  "truth": {
+   "points": [
+    [
+     291.835,
+     112.64
+    ],
+    [
+     663.99,
+     212.36
+    ],
+    [
+     477.305,
+     911.36
+    ],
+    [
+     104.01,
+     811.335
+    ]
+   ]
+  }
+ },
+ {
+  "id": "tilted_table_81",
+  "category": "tilted_table",
+  "document": "receipt_table_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1780.1,
+  "truth": {
+   "points": [
+    [
+     124.845,
+     180.83
+    ],
+    [
+     511.555,
+     112.64
+    ],
+    [
+     643.155,
+     842.155
+    ],
+    [
+     250.69,
+     911.36
+    ]
+   ]
+  }
+ },
+ {
+  "id": "tilted_table_82",
+  "category": "tilted_table",
+  "document": "receipt_table_el",
+  "partial": false,
+  "fillsFrame": false,
+  "focalPx": 1737.5,
+  "truth": {
+   "points": [
+    [
+     103.89,
+     213.41
+    ],
+    [
+     479.97,
+     112.64
+    ],
+    [
+     664.11,
+     812.25
+    ],
+    [
+     294.225,
+     911.36
+    ]
+   ]
+  }
+ }
+]

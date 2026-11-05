@@ -1,0 +1,13 @@
+SAMPLE CORNER SHOP LTD
+12 Example Street
+VAT 55512345
+Receipt 220981
+Date 18/10/2026
+Bread loaf          2.10
+Orange juice 1L     3.45
+Cheddar 250g        4.99
+Tomatoes 1kg        2.80
+TOTAL 13.34 EUR
+Card ending 4242
+Thank you for shopping
+shop@example.com

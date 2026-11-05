@@ -1,0 +1,155 @@
+detector,id,category,hasDocument,partial,fillsFrame,score,area,angle,ratio,support,contrast,iou,coverage,cornerErrPct,candidates,msPrepare,msDetect,msConfidence
+A3 pure Dart,frontal_00,frontal,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.975,1.000,0.402,3,41.1,67.8,1.0
+A3 pure Dart,frontal_01,frontal,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.987,1.000,0.217,4,22.6,44.3,1.1
+A3 pure Dart,frontal_02,frontal,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.981,1.000,0.381,8,16.5,59.4,1.3
+A3 pure Dart,frontal_03,frontal,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.988,1.000,0.218,8,15.9,51.9,1.1
+A3 pure Dart,perspective_04,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.959,1.000,0.646,3,15.4,53.0,0.7
+A3 pure Dart,perspective_05,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.959,1.000,0.659,4,16.4,42.3,1.0
+A3 pure Dart,perspective_06,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.967,1.000,0.651,8,14.7,60.8,1.3
+A3 pure Dart,perspective_07,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.965,1.000,0.658,8,16.8,64.4,2.0
+A3 pure Dart,perspective_08,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.994,0.997,0.109,3,20.3,54.6,1.0
+A3 pure Dart,perspective_09,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.955,1.000,0.660,5,19.3,43.9,0.8
+A3 pure Dart,rotation_10,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.963,1.000,0.650,8,18.4,50.7,1.4
+A3 pure Dart,rotation_11,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.982,1.000,0.309,8,18.8,57.7,1.6
+A3 pure Dart,rotation_12,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.951,1.000,0.657,4,19.1,40.1,0.7
+A3 pure Dart,rotation_13,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.992,0.997,0.098,3,15.3,50.2,1.1
+A3 pure Dart,rotation_14,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.955,1.000,0.667,4,18.9,51.6,1.1
+A3 pure Dart,rotation_15,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.961,1.000,0.604,8,16.4,46.8,1.0
+A3 pure Dart,light_16,light,true,false,false,0.880,1.000,1.000,1.000,0.880,1.000,0.957,1.000,0.659,5,16.6,42.6,0.9
+A3 pure Dart,light_17,light,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.990,0.995,0.159,3,15.4,55.5,0.9
+A3 pure Dart,light_18,light,true,false,false,0.930,1.000,1.000,1.000,0.930,1.000,0.967,1.000,0.653,9,19.5,50.7,1.3
+A3 pure Dart,light_19,light,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.970,1.000,0.613,8,16.9,60.0,1.3
+A3 pure Dart,light_20,light,true,false,false,0.997,1.000,1.000,1.000,0.997,1.000,0.959,1.000,0.648,6,14.8,45.1,1.1
+A3 pure Dart,light_21,light,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.959,1.000,0.654,4,14.6,48.3,1.1
+A3 pure Dart,low_contrast_22,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.306,8,15.7,57.5,2.2
+A3 pure Dart,low_contrast_23,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.983,1.000,0.312,8,17.5,60.9,14.3
+A3 pure Dart,low_contrast_24,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.979,1.000,0.312,3,19.5,57.5,0.9
+A3 pure Dart,low_contrast_25,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.980,1.000,0.308,4,17.0,46.7,0.7
+A3 pure Dart,low_contrast_26,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.309,8,17.5,55.7,1.5
+A3 pure Dart,crumple_27,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.308,8,19.0,78.7,2.1
+A3 pure Dart,crumple_28,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.958,1.000,0.654,4,26.1,78.6,1.7
+A3 pure Dart,crumple_29,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.968,1.000,0.537,4,31.2,95.2,6.9
+A3 pure Dart,crumple_30,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.978,1.000,0.447,9,21.9,61.4,1.4
+A3 pure Dart,crumple_31,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.308,8,18.2,58.2,1.3
+A3 pure Dart,crumple_32,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.958,1.000,0.651,4,16.6,51.4,1.2
+A3 pure Dart,noisy_background_33,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.960,1.000,0.655,4,16.9,47.1,0.8
+A3 pure Dart,noisy_background_34,noisy_background,true,false,false,0.972,1.000,1.000,1.000,0.972,1.000,0.978,0.998,0.454,8,18.5,64.1,1.1
+A3 pure Dart,noisy_background_35,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.985,1.000,0.274,8,20.2,66.1,1.6
+A3 pure Dart,noisy_background_36,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.989,0.989,0.170,4,19.7,57.6,1.1
+A3 pure Dart,noisy_background_37,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.959,1.000,0.652,3,16.3,43.2,0.8
+A3 pure Dart,noisy_background_38,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.989,0.989,0.224,8,17.0,62.1,1.1
+A3 pure Dart,hand_39,hand,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.989,0.989,0.215,8,15.5,68.0,1.6
+A3 pure Dart,hand_40,hand,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.992,0.997,0.135,4,19.5,49.4,0.8
+A3 pure Dart,hand_41,hand,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.997,0.998,0.044,4,16.7,50.5,1.0
+A3 pure Dart,hand_42,hand,true,false,false,0.975,1.000,1.000,1.000,0.975,1.000,0.866,0.998,4.827,8,16.1,60.6,1.5
+A3 pure Dart,dark_background_43,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.983,1.000,0.314,8,16.3,65.5,1.5
+A3 pure Dart,dark_background_44,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.978,1.000,0.313,3,16.8,55.7,0.7
+A3 pure Dart,dark_background_45,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.979,1.000,0.316,3,16.2,45.8,0.7
+A3 pure Dart,dark_background_46,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.316,8,17.9,69.0,1.2
+A3 pure Dart,dark_background_47,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.985,1.000,0.278,8,18.5,66.8,1.5
+A3 pure Dart,partial_48,partial,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.994,0.997,0.101,6,18.9,51.4,1.0
+A3 pure Dart,partial_49,partial,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.993,0.998,0.117,4,19.1,68.2,1.0
+A3 pure Dart,partial_50,partial,true,true,false,1.000,1.000,1.000,1.000,1.000,1.000,0.983,0.997,,8,15.7,69.3,1.1
+A3 pure Dart,partial_51,partial,true,true,false,1.000,1.000,1.000,1.000,1.000,1.000,0.986,0.998,,8,15.5,71.2,1.5
+A3 pure Dart,partial_52,partial,true,true,false,1.000,1.000,1.000,1.000,1.000,1.000,0.966,1.000,,5,15.3,54.3,1.0
+A3 pure Dart,fills_frame_53,fills_frame,true,true,false,1.000,1.000,1.000,1.000,1.000,1.000,0.997,0.997,,7,20.7,74.2,0.9
+A3 pure Dart,fills_frame_54,fills_frame,true,false,true,0.000,0.000,1.000,1.000,0.000,0.000,0.009,0.009,,8,16.0,72.6,0.3
+A3 pure Dart,fills_frame_55,fills_frame,true,false,true,0.000,0.000,1.000,0.980,0.664,1.000,0.013,0.013,,4,16.9,68.1,0.4
+A3 pure Dart,small_document_56,small_document,true,false,false,0.000,0.000,1.000,1.000,1.000,1.000,0.889,1.000,0.623,3,17.6,29.7,0.3
+A3 pure Dart,small_document_57,small_document,true,false,false,0.135,0.135,1.000,1.000,1.000,1.000,0.916,1.000,0.615,3,17.7,36.7,0.4
+A3 pure Dart,small_document_58,small_document,true,false,false,0.278,0.278,1.000,1.000,1.000,1.000,0.921,1.000,0.656,3,19.6,35.9,0.4
+A3 pure Dart,small_document_59,small_document,true,false,false,0.038,0.038,1.000,1.000,1.000,1.000,0.902,1.000,0.671,3,15.0,26.7,0.5
+A3 pure Dart,small_document_60,small_document,true,false,false,0.110,0.110,1.000,1.000,1.000,1.000,0.914,1.000,0.599,3,17.5,30.2,0.4
+A3 pure Dart,lines_background_61,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,0.988,0.188,3,16.0,59.8,0.5
+A3 pure Dart,lines_background_62,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.994,0.999,0.107,3,18.7,61.9,0.5
+A3 pure Dart,lines_background_63,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.986,0.996,0.220,4,18.2,58.3,0.5
+A3 pure Dart,lines_background_64,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.986,0.987,0.229,3,18.1,64.8,0.5
+A3 pure Dart,lines_background_65,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.986,0.990,0.180,3,18.0,59.4,0.5
+A3 pure Dart,lines_background_66,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.985,0.985,0.270,7,18.2,62.8,1.0
+A3 pure Dart,no_document_67,no_document,false,false,false,0.023,1.000,1.000,0.295,0.159,0.000,0.000,0.000,,2,18.8,60.3,0.2
+A3 pure Dart,no_document_68,no_document,false,false,false,0.008,0.008,1.000,0.159,1.000,1.000,0.000,0.000,,6,19.3,36.2,0.7
+A3 pure Dart,no_document_69,no_document,false,false,false,0.000,0.041,1.000,1.000,0.000,0.000,0.000,0.000,,2,17.9,67.2,0.2
+A3 pure Dart,no_document_70,no_document,false,false,false,0.033,0.062,1.000,1.000,0.533,1.000,0.000,0.000,,6,16.5,35.5,0.6
+A3 pure Dart,combined_71,combined,true,false,false,0.001,1.000,0.910,1.000,0.002,1.000,0.725,1.000,6.726,9,16.4,46.3,1.5
+A3 pure Dart,combined_72,combined,true,false,false,0.060,1.000,1.000,1.000,0.060,1.000,0.825,1.000,2.838,8,16.5,43.2,1.5
+A3 pure Dart,combined_73,combined,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.957,1.000,0.663,4,16.7,40.2,0.8
+A3 pure Dart,combined_74,combined,true,false,false,0.956,1.000,1.000,1.000,0.956,1.000,0.963,1.000,0.662,7,19.4,47.9,1.2
+A3 pure Dart,combined_75,combined,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.962,1.000,0.667,7,18.2,42.7,1.2
+A3 pure Dart,combined_76,combined,true,false,false,0.094,1.000,0.977,0.146,0.643,1.000,0.628,1.000,7.947,4,15.8,38.4,0.8
+A3 small-area,frontal_00,frontal,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.975,1.000,0.402,3,16.9,48.8,0.7
+A3 small-area,frontal_01,frontal,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.987,1.000,0.217,4,15.2,51.9,0.7
+A3 small-area,frontal_02,frontal,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.981,1.000,0.381,8,18.3,52.9,1.2
+A3 small-area,frontal_03,frontal,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.988,1.000,0.218,8,19.6,66.6,1.5
+A3 small-area,perspective_04,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.959,1.000,0.646,3,18.6,48.0,0.7
+A3 small-area,perspective_05,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.959,1.000,0.659,4,20.3,51.3,0.8
+A3 small-area,perspective_06,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.967,1.000,0.651,8,17.9,55.6,1.0
+A3 small-area,perspective_07,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.965,1.000,0.658,8,16.3,64.1,1.4
+A3 small-area,perspective_08,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.994,0.997,0.109,3,17.7,57.3,1.0
+A3 small-area,perspective_09,perspective,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.955,1.000,0.660,5,18.8,41.9,0.7
+A3 small-area,rotation_10,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.963,1.000,0.650,8,19.1,50.0,1.0
+A3 small-area,rotation_11,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.982,1.000,0.309,8,17.4,65.0,1.5
+A3 small-area,rotation_12,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.951,1.000,0.657,4,15.6,48.7,0.7
+A3 small-area,rotation_13,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.992,0.997,0.098,3,17.5,42.7,0.9
+A3 small-area,rotation_14,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.955,1.000,0.667,4,16.9,45.7,0.7
+A3 small-area,rotation_15,rotation,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.961,1.000,0.604,8,18.7,49.8,1.0
+A3 small-area,light_16,light,true,false,false,0.880,1.000,1.000,1.000,0.880,1.000,0.957,1.000,0.659,5,16.0,38.9,0.7
+A3 small-area,light_17,light,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.990,0.995,0.159,3,17.2,51.5,0.9
+A3 small-area,light_18,light,true,false,false,0.930,1.000,1.000,1.000,0.930,1.000,0.967,1.000,0.653,9,19.3,44.0,1.2
+A3 small-area,light_19,light,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.970,1.000,0.613,8,15.0,60.4,1.5
+A3 small-area,light_20,light,true,false,false,0.997,1.000,1.000,1.000,0.997,1.000,0.959,1.000,0.648,7,16.7,48.8,0.9
+A3 small-area,light_21,light,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.959,1.000,0.654,4,18.7,53.2,0.7
+A3 small-area,low_contrast_22,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.306,8,17.3,52.6,1.0
+A3 small-area,low_contrast_23,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.983,1.000,0.312,8,17.4,69.1,1.5
+A3 small-area,low_contrast_24,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.979,1.000,0.312,3,19.8,47.1,0.7
+A3 small-area,low_contrast_25,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.980,1.000,0.308,4,18.4,44.4,0.9
+A3 small-area,low_contrast_26,low_contrast,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.309,8,18.1,59.3,1.0
+A3 small-area,crumple_27,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.308,9,15.8,53.8,1.2
+A3 small-area,crumple_28,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.958,1.000,0.654,4,16.7,46.5,1.1
+A3 small-area,crumple_29,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.968,1.000,0.537,5,18.6,48.9,0.8
+A3 small-area,crumple_30,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.978,1.000,0.447,9,18.6,56.5,1.6
+A3 small-area,crumple_31,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.308,8,15.9,69.8,2.1
+A3 small-area,crumple_32,crumple,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.958,1.000,0.651,4,17.4,53.1,0.7
+A3 small-area,noisy_background_33,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.960,1.000,0.655,4,16.6,50.3,0.8
+A3 small-area,noisy_background_34,noisy_background,true,false,false,0.972,1.000,1.000,1.000,0.972,1.000,0.978,0.998,0.454,8,16.4,56.1,1.5
+A3 small-area,noisy_background_35,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.985,1.000,0.274,8,17.6,69.4,1.7
+A3 small-area,noisy_background_36,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.989,0.989,0.170,4,20.5,44.4,0.8
+A3 small-area,noisy_background_37,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.959,1.000,0.652,3,18.5,52.8,1.0
+A3 small-area,noisy_background_38,noisy_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.989,0.989,0.224,8,17.9,55.3,1.1
+A3 small-area,hand_39,hand,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.989,0.989,0.215,8,20.3,73.5,1.6
+A3 small-area,hand_40,hand,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.992,0.997,0.135,5,17.8,45.6,1.2
+A3 small-area,hand_41,hand,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.997,0.998,0.044,4,20.2,50.4,1.0
+A3 small-area,hand_42,hand,true,false,false,0.975,1.000,1.000,1.000,0.975,1.000,0.866,0.998,4.827,8,19.1,58.4,1.1
+A3 small-area,dark_background_43,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.983,1.000,0.314,8,16.6,61.3,1.1
+A3 small-area,dark_background_44,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.978,1.000,0.313,3,16.4,52.3,0.7
+A3 small-area,dark_background_45,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.979,1.000,0.316,3,19.6,51.8,1.0
+A3 small-area,dark_background_46,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,1.000,0.316,8,19.2,69.3,1.2
+A3 small-area,dark_background_47,dark_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.985,1.000,0.278,8,19.2,59.1,1.1
+A3 small-area,partial_48,partial,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.994,0.997,0.101,6,15.6,48.6,1.3
+A3 small-area,partial_49,partial,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.993,0.998,0.117,4,15.4,73.7,1.2
+A3 small-area,partial_50,partial,true,true,false,1.000,1.000,1.000,1.000,1.000,1.000,0.983,0.997,,8,18.9,70.1,1.4
+A3 small-area,partial_51,partial,true,true,false,1.000,1.000,1.000,1.000,1.000,1.000,0.986,0.998,,8,15.4,61.6,1.2
+A3 small-area,partial_52,partial,true,true,false,1.000,1.000,1.000,1.000,1.000,1.000,0.966,1.000,,5,16.9,50.5,0.7
+A3 small-area,fills_frame_53,fills_frame,true,true,false,1.000,1.000,1.000,1.000,1.000,1.000,0.997,0.997,,7,17.8,63.4,1.0
+A3 small-area,fills_frame_54,fills_frame,true,false,true,0.000,0.000,1.000,1.000,0.000,0.000,0.009,0.009,,8,15.4,82.3,0.4
+A3 small-area,fills_frame_55,fills_frame,true,false,true,0.015,0.023,1.000,0.980,0.664,1.000,0.013,0.013,,4,19.2,79.8,0.3
+A3 small-area,small_document_56,small_document,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.889,1.000,0.623,3,14.9,33.7,0.3
+A3 small-area,small_document_57,small_document,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.916,1.000,0.615,3,17.0,37.1,0.3
+A3 small-area,small_document_58,small_document,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.921,1.000,0.656,3,15.7,34.8,0.4
+A3 small-area,small_document_59,small_document,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.902,1.000,0.671,3,19.1,30.8,0.4
+A3 small-area,small_document_60,small_document,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.914,1.000,0.599,3,18.3,25.2,0.4
+A3 small-area,lines_background_61,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.984,0.988,0.188,3,15.9,65.9,0.5
+A3 small-area,lines_background_62,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.994,0.999,0.107,3,19.0,62.3,0.4
+A3 small-area,lines_background_63,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.986,0.996,0.220,4,17.3,61.3,0.7
+A3 small-area,lines_background_64,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.986,0.987,0.229,3,17.0,51.5,0.6
+A3 small-area,lines_background_65,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.986,0.990,0.180,3,18.9,57.9,0.4
+A3 small-area,lines_background_66,lines_background,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.985,0.985,0.270,7,16.4,65.5,0.7
+A3 small-area,no_document_67,no_document,false,false,false,0.030,0.255,0.272,0.162,0.376,0.000,0.000,0.000,,3,18.7,68.3,0.2
+A3 small-area,no_document_68,no_document,false,false,false,0.743,0.743,1.000,1.000,1.000,1.000,0.000,0.000,,10,18.0,38.3,1.0
+A3 small-area,no_document_69,no_document,false,false,false,0.192,0.599,1.000,0.384,1.000,0.000,0.000,0.000,,4,17.8,65.0,0.4
+A3 small-area,no_document_70,no_document,false,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.000,0.000,,10,19.0,41.2,1.2
+A3 small-area,combined_71,combined,true,false,false,0.001,1.000,0.910,1.000,0.002,1.000,0.725,1.000,6.726,9,18.8,45.3,1.1
+A3 small-area,combined_72,combined,true,false,false,0.060,1.000,1.000,1.000,0.060,1.000,0.825,1.000,2.838,8,16.7,43.2,1.0
+A3 small-area,combined_73,combined,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.957,1.000,0.663,8,19.1,44.8,0.8
+A3 small-area,combined_74,combined,true,false,false,0.956,1.000,1.000,1.000,0.956,1.000,0.963,1.000,0.662,8,19.5,40.3,1.3
+A3 small-area,combined_75,combined,true,false,false,1.000,1.000,1.000,1.000,1.000,1.000,0.962,1.000,0.667,7,18.9,42.2,1.4
+A3 small-area,combined_76,combined,true,false,false,0.094,1.000,0.977,0.146,0.643,1.000,0.628,1.000,7.947,4,18.0,42.1,0.6
