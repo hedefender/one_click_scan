@@ -17,7 +17,7 @@
 2. **Δημιουργία πλατφόρμας.** Το seed έχει ήδη `pubspec.yaml`. Μετακίνησέ το προσωρινά έξω από τον φάκελο, τρέξε:
    `flutter create --org com.example --project-name one_click_scan --platforms android .`
    και μετά επανάφερε το δικό μας `pubspec.yaml` και το `analysis_options.yaml` (αντικατάσταση των παραγόμενων).
-   Σβήσε το παραγόμενο `test/widget_test.dart` και βεβαιώσου ότι το `lib/main.dart` είναι το δικό μας (όχι το demo counter).
+   Σβήσε το παραγόμενο `test/widget_test.dart` (ιστορικό βήμα της Phase 0: το αρχείο δεν υπάρχει πια στο repo) και βεβαιώσου ότι το `lib/main.dart` είναι το δικό μας (όχι το demo counter).
 
 3. **Android overlay.**
    - Αντίγραψε `android_overlay/app/src/main/kotlin/com/example/one_click_scan/MainActivity.kt` πάνω από το παραγόμενο `android/app/src/main/kotlin/com/example/one_click_scan/MainActivity.kt` (αν το package ή το path διαφέρει, προσάρμοσε το `package` και το path και ενημέρωσέ με).

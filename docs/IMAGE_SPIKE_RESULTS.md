@@ -337,7 +337,7 @@ Pages where the crop was used, change against the whole frame (final run, 79 pag
 ### 4.2 Detection at full size (1536 x 2048), same emulator
 
 The detection tables of section 3 were taken at 768 x 1024; the same run at full size gave
-the same picture (details in `ocr_run5_final_83scenes.log`, `OCREVAL detreport` lines):
+the same picture (the numbers are in the tables of this document; the raw run logs are not kept in the repository):
 A3 0 cuts and 0 false positives from threshold 0.2 up; A1 enclosing quad 0 cuts from 0.2;
 A1 approxPolyDP 4 cuts from 0.4 up to 0.9. Median time per picture: A3 79 ms, A1 28 ms
 (prepare about 19 ms, the same Dart grey downscale in both).
@@ -453,7 +453,7 @@ roadmap update and the Phase 6 proposal.
   `binary` (flat, then a local mean threshold: pure black and white).
 - **Pictures:** the 73 scenes whose page lies whole in the frame, straightened with the
   true outline (so detection does not matter here), full size. Real OCR engine of the app,
-  release build, emulator `Claude_Code_Test`. Raw lines: `docs/image_spike_data/enhance_run1_73pages.log`.
+  release build, emulator `Claude_Code_Test`. The raw run log is not kept in the repository; the table is the result.
   Before/after strips (one picture per option, in the order above, magenta lines between
   them): `docs/image_spike_data/enhance_examples/`.
 
@@ -543,7 +543,7 @@ shot -> PrepareImageForOcr (upright, <= 2560)
 OCR one after the other. "Today" = prepare + OCR of the whole frame; "new" = prepare +
 detection + warp + OCR of the crop (A3, pure Dart; one row with A1). Wait = time from
 the last shot to the end of all the work. Debug-free release build, x86_64 emulator,
-2 GB, first row of each pair is today. Raw lines: `docs/image_spike_data/background_run1_emulator.log`.
+2 GB, first row of each pair is today. The raw run log is not kept in the repository; the table is the result.
 
 | pages | shots every | today: wait after the last shot | new (A3) | prepare per page (today / new) | OCR per page (today / new) |
 |---|---|---|---|---|---|
