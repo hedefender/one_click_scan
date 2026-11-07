@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
-/// The working copy the OCR (and later the PDF) reads: EXIF orientation
+/// The working copy the OCR and the PDF read (after the crop of Phase 6.1 it
+/// is the straightened page, ADR-029): EXIF orientation
 /// applied, long side at most `OcrConfig.workingSide`, stored in the app cache.
 ///
 /// [width] and [height] are the pixels of that file as decoded. They are never
@@ -12,6 +13,7 @@ class UprightImage extends Equatable {
     required this.height,
     required this.sourceWidth,
     required this.sourceHeight,
+    this.focalLength35mm,
   });
 
   final String path;
@@ -23,8 +25,19 @@ class UprightImage extends Equatable {
   final int sourceWidth;
   final int sourceHeight;
 
+  /// EXIF 35 mm equivalent focal length of the original photo (null when it
+  /// had none). The working copy has no EXIF, so it travels here.
+  final int? focalLength35mm;
+
   double get sourceMegapixels => sourceWidth * sourceHeight / 1e6;
 
   @override
-  List<Object?> get props => [path, width, height, sourceWidth, sourceHeight];
+  List<Object?> get props => [
+    path,
+    width,
+    height,
+    sourceWidth,
+    sourceHeight,
+    focalLength35mm,
+  ];
 }

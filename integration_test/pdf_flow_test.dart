@@ -222,7 +222,9 @@ void main() {
       await keep(pdfPath, 'flow_1page.pdf');
 
       // The pictures of the user's documents are not left in the cache.
-      expect(filesIn('ocr_work'), isEmpty);
+      // The preview keeps the straightened pages (one file each) until the
+      // screen is left (ADR-029, a named deviation from ADR-018).
+      expect(filesIn('ocr_work'), hasLength(1));
       expect(filesIn('pdf_work'), isEmpty);
 
       // The button hands the stored file to the viewer.
@@ -235,6 +237,11 @@ void main() {
       await tester.tap(find.byKey(ScanKeys.resultOcr));
       await tester.pumpAndSettle();
       expect(find.textContaining('45,90'), findsWidgets);
+
+      // Leaving the screen ends the session: no picture is left in the cache.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 2));
+      expect(filesIn('ocr_work'), isEmpty);
     });
 
     testWidgets('three pages: ONE pdf with 3 pages, named after the first '
@@ -272,7 +279,9 @@ void main() {
       expect(inspected.invisibleTextCount, greaterThan(40));
       expect(find.textContaining('3 pages,'), findsOneWidget);
       await keep(pdfPath, 'flow_3pages.pdf');
-      expect(filesIn('ocr_work'), isEmpty);
+      // The preview keeps the straightened pages (one file each) until the
+      // screen is left (ADR-029, a named deviation from ADR-018).
+      expect(filesIn('ocr_work'), hasLength(3));
       expect(filesIn('pdf_work'), isEmpty);
     });
 
@@ -330,7 +339,9 @@ void main() {
       await tester.tap(find.byKey(ScanKeys.pdfRetry));
       await pumpUntil(tester, find.byKey(ScanKeys.pdfOpen));
       expect(folder.files('pdf'), ['2026-10-21_19-05-12.pdf']);
-      expect(filesIn('ocr_work'), isEmpty);
+      // The preview keeps the straightened pages (one file each) until the
+      // screen is left (ADR-029, a named deviation from ADR-018).
+      expect(filesIn('ocr_work'), hasLength(1));
     });
 
     testWidgets('no access to the folder is said clearly', (tester) async {
@@ -601,7 +612,9 @@ void main() {
         findsOneWidget,
       );
       expect(folder.files('pdf'), hasLength(1));
-      expect(filesIn('ocr_work'), isEmpty);
+      // The preview keeps the straightened pages (one file each) until the
+      // screen is left (ADR-029, a named deviation from ADR-018).
+      expect(filesIn('ocr_work'), hasLength(2));
       Directory('${work.path}/user_folder2').deleteSync(recursive: true);
       shots.deleteSync(recursive: true);
     });

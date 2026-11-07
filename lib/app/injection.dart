@@ -28,6 +28,7 @@ import '../domain/usecases/scan_and_send.dart';
 import '../domain/usecases/send_scan_pdf.dart';
 import '../domain/usecases/prepare_image_for_ocr.dart';
 import '../domain/usecases/recognize_pages.dart';
+import '../domain/usecases/straighten_page.dart';
 import '../services/ocr/ocr_services.dart';
 import '../domain/scan/gallery_naming.dart';
 import '../domain/scan/scan_naming.dart';
@@ -188,6 +189,9 @@ Future<GetIt> buildContainer({
         nativeMaker: ocr.nativeMaker,
         workStore: ocr.workStore,
       ),
+      straighten: ocr.cropper == null
+          ? null
+          : StraightenPage(cropper: ocr.cropper!, workStore: ocr.workStore),
     ),
   );
 

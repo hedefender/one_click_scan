@@ -61,6 +61,7 @@ class PrepareImageForOcr {
         height: pixels.height,
         sourceWidth: header.width,
         sourceHeight: header.height,
+        focalLength35mm: header.focalLength35mm,
       );
     } on UprightImageException catch (error) {
       await workStore.delete(target);

@@ -25,6 +25,8 @@ abstract final class ScanKeys {
   static const resultBack = Key('scan.result.back');
   static const resultOcr = Key('scan.result.ocr');
   static const resultSummary = Key('scan.result.summary');
+  static const pdfPages = Key('scan.result.pdfPages');
+  static Key pdfPage(int index) => Key('scan.result.pdfPage.$index');
   static const flowStatus = Key('scan.result.flow.status');
   static const flowCancel = Key('scan.result.flow.cancel');
   static const flowCancelled = Key('scan.result.flow.cancelled');

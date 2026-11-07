@@ -4,15 +4,19 @@ import 'package:one_click_scan/domain/entities/ocr_line.dart';
 import 'package:one_click_scan/domain/entities/ocr_outcome.dart';
 import 'package:one_click_scan/domain/entities/ocr_progress.dart';
 import 'package:one_click_scan/domain/entities/ocr_result.dart';
+import 'package:one_click_scan/domain/entities/page_crop_outcome.dart';
 import 'package:one_click_scan/domain/entities/upright_image.dart';
+import 'package:one_click_scan/domain/imaging/quad.dart';
 import 'package:one_click_scan/domain/ocr/ocr_cancellation.dart';
 import 'package:one_click_scan/domain/ocr/ocr_config.dart';
 import 'package:one_click_scan/domain/ports/image_header_reader.dart';
 import 'package:one_click_scan/domain/ports/ocr_engine.dart';
 import 'package:one_click_scan/domain/ports/ocr_work_store.dart';
+import 'package:one_click_scan/domain/ports/page_cropper.dart';
 import 'package:one_click_scan/domain/ports/upright_image_maker.dart';
 import 'package:one_click_scan/domain/usecases/prepare_image_for_ocr.dart';
 import 'package:one_click_scan/domain/usecases/recognize_pages.dart';
+import 'package:one_click_scan/domain/usecases/straighten_page.dart';
 import 'package:one_click_scan/services/ocr/ocr_services.dart';
 
 /// A square quad around (x, y).
@@ -104,6 +108,91 @@ class FakeOcrEngine implements OcrEngine {
   Future<void> dispose() async => disposeCalls++;
 }
 
+/// One call of [FakeCropper].
+class CropCall {
+  const CropCall({
+    required this.source,
+    required this.target,
+    required this.maxSide,
+    required this.jpegQuality,
+    required this.focalLength35mm,
+    required this.timeout,
+    required this.cancellation,
+  });
+
+  final String source;
+  final String target;
+  final int maxSide;
+  final int jpegQuality;
+  final int? focalLength35mm;
+  final Duration timeout;
+  final OcrCancellation? cancellation;
+}
+
+/// Scripted page cropper: no pixels, only the outcomes.
+class FakeCropper implements PageCropper {
+  /// The answer when [respond] is not set: a crop of 1200 x 1700.
+  PageCropOutcome outcome = PageCropped(
+    quad: Quad.frame(1200, 1700),
+    confidence: 0.9,
+    width: 1200,
+    height: 1700,
+  );
+
+  /// The answer by the path of the picture being cropped.
+  PageCropOutcome Function(String source)? respond;
+
+  /// Thrown instead of an answer.
+  Object? throwWith;
+
+  /// While set, a crop waits for it (to hold a page "in the crop"); a cancel
+  /// ends the wait with the whole frame, as the real cropper does.
+  Completer<void>? gate;
+
+  final List<CropCall> calls = [];
+  int running = 0;
+  int maxRunning = 0;
+
+  @override
+  Future<PageCropOutcome> crop({
+    required String source,
+    required String target,
+    required int maxSide,
+    required int jpegQuality,
+    required int? focalLength35mm,
+    required Duration timeout,
+    OcrCancellation? cancellation,
+  }) async {
+    calls.add(
+      CropCall(
+        source: source,
+        target: target,
+        maxSide: maxSide,
+        jpegQuality: jpegQuality,
+        focalLength35mm: focalLength35mm,
+        timeout: timeout,
+        cancellation: cancellation,
+      ),
+    );
+    running++;
+    if (running > maxRunning) maxRunning = running;
+    try {
+      final failure = throwWith;
+      if (failure != null) throw failure;
+      final g = gate;
+      if (g != null) {
+        await Future.any([g.future, ?cancellation?.whenCancelled]);
+        if (cancellation?.isCancelled ?? false) {
+          return const PageWholeFrame(WholeFrameReason.cancelled);
+        }
+      }
+      return respond?.call(source) ?? outcome;
+    } finally {
+      running--;
+    }
+  }
+}
+
 class InMemoryOcrWorkStore implements OcrWorkStore {
   final Set<String> files = {};
   final List<String> deleted = [];
@@ -172,7 +261,7 @@ class FakeMaker implements UprightImageMaker {
 
 /// Everything a session test needs, wired like the real container.
 class OcrTestRig {
-  OcrTestRig({FakeOcrEngine? engine})
+  OcrTestRig({FakeOcrEngine? engine, this.cropper})
     : engine = engine ?? FakeOcrEngine(),
       header = FakeHeaderReader(),
       dartMaker = FakeMaker('dart'),
@@ -188,8 +277,14 @@ class OcrTestRig {
       engine: this.engine,
       prepare: prepare,
       workStore: workStore,
+      straighten: cropper == null
+          ? null
+          : StraightenPage(cropper: cropper!, workStore: workStore),
     );
   }
+
+  /// The crop of the pages; none unless a test gives one.
+  final PageCropper? cropper;
 
   /// The same fakes as an `OcrServices` bundle, for `buildTestContainer`.
   OcrServices get services => OcrServices(
@@ -198,6 +293,7 @@ class OcrTestRig {
     headerReader: header,
     dartMaker: dartMaker,
     nativeMaker: nativeMaker,
+    cropper: cropper,
   );
 
   final FakeOcrEngine engine;

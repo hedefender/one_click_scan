@@ -8,6 +8,7 @@ import 'package:one_click_scan/core/config/app_config.dart';
 import 'package:one_click_scan/core/errors/app_exceptions.dart';
 import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
 import 'package:one_click_scan/domain/entities/ocr_outcome.dart';
+import 'package:one_click_scan/domain/entities/page_crop_outcome.dart';
 import 'package:one_click_scan/domain/ports/open_pdf.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
 import 'package:one_click_scan/features/home/home_keys.dart';
@@ -26,11 +27,15 @@ void main() {
   late PdfTestRig pdf;
   late FakeScanFileStore store;
 
-  Future<void> pumpHome(WidgetTester tester, {String language = 'en'}) async {
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    String language = 'en',
+    FakeCropper? cropper,
+  }) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    rig = OcrTestRig();
+    rig = OcrTestRig(cropper: cropper);
     pdf = PdfTestRig();
     store = FakeScanFileStore();
     final values = InMemoryKeyValueStore();
@@ -297,16 +302,16 @@ void main() {
     expect(find.text('Κείμενο OCR (έλεγχος)'), findsOneWidget);
   });
 
-  testWidgets('working copies are deleted once the PDF is stored, and the '
-      'OCR check screen still works', (tester) async {
+  testWidgets('the preview keeps the pages of the PDF, and the OCR check '
+      'screen still works', (tester) async {
     await pumpHome(tester);
     rig.engine.respond = (_) =>
         OcrSuccess(fakeResult([fakeLine('Σύνολο 12,50', confidence: 0.97)]));
 
     await tapKey(tester, ScanKeys.capture);
 
-    expect(rig.workStore.files, isEmpty);
-    expect(rig.workStore.deleted, isNotEmpty);
+    // The preview mode draws the pages as they are in the PDF (ADR-029).
+    expect(rig.workStore.files, isNotEmpty);
 
     await tapKey(tester, ScanKeys.resultOcr);
     expect(find.text('Σύνολο 12,50'), findsOneWidget);
@@ -315,4 +320,60 @@ void main() {
     await tapKey(tester, OcrKeys.showBoxes);
     expect(find.byKey(OcrKeys.boxesImage), findsOneWidget);
   });
+
+  testWidgets('the preview shows the pages as they are in the PDF, and says '
+      'how many were straightened', (tester) async {
+    final cropper = FakeCropper();
+    await pumpHome(tester, cropper: cropper);
+    await tester.tap(find.text('Multi page'));
+    await tester.pumpAndSettle();
+    await tapKey(tester, ScanKeys.capture);
+    await tapKey(tester, ScanKeys.capture);
+    await tapKey(tester, ScanKeys.done);
+
+    expect(find.byKey(ScanKeys.pdfPages), findsOneWidget);
+    expect(find.text('Pages of the PDF'), findsOneWidget);
+    expect(find.byKey(ScanKeys.pdfPage(0)), findsOneWidget);
+    expect(find.byKey(ScanKeys.pdfPage(1)), findsOneWidget);
+    expect(
+      find.textContaining('2 of 2 pages were cropped and straightened'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('as they were taken'), findsOneWidget);
+  });
+
+  testWidgets('a page that kept the whole frame is counted as such', (
+    tester,
+  ) async {
+    final cropper = FakeCropper();
+    var n = 0;
+    cropper.respond = (_) => n++ == 0
+        ? cropper.outcome
+        : const PageWholeFrame(WholeFrameReason.lowConfidence);
+    await pumpHome(tester, cropper: cropper);
+    await tester.tap(find.text('Multi page'));
+    await tester.pumpAndSettle();
+    await tapKey(tester, ScanKeys.capture);
+    await tapKey(tester, ScanKeys.capture);
+    await tapKey(tester, ScanKeys.done);
+
+    expect(
+      find.textContaining('1 of 2 pages were cropped and straightened'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'without a crop step the preview says that no page was straightened',
+    (tester) async {
+      await pumpHome(tester);
+      await tapKey(tester, ScanKeys.capture);
+
+      // The pictures are kept (the preview mode) but nothing was straightened.
+      expect(
+        find.textContaining('0 of 1 pages were cropped and straightened'),
+        findsOneWidget,
+      );
+    },
+  );
 }

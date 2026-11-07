@@ -8,11 +8,13 @@ import '../../domain/ocr/ocr_language_pack_registry.dart';
 import '../../domain/ports/image_header_reader.dart';
 import '../../domain/ports/ocr_engine.dart';
 import '../../domain/ports/ocr_work_store.dart';
+import '../../domain/ports/page_cropper.dart';
 import '../../domain/ports/upright_image_maker.dart';
 import '../image/dart_upright_image_maker.dart';
 import '../image/file_image_header_reader.dart';
 import '../image/io_ocr_work_store.dart';
 import '../image/native_upright_image_maker.dart';
+import '../imaging/isolate_page_cropper.dart';
 import 'ocr_model_store.dart';
 import 'paddle_ocr_engine.dart';
 import 'unsupported_ocr_engine.dart';
@@ -26,6 +28,7 @@ class OcrServices {
     required this.headerReader,
     required this.dartMaker,
     required this.nativeMaker,
+    this.cropper,
   });
 
   /// No OCR: the default of the container, so tests never load a model, touch
@@ -35,13 +38,18 @@ class OcrServices {
       workStore = const _NoopWorkStore(),
       headerReader = const _NoHeaderReader(),
       dartMaker = const _NoMaker(),
-      nativeMaker = const _NoMaker();
+      nativeMaker = const _NoMaker(),
+      cropper = null;
 
   final OcrEngine engine;
   final OcrWorkStore workStore;
   final ImageHeaderReader headerReader;
   final UprightImageMaker dartMaker;
   final UprightImageMaker nativeMaker;
+
+  /// Finds and straightens the page of a shot (Phase 6.1); null where there is
+  /// none, and then every page keeps the whole frame.
+  final PageCropper? cropper;
 }
 
 Future<OcrServices> createPlatformOcrServices({
@@ -66,6 +74,7 @@ Future<OcrServices> createPlatformOcrServices({
     headerReader: const FileImageHeaderReader(),
     dartMaker: const DartUprightImageMaker(),
     nativeMaker: NativeUprightImageMaker(),
+    cropper: const IsolatePageCropper(),
   );
 }
 

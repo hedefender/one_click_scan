@@ -181,7 +181,7 @@ class _Status extends StatelessWidget {
     final strings = AppStrings.of(context);
     final progress = page.progress;
     final text = switch (page.status) {
-      OcrPageStatus.queued => strings.ocrStatusQueued,
+      OcrPageStatus.queued || OcrPageStatus.ready => strings.ocrStatusQueued,
       OcrPageStatus.preparing => strings.ocrStatusPreparing,
       _ => switch (progress?.stage) {
         OcrStage.loadingModels => strings.ocrStatusLoadingModels,

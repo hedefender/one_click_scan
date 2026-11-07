@@ -159,15 +159,20 @@ void main() {
       expect(cubit.state.pdf!.textPageCount, 0);
     });
 
-    test('the working copies are deleted once the PDF is stored', () async {
+    test('the pages stay as they are in the PDF until the screen is left '
+        '(ADR-029)', () async {
       await setUpRig(flowMode: ScanFlowMode.preview, pages: 2);
       session.close();
 
       await cubit.start();
       await untilFinal();
 
-      expect(rig.workStore.files, isEmpty);
+      // The preview draws them; nothing was deleted yet.
+      expect(rig.workStore.files, hasLength(2));
       expect(pdf.builder.discarded, hasLength(1));
+
+      await session.dispose(); // what leaving the result screen does
+      expect(rig.workStore.files, isEmpty);
     });
   });
 
@@ -194,6 +199,8 @@ void main() {
       await untilFinal();
 
       expect(cubit.state.previewMode, isFalse);
+      // One Click shows no pages: no picture stays in the cache (ADR-018).
+      expect(rig.workStore.files, isEmpty);
       final done = cubit.state.flow as FlowFinished;
       expect(done.delivery, isA<DeliverySent>());
       expect(cubit.state.canDiscard, isFalse); // already sent
@@ -235,6 +242,11 @@ void main() {
       expect(cubit.state.flow, isA<FlowCancelled>());
       expect(pdf.builder.builds, isEmpty);
       expect(store.files('pictures'), isNotEmpty);
+      expect(
+        rig.workStore.files,
+        isEmpty,
+        reason: 'no picture of a document stays in the cache after a Cancel',
+      );
     });
 
     test('there is no cancel while the PDF is written or after it', () async {
@@ -269,6 +281,8 @@ void main() {
 
       expect(cubit.state.flow, isA<FlowAwaitingDecision>());
       expect(store.files('pdf'), ['2026-10-21_19-05-12.pdf']);
+      expect(rig.workStore.files, isNotEmpty); // the preview keeps them
+      await session.dispose();
       expect(rig.workStore.files, isEmpty);
     });
 
@@ -341,8 +355,19 @@ void main() {
       await setUpRig(flowMode: ScanFlowMode.preview);
       await reachDecision();
       expect(cubit.state.canDiscard, isTrue);
+      expect(
+        rig.workStore.files,
+        isNotEmpty,
+        reason: 'the preview keeps the pages as they are in the PDF',
+      );
 
       await cubit.discard();
+
+      expect(
+        rig.workStore.files,
+        isEmpty,
+        reason: 'a discarded scan leaves no picture in the cache',
+      );
 
       expect(cubit.state.discarded, isTrue);
       expect(cubit.state.discardOutcome!.complete, isTrue);

@@ -133,6 +133,9 @@ class ScanFlowCubit extends Cubit<ScanFlowViewState> {
             .length,
       );
     }
+    // The preview keeps the straightened pages in the cache to show them
+    // (ADR-029); a discarded scan must leave no picture of it anywhere.
+    await _session?.releaseWorkingCopies();
     if (isClosed) return;
     emit(state.copyWith(discard: DiscardPhase.done, discardOutcome: outcome));
   }

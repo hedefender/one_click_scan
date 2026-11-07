@@ -1,11 +1,10 @@
 # Image spike results (Phase 6.0)
 
-Status: **research only (section 1), 2026-10-29.** Nothing is implemented or measured
-yet. Sections 2 to 7 of the request (detection quality, confidence, contrast,
-background, reading order, focus) are still to do and wait for the user's decision
-on which options to build.
+Status: **spike 6.0 complete (2026-10-31): sections 1 to 9 are measured on the emulator and the PC, and the phone check by the user is in the appendix at the end.** The decisions that followed (A3 only, enclosing quad, confidence 0.5, originals untouched) are the base of Phase 6.1 (`DECISIONS.md` ADR-029).
 
-All claims below come from pages fetched on 2026-10-29. "Not stated" means the page
+Section 1 below was written first, from pages fetched on 2026-10-29 (research before anything was built). The other sections are measurements.
+
+All claims of section 1 come from pages fetched on 2026-10-29. "Not stated" means the page
 was read and does not say it; it is not a statement that the thing is false.
 
 ## 1. Implementation options
@@ -649,3 +648,36 @@ What the code does (read, `lib/services/camera/plugin_camera_service.dart`; the 
   the same queue (section 6.2). The real gain to look for is pipelining the preparation.
 - **Autofocus:** the app waits for nothing before the shutter (section 7); to be judged on
   the phone.
+
+## Appendix. Results on the phone (user), 2026-11
+
+**These are human tests on the user's own phone with the spike APK, not automated measurements.** Nothing of the
+documents was sent to Claude; only the answers below.
+
+### Controlled checks, method A3 (pure Dart)
+
+Nine situations (well lit, badly lit, crumpled receipt, tilted, dark background, document out of the frame, small
+receipt, table with no document, the hard receipt of Phase 2): **all satisfactory**. In random checks no content was
+lost. With bad light and with a dark background the app often falls back to the whole frame (safe, by design).
+
+### Background test on the phone (today / new with the crop)
+
+| Pages | Shots every | Wait after the last shot (s) | Frames above 33 ms |
+|---|---|---|---|
+| 5 | 2.5 s | 5.2 / 4.9 | 7 / 1 |
+| 21 | 2.5 s | 8 / 7.7 | 1 / 3 |
+| 21 | all at once | 56.4 / 65.4 | 0 / 3 |
+
+The bar did not stick. So the reading in the background does not disturb the camera, and **the crop alone gains no
+time when the pages come at once** (65.4 against 56.4 s on the phone; on the emulator it was 37.2 against 41.8 s).
+The aim of Phase 6.1 is therefore to hide the preparation between the shots (pipelining), not to speed up the
+all-at-once case.
+
+### Conclusions of the user
+
+- **A1 (OpenCV) is out:** on real documents it gave the worst results, wrong crops, and it distorted a page that was
+  already straight because of a diagonal line in the content. Only A3 goes on.
+- **Focus:** the blur of a photo taken close to the text is the behaviour of the lens and the automatic focus of the
+  phone, the same as in the phone's own camera app. The camera of the app is not changed.
+- **Light:** in bad light or on a dark background the crop is not applied (whole frame). Section "Phase 6.2" of
+  `ROADMAP.md` records a proposal for that (a milder light normalisation for the detection only).

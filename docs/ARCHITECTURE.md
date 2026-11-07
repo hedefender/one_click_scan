@@ -10,6 +10,8 @@ Phase 1.2 adds the app icon, the splash screen and the Gallery copy names
 (section 8f, ADR-019 to ADR-024, `PHASE_4_VALIDATION.md`, `MAIL_PROVIDERS.md`,
 `MAIL_OAUTH_PLAN.md`); Phase 4.1 completes the share route and the error texts
 (ADR-024).
+Phase 6.1 adds the crop and straightening of the page for the PDF and the two-stage queue
+(section 8i, ADR-029, `PHASE_6_1_VALIDATION.md`).
 
 ## 1. Principles
 
@@ -614,6 +616,69 @@ Tests: `store_scan_pages_test` (cancel), `scan_and_send_test` (PDF stage),
 `scan_page_widget_test` (Phase 5.1 groups), and on the emulator the Phase 5.1 cases
 of `one_click_flow_test`. `processing_measure_test` measures 5 and 21 pages
 (nothing asserted; the numbers feed Phase 6).
+
+### 8i. Crop and straighten of the page, and the two-stage queue (Phase 6.1)
+
+Decision and reasons: ADR-029. Measurements of the spike: `IMAGE_SPIKE_RESULTS.md`.
+
+**Layers**
+
+| Layer | Files | What |
+|---|---|---|
+| `domain/imaging/` | `quad.dart` (`Pt`, `Quad`), `page_crop_config.dart` | Geometry, and **every constant of the crop in one place** with `trustsDetection(confidence)` (>= 0.5) as the only rule that applies the threshold |
+| `domain/entities/` | `page_crop_outcome.dart` | Sealed `PageCropOutcome`: `PageCropped(quad, confidence, width, height)` or `PageWholeFrame(reason)` (`lowConfidence`, `notFound`, `failed`, `timeout`, `cancelled`) |
+| `domain/ports/` | `page_cropper.dart` | `PageCropper.crop(source, target, ...)` returns an outcome and never throws for a bad picture |
+| `domain/usecases/` | `straighten_page.dart` | `StraightenPage`: calls the port, covers every error with the whole frame, replaces the working copy by the cropped file (one working file per page) |
+| `domain/usecases/` | `recognize_pages.dart` | `OcrSession`: the two-stage queue |
+| `services/imaging/` | `detection.dart`, `crop_page_job.dart`, `isolate_page_cropper.dart` (and the homography/warp files) | The pure Dart method A3 (package `image`), in its own isolate |
+| `services/image/` | `image_header_parser.dart` | Also reads the EXIF 35 mm focal length (tag 0xA405) |
+
+The domain imports no Flutter and no plugin; the isolate and the `image` package are
+only in `services/imaging/`.
+
+**Data flow of one page**
+
+```
+shot (original, untouched)
+  -> prepare: upright working copy (<= 2560 px, EXIF applied)          [stage A]
+  -> crop: detect on a 640 px grey picture, enclosing quad,
+           confidence >= 0.5 ? warp the working copy : keep the frame   [stage A]
+  -> read: the OCR on that picture                                      [stage B]
+  -> the PDF takes the same picture and the words of the OCR
+```
+
+**The queue.** Stage A (prepare and crop) works on one page at a time and stage B (the
+OCR) on one page at a time, both in capture order. A prepared page waits for the engine
+as a file; at most `PageCropConfig.prepareAhead` (2) of them wait, so the preparation
+pauses until the engine takes one (backpressure: bounded memory). While page k is read,
+page k+1 is prepared. `add` returns at once, and the pages that the processing could not
+catch up with are finished after "Done".
+
+**The isolate of the crop** is spawned with `Isolate.spawn` (not `Isolate.run`) with a
+result port, an exit port and an error port. On the timeout (8 s) or on a cancel it is
+**killed**; the file of the target is deleted only after the isolate has exited, so no
+file can appear afterwards. The UI isolate does no part of the work.
+
+**Cancel, undo, discard.** A table is in ADR-029. In short: undo of a shot being
+processed kills the crop and removes all its files; Cancel/Back kills every stage;
+Discard disposes the session; an error in the crop keeps the whole frame.
+
+**Files.** The originals are never read by the crop and never written. The cropped
+pictures are in the cache folder of the OCR working copies (`ocr_work`), removed at the
+end of the scan (One Click), on Discard or when the preview is left, on an error, on a
+cancel and at start-up (`purgeAll`). The preview keeps them until then, to show "the
+pages as they are in the PDF" (the named deviation from ADR-018).
+
+**Logs.** Numbers only: how many pages were straightened and how many kept the whole
+frame, by reason. No picture, no text.
+
+**Testing.** Unit: geometry and corner order, confidence and the threshold (exactly 0.5),
+the ratio of the straightened page, the whole frame for every reason, the EXIF focal
+length present and absent, a seeded synthetic set (0 cuts of the content, 0 false
+crops), the isolate (killed on timeout and cancel). Queue with fakes: order, depth and
+backpressure, undo, cancel at every stage, discard, an error of the crop, originals byte
+for byte the same. Widget: the preview shows the straightened pages. Integration on the
+emulator: `integration_test/crop_flow_test.dart` (real OCR, real PDF, real isolate).
 
 ## 9. Testing strategy
 

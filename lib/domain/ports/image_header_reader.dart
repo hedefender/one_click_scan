@@ -4,6 +4,7 @@ class ImageHeader {
     required this.width,
     required this.height,
     required this.orientation,
+    this.focalLength35mm,
   });
 
   /// Pixels of the stored image (not the EXIF size tags).
@@ -12,6 +13,10 @@ class ImageHeader {
 
   /// EXIF orientation 1..8; 1 when the tag is missing or invalid (0, 9...).
   final int orientation;
+
+  /// EXIF 35 mm equivalent focal length in millimetres; null when the photo
+  /// has none. Used to straighten a tilted page in its true proportions.
+  final int? focalLength35mm;
 
   double get megapixels => width * height / 1e6;
 }

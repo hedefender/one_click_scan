@@ -167,6 +167,14 @@ class AppStringsEl extends AppStrings {
       : 'Αποθηκεύτηκαν $count αρχεία στο "$folderName/pictures"';
 
   @override
+  String get scanPdfPagesTitle => 'Σελίδες του PDF';
+
+  @override
+  String scanPdfPagesNote(int straightened, int total) =>
+      '$straightened από $total σελίδες κόπηκαν και ισιώθηκαν. Οι άλλες '
+      'μπήκαν ολόκληρες. Οι φωτογραφίες στον φάκελο έμειναν όπως τραβήχτηκαν.';
+
+  @override
   String get scanGallerySaved => 'Αντίγραφο αποθηκεύτηκε στη Gallery';
 
   @override

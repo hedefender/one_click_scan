@@ -673,3 +673,83 @@ started when the send failed, when only the e-mail app was opened (`shareDraft`)
 while anything runs. One update a second, no animation. `AutoReturnCubit` takes the
 clock as an injected stream so a test drives time by hand; its subscription ends at
 zero, at the touch and in `close`, so nothing navigates after the user left.
+
+## ADR-029 Crop and straighten of the page for the PDF, pure Dart, as a step of the background queue (Phase 6.1)
+
+**Decision of the user (after the spike 6.0 and the phone check):** the PDF gets the
+page cut out of the photo and straightened; the originals do not change.
+
+- **Method A3 only (pure Dart, package `image`, MIT, already a dependency).** No
+  native code, no new package, no APK growth. A1 (OpenCV) was excluded on the
+  phone check: wrong cuts, and a deformed page that was already straight (a diagonal
+  line in the content). Spike results: `IMAGE_SPIKE_RESULTS.md`.
+- **Detection:** brightness and edge candidates on a grey picture of at most 640 px,
+  then the **enclosing quad** (the outline that always contains the convex hull of
+  the candidate). This is what protects the content: on 77 synthetic scenes it cut
+  nothing at confidence 0.5, while `approxPolyDP` cut four pages.
+- **One rule, one place:** `PageCropConfig` holds every constant (confidence 0.5,
+  detection side 640, area bounds, timeout 8 s, queue depth 2) and
+  `trustsDetection(confidence)` is the only place that applies the threshold
+  (`>= 0.5`). Each constant has a comment saying what raises or lowers it.
+- **The PDF never loses content.** A low confidence, no page found, an exception,
+  an out-of-memory, a timeout of 8 s, or a cancel all give the **whole frame** (the
+  same working copy as before) for that page, and the scan goes on
+  (`PageWholeFrame(reason)`). The scan never fails because of the crop. Only numbers
+  go to the log (how many pages were straightened, the whole-frame reasons), never
+  content.
+- **Originals untouched.** `StoreScanPages`, `./pictures` and the Gallery copy are not
+  changed: the crop reads and writes only the cache. Tests compare the originals
+  byte for byte before and after.
+- **The picture of the PDF** is the straightened working copy, with the same size
+  rule (ADR-017: page size = pixels x 72/200) and the same JPEG quality as before.
+  **No contrast or shadow processing** (the spike showed no gain; `flat` stays out
+  of the app until Phase 6.2, as an option of the user).
+- **The OCR reads the cropped picture**, so the text layer of the PDF fits the
+  picture of the page. The straightened page replaces the working copy (one working
+  file per page).
+- **Focal length for the perspective:** read from the EXIF of the original (tag
+  0xA405, 35 mm equivalent) into `ImageHeader` and `UprightImage`. If it is missing
+  the mean of the opposite sides is used; the limit of accuracy is that a page tilted
+  about 20 degrees can come out about 6% narrower. The 35 mm value is turned into
+  pixels with `focalPx = f35 * diagonalPx / 43.27`.
+- **It runs in its own isolate** (`IsolatePageCropper`), never in the UI isolate. The
+  isolate is spawned (not `Isolate.run`) so a timeout or a cancel **kills** it, and
+  the target file is deleted only after it has exited, so nothing appears afterwards.
+
+**The queue (`OcrSession`) has two stages** that overlap: *prepare* (upright working
+copy, then the crop; one page at a time) and *read* (the OCR; one page at a time).
+While page k is read, page k+1 is prepared. At most `prepareAhead = 2` prepared pages
+wait for the engine: this is the backpressure that bounds the memory. The reading is
+always in capture order, whatever the order the stages end. `add` still returns at
+once.
+
+| Case | What happens |
+|---|---|
+| Undo of the last shot while its page is worked on | The crop is killed, every file of the page is deleted, the result is dropped |
+| Cancel / Back after Done (ADR-028) | Every stage stops at once, the crop is killed, no file stays in the cache |
+| Discard | `session.dispose` deletes the cache files; `DiscardScan` is as before (ADR-027) |
+| "No text" (`skipText`, `stopReading`) | A crop that runs is let to finish; the OCR is skipped; the page goes in the PDF without text |
+| Error, timeout or exception in the crop | Whole frame for that page, the scan goes on |
+
+**Cache and clean-up.** The cropped files are in the cache of the app, not in the
+user's folder. They are removed at the end, on an error, on a cancel, and at start-up
+(`purgeAll`, as in Phase 4).
+
+**Deviation from ADR-018 (named on purpose).** ADR-018 says no picture stays in the
+cache after the PDF is stored. In the **preview** mode the preview shows the pages
+"as they are in the PDF", so their straightened working copies stay until the result
+screen is left (like the captured shots). In **One Click** they are deleted at once,
+as before. The preview shows them in a row of thumbnails with a note of how many were
+straightened.
+
+**ADR-028:** the stage texts and the cancel behaviour are as before; the stage text
+may stay "Processing" with no animation. The only change is that Cancel also kills a
+running crop.
+
+**Limits.** 14 of 77 synthetic scenes fall back to the whole frame (small pages and
+some combined scenes), and with bad light or a dark background the phone check showed
+the same (safe by design). Proposals for Phase 6.2 (not built): detection on a picture
+with a mild light flattening used only for the detection, and a lowered area bound for
+small receipts. No gain of time is claimed when all pages arrive at once (measured on
+the phone: 56.4 s before against 65.4 s with the crop): the gain is in hiding the time
+between the shots.

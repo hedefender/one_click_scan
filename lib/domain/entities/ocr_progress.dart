@@ -7,6 +7,9 @@ enum OcrStage {
   /// The upright working copy is being made.
   preparingImage,
 
+  /// The page is being found and straightened (Phase 6.1).
+  straighteningPage,
+
   /// Looking for text boxes.
   detecting,
 

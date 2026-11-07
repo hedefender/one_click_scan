@@ -165,6 +165,14 @@ class AppStringsEn extends AppStrings {
       : '$count files saved in "$folderName/pictures"';
 
   @override
+  String get scanPdfPagesTitle => 'Pages of the PDF';
+
+  @override
+  String scanPdfPagesNote(int straightened, int total) =>
+      '$straightened of $total pages were cropped and straightened. The '
+      'others went in whole. The photos in the folder are as they were taken.';
+
+  @override
   String get scanGallerySaved => 'Copy saved to Gallery';
 
   @override

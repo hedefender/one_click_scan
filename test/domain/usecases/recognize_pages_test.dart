@@ -186,11 +186,11 @@ void main() {
         ..add('p3', 'p3.jpg');
       await pumpEventQueue();
 
-      // p1 is being read, p2 and p3 wait their turn.
+      // p1 is being read; p2 and p3 are already prepared and wait their turn.
       expect(session.snapshot.pages.map((p) => p.status), [
         OcrPageStatus.recognizing,
-        OcrPageStatus.queued,
-        OcrPageStatus.queued,
+        OcrPageStatus.ready,
+        OcrPageStatus.ready,
       ]);
 
       gate.complete();

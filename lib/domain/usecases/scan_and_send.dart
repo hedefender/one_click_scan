@@ -72,6 +72,9 @@ class ScanAndSend {
       final done = await _waitForText(session, cancellation, out);
       if (cancellation.isCancelled) {
         out.add(const FlowCancelled(ScanFlowStage.recognizing));
+        // Every stage has ended (the session finishes after them): no picture
+        // of a document stays in the cache after a Cancel (ADR-028, ADR-029).
+        await session.releaseWorkingCopies();
         return;
       }
       out.add(const FlowBuildingPdf());
@@ -95,6 +98,7 @@ class ScanAndSend {
         // it finishes later is deleted again, never left without a scan (ADR-028).
         out.add(const FlowCancelled(ScanFlowStage.buildingPdf));
         await _discardLate(pending);
+        await session.releaseWorkingCopies();
         return;
       }
       final settings = await loadSettings();
@@ -225,15 +229,26 @@ class ScanAndSend {
     if (pages.isEmpty) {
       throw const ScanPdfException(ScanPdfFailure.pageImageMissing);
     }
-    final folder = (await loadSettings()).storageFolder;
+    final settings = await loadSettings();
+    final folder = settings.storageFolder;
     if (folder == null) throw const ScanPdfException(ScanPdfFailure.noAccess);
+    // Numbers only, never the content of a page.
+    logger.debug(
+      'Page crop: ${done.croppedCount} of ${done.pages.length} pages '
+      'straightened, whole frame by reason: '
+      '${done.wholeFrameReasons.map((k, v) => MapEntry(k.name, v))}',
+    );
     final stored = await storePdf(
       folder: folder,
       stem: scan.stem,
       pages: pages,
     );
-    // The pictures are in the PDF now: no copy of them stays in the cache.
-    await session.releaseWorkingCopies();
+    // The pictures are in the PDF now: no copy of them stays in the cache. The
+    // preview keeps the straightened pages to show them as they are in the PDF
+    // (ADR-029); they go with the session when the screen is left.
+    if (settings.effectiveScanFlowMode != ScanFlowMode.preview) {
+      await session.releaseWorkingCopies();
+    }
     return stored;
   }
 }

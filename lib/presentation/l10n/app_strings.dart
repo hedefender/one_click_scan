@@ -87,6 +87,8 @@ abstract class AppStrings {
   String get scanDiscardBody;
   String get scanResultTitle;
   String scanResultSummary(int count, String folderName);
+  String get scanPdfPagesTitle;
+  String scanPdfPagesNote(int straightened, int total);
   String get scanGallerySaved;
   String get scanGalleryFailed;
   String get scanBackHome;

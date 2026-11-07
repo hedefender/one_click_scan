@@ -2,7 +2,7 @@
 # Runs the Phase 3 integration test (real OCR, real PDF writer) on the Claude
 # Code emulator with no human help, and copies the PDFs it writes to the PC.
 #
-#   tool/run_pdf_integration_test.sh <device-id> [out-dir]
+#   tool/run_pdf_integration_test.sh <device-id> [out-dir] [test-file]
 #   tool/run_pdf_integration_test.sh emulator-5554 build/pdf_it
 #
 # Like tool/run_integration_test.sh it refuses to run on any device that is not
@@ -18,12 +18,13 @@ PACKAGE="com.example.one_click_scan"
 EXPECTED_AVD="Claude_Code_Test"
 REMOTE="files/pdf_it"   # inside the app (run-as; the test app is a debug build)
 
-if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-  echo "usage: $0 <device-id> [out-dir]" >&2
+if [ $# -lt 1 ] || [ $# -gt 3 ]; then
+  echo "usage: $0 <device-id> [out-dir] [test-file]" >&2
   exit 2
 fi
 DEVICE="$1"
 OUT="${2:-build/pdf_it}"
+TEST="${3:-integration_test/pdf_flow_test.dart}"
 
 AVD="$(adb -s "$DEVICE" emu avd name 2>/dev/null | head -n 1 | tr -d '\r')"
 if [ "$AVD" != "$EXPECTED_AVD" ]; then
@@ -54,7 +55,7 @@ mkdir -p "$OUT"
 HELPER=$!
 trap 'kill $HELPER 2>/dev/null' EXIT
 
-flutter test integration_test/pdf_flow_test.dart -d "$DEVICE"
+flutter test "$TEST" -d "$DEVICE"
 STATUS=$?
 sleep 2
 echo "PDFs pulled to $OUT:"

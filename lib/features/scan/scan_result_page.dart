@@ -11,6 +11,7 @@ import '../../domain/mail/mail_outcome.dart';
 import '../../domain/ports/draft_sharer.dart';
 import '../../domain/ports/open_pdf.dart';
 import '../../domain/scan/scan_flow.dart';
+import '../../domain/entities/page_crop_outcome.dart';
 import '../../domain/usecases/recognize_pages.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../presentation/state/settings_cubit.dart';
@@ -166,6 +167,8 @@ class _ScanResultPageState extends State<ScanResultPage> {
                       key: ScanKeys.resultList,
                       children: [
                         const _PdfSection(),
+                        if (widget.ocr != null && !discarded)
+                          _PdfPagesSection(session: widget.ocr!),
                         const _FlowSection(),
                         const _MailSection(),
                         const _DiscardSection(),
@@ -756,5 +759,66 @@ class _MailSection extends StatelessWidget {
       MailRejected() => strings.mailFailedRejected(0),
       _ => strings.mailFailedUnknown,
     };
+  }
+}
+
+/// The pages as they are in the PDF (straightened where the crop was made),
+/// in the preview mode, where their pictures are kept until this screen is
+/// left (ADR-029). Hidden when no picture of a page is left (One Click).
+class _PdfPagesSection extends StatelessWidget {
+  const _PdfPagesSection({required this.session});
+
+  final OcrSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final theme = Theme.of(context);
+    // Rebuilt when the flow moves (the pictures are final once the PDF is made).
+    return BlocBuilder<ScanFlowCubit, ScanFlowViewState>(
+      builder: (context, state) {
+        final pages = session.snapshot.pages
+            .where((p) => p.hasWorkingFile)
+            .toList();
+        if (pages.isEmpty || state.pdf == null) return const SizedBox.shrink();
+        final straightened = pages.where((p) => p.crop is PageCropped).length;
+        return Padding(
+          key: ScanKeys.pdfPages,
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                strings.scanPdfPagesTitle,
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 96,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: pages.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) => AspectRatio(
+                    key: ScanKeys.pdfPage(index),
+                    aspectRatio:
+                        pages[index].image!.width / pages[index].image!.height,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: PageThumbnail(path: pages[index].image!.path),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                strings.scanPdfPagesNote(straightened, pages.length),
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
