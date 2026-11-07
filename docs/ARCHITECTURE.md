@@ -680,6 +680,52 @@ backpressure, undo, cancel at every stage, discard, an error of the crop, origin
 for byte the same. Widget: the preview shows the straightened pages. Integration on the
 emulator: `integration_test/crop_flow_test.dart` (real OCR, real PDF, real isolate).
 
+### 8j. Flash, focus, light detection and the optional correction (Phase 6.2)
+
+Decision and reasons: ADR-030. Numbers and the phone check: `PHASE_6_2_VALIDATION.md`.
+
+**Layers**
+
+| Layer | Files | What |
+|---|---|---|
+| `domain/lighting/` | `flash_mode.dart` | `FlashMode` and the rule of what is remembered (`storedName`, `fromStored`: On is stored as Auto) |
+| `domain/lighting/` | `light_metric.dart`, `lighting_config.dart` | The metric (paper level = 95th percentile of Y, contrast) and **every constant in one file**, with `isLowLight` as the only place the threshold is applied |
+| `domain/lighting/` | `low_light_policy.dart`, `low_light_debouncer.dart` | The decision per mode (Single / Multi, One Click / preview), the summary rule, and the flicker guard of the preview mark |
+| `domain/lighting/` | `enhancement_gate.dart` | The safety valve: `chooseByWords` (more words wins, a tie keeps the original) and `countWords` |
+| `domain/ports/` | `light_meter.dart`, `light_enhancer.dart`, `flash_preference_store.dart` | Ports (no Flutter, no plugin) |
+| `domain/usecases/` | `enhance_page_light.dart`, `recognize_pages.dart` | The corrected copy of a page; `OcrSession.requestEnhance` reads the corrected picture too and keeps the better version |
+| `services/camera/` | `camera_service.dart`, `plugin_camera_service.dart` | The camera port grew `hasFlash`, `flashMode`, `setFlashMode`, `focusAt`, `lightSamples`, `startLightAnalysis`; the plugin version runs the duty-cycled analyser |
+| `services/imaging/` | `flatten_light.dart`, `light_jobs.dart`, `isolate_light_enhancer.dart`, `file_light_meter.dart` | `flat` (moved from the spike), the isolate runner that is killed on a cancel or timeout, and the meter for a shot file |
+| `data/datasources/` | `key_value_flash_preference_store.dart` | The remembered flash mode |
+| `features/scan/` | `scan_cubit.dart`, `scan_page.dart`, `focus_tap_layer.dart`, `scan_flow_cubit.dart`, `scan_result_page.dart` | The flash button and mark, the tap ring, the dialog, the bar, the summary, and the banner of the preview |
+| `features/light_diagnostics/` | cubit, page, module | The hidden diagnostics screen (route `/settings/light-diagnostics`) |
+| Android | `SystemHandler.kt` | `hasFlashUnit` (back camera `FLASH_INFO_AVAILABLE`) |
+
+**Flow of a dark shot**
+
+```
+capture -> (Single)  measure (160 px copy, isolate) -> dark? -> One Click: dialog -> save / drop
+                                                              -> preview:   save, flag the page
+        -> (Multi)   shot is listed at once; measure behind the screen -> dark? -> bar + flag
+Done    -> One Click and a flagged page without a decision -> summary -> save
+        -> preview -> save; the result screen offers the banner
+banner  -> OcrSession.requestEnhance(page) -> OCR on flat picture -> more words? keep : drop
+        -> if kept: delete old PDF by URI, make the PDF again
+```
+
+**The camera analyser.** The `camera` plugin streams every frame of its `ImageAnalysis`
+into Dart, with no rate option. The analyser therefore is on only to take one frame,
+then off for 400 ms. The metric is computed in an isolate from a transferred buffer.
+`capture()` stops it and starts it again after the shot.
+
+**Testing.** Domain tests (metric, flash storage, policy, debouncer, gate), session tests
+(`enhance_session_test.dart`), imaging tests (`light_jobs_test.dart`: `flat` removes a
+synthetic shadow, the source is untouched, cancel and timeout leave no file), cubit tests
+(`scan_light_cubit_test.dart`, the light part of `scan_flow_cubit_test.dart`), widget tests
+(`scan_light_widget_test.dart`), and on the emulator `integration_test/light_flow_test.dart`
+(real OCR, PDF, meter and `flat`) and `integration_test/light_camera_test.dart` (real camera
+plugin: analyser cost, sample rate, shot while analysing, focus).
+
 ## 9. Testing strategy
 
 | Level | What | Where |
@@ -737,4 +783,5 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 | 3 | PDF into `./pdf` with a best-effort text layer, Open PDF (done, 8e) | `services/pdf/`, `domain/pdf/`, `features/scan` result screen |
 | 4, 4.1 | `MailSender` / `MailProvider`, SMTP with an app password, the share route (the provider's own app first), the Send button, the diagnostic line, the guide (done, 8f) | `services/mail/`, `domain/mail/`, `features/scan` result screen, Settings |
 | 5 | One-click orchestration use case | `domain/usecases/`, feature `scan` |
-| 6 | Image enhancement | `services/` (Rust candidate) |
+| 6, 6.1 | Crop and straighten of the page (done, 8i) | `services/imaging/`, `OcrSession` |
+| 6.2 | Flash, tap-to-focus, low light detection, optional light correction (done, 8j) | `services/camera/`, `services/imaging/`, `domain/lighting/`, `features/scan` |

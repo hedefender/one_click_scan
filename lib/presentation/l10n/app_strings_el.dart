@@ -798,4 +798,115 @@ class AppStringsEl extends AppStrings {
     ];
     return 'Δεν διαγράφηκαν όλα. Έμειναν: ${left.join(', ')}.';
   }
+
+  @override
+  String get flashOffLabel => 'Φλας: κλειστό';
+
+  @override
+  String get flashAutoLabel => 'Φλας: αυτόματο';
+
+  @override
+  String get flashOnLabel => 'Φλας: πάντα ενεργό';
+
+  @override
+  String get lowLightChip => 'Χαμηλός φωτισμός';
+
+  @override
+  String get lowLightDialogTitle => 'Σκοτεινή λήψη';
+
+  @override
+  String get lowLightDialogBody =>
+      'Η φωτογραφία είναι σκοτεινή και το κείμενο ίσως δεν διαβαστεί καλά.';
+
+  @override
+  String get lowLightRetake => 'Νέα λήψη';
+
+  @override
+  String get lowLightContinue => 'Συνέχεια ούτως ή άλλως';
+
+  @override
+  String get lowLightContinueEnhance => 'Συνέχεια με βελτίωση φωτισμού';
+
+  @override
+  String get lowLightBarText => 'Σκοτεινή λήψη: νέα λήψη;';
+
+  @override
+  String get lowLightBarRetake => 'Νέα λήψη';
+
+  @override
+  String get lowLightBarDismiss => 'Κλείσιμο';
+
+  @override
+  String get lowLightSummaryTitle => 'Σκοτεινές σελίδες';
+
+  @override
+  String lowLightSummaryBody(int pages) => pages == 1
+      ? 'Μία σελίδα είναι σκοτεινή. Τι να γίνει πριν την αποστολή;'
+      : '$pages σελίδες είναι σκοτεινές. Τι να γίνει πριν την αποστολή;';
+
+  @override
+  String get lowLightSummaryBack => 'Πίσω στην κάμερα';
+
+  @override
+  String lowLightBannerBody(int pages) => pages == 1
+      ? 'Μία σελίδα είναι σκοτεινή.'
+      : '$pages σελίδες είναι σκοτεινές.';
+
+  @override
+  String get lowLightImprove => 'Βελτίωση φωτισμού';
+
+  @override
+  String get lowLightKeep => 'Όπως είναι';
+
+  @override
+  String get lowLightImproving => 'Βελτίωση φωτισμού…';
+
+  @override
+  String get lowLightImproved =>
+      'Ο φωτισμός βελτιώθηκε και το PDF ξαναφτιάχτηκε.';
+
+  @override
+  String get lowLightImproveKept =>
+      'Η βελτίωση δεν βοήθησε: το PDF κράτησε την αρχική εικόνα.';
+
+  @override
+  String get lowLightImproveFailed =>
+      'Η βελτίωση δεν έγινε. Το PDF μένει όπως ήταν.';
+
+  @override
+  String get lightDiagTitle => 'Διαγνωστικά φωτισμού';
+
+  @override
+  String get lightDiagLive => 'Ζωντανά (προεπισκόπηση)';
+
+  @override
+  String get lightDiagPaper => 'Επίπεδο χαρτιού (0–100)';
+
+  @override
+  String get lightDiagContrast => 'Αντίθεση (0–100)';
+
+  @override
+  String get lightDiagLastShot => 'Τελευταία λήψη';
+
+  @override
+  String get lightDiagNoShot => 'Καμία λήψη ακόμα';
+
+  @override
+  String get lightDiagTake => 'Λήψη (μόνο μέτρηση)';
+
+  @override
+  String get lightDiagFlashSignal => 'Σήμα «flash required»';
+
+  @override
+  String get lightDiagThreshold => 'Κατώφλι χαμηλού φωτισμού';
+
+  @override
+  String get lightDiagLowYes => 'ΝΑΙ, θα προειδοποιούσε';
+
+  @override
+  String get lightDiagLowNo => 'όχι';
+
+  @override
+  String get lightDiagNote =>
+      'Δεν αποθηκεύεται εικόνα ή κείμενο, μόνο νούμερα στην οθόνη.';
 }

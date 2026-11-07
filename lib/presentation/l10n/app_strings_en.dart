@@ -777,4 +777,114 @@ class AppStringsEn extends AppStrings {
     ];
     return 'Not everything was deleted. Still there: ${left.join(', ')}.';
   }
+
+  @override
+  String get flashOffLabel => 'Flash: off';
+
+  @override
+  String get flashAutoLabel => 'Flash: auto';
+
+  @override
+  String get flashOnLabel => 'Flash: always on';
+
+  @override
+  String get lowLightChip => 'Low light';
+
+  @override
+  String get lowLightDialogTitle => 'Dark shot';
+
+  @override
+  String get lowLightDialogBody =>
+      'The photo is dark and the text may not be read well.';
+
+  @override
+  String get lowLightRetake => 'Retake';
+
+  @override
+  String get lowLightContinue => 'Continue anyway';
+
+  @override
+  String get lowLightContinueEnhance => 'Continue with light correction';
+
+  @override
+  String get lowLightBarText => 'Dark shot: retake?';
+
+  @override
+  String get lowLightBarRetake => 'Retake';
+
+  @override
+  String get lowLightBarDismiss => 'Dismiss';
+
+  @override
+  String get lowLightSummaryTitle => 'Dark pages';
+
+  @override
+  String lowLightSummaryBody(int pages) => pages == 1
+      ? 'One page is dark. What should happen before sending?'
+      : '$pages pages are dark. What should happen before sending?';
+
+  @override
+  String get lowLightSummaryBack => 'Back to the camera';
+
+  @override
+  String lowLightBannerBody(int pages) =>
+      pages == 1 ? 'One page is dark.' : '$pages pages are dark.';
+
+  @override
+  String get lowLightImprove => 'Correct the light';
+
+  @override
+  String get lowLightKeep => 'Keep as is';
+
+  @override
+  String get lowLightImproving => 'Correcting the light…';
+
+  @override
+  String get lowLightImproved =>
+      'The light was corrected and the PDF was made again.';
+
+  @override
+  String get lowLightImproveKept =>
+      'The correction did not help: the PDF kept the original picture.';
+
+  @override
+  String get lowLightImproveFailed =>
+      'The correction could not be made. The PDF stays as it was.';
+
+  @override
+  String get lightDiagTitle => 'Light diagnostics';
+
+  @override
+  String get lightDiagLive => 'Live (preview)';
+
+  @override
+  String get lightDiagPaper => 'Paper level (0-100)';
+
+  @override
+  String get lightDiagContrast => 'Contrast (0-100)';
+
+  @override
+  String get lightDiagLastShot => 'Last shot';
+
+  @override
+  String get lightDiagNoShot => 'No shot yet';
+
+  @override
+  String get lightDiagTake => 'Shoot (measure only)';
+
+  @override
+  String get lightDiagFlashSignal => '"flash required" signal';
+
+  @override
+  String get lightDiagThreshold => 'Low light threshold';
+
+  @override
+  String get lightDiagLowYes => 'YES, it would warn';
+
+  @override
+  String get lightDiagLowNo => 'no';
+
+  @override
+  String get lightDiagNote =>
+      'No picture or text is stored, only numbers on the screen.';
 }

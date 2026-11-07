@@ -4,8 +4,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/errors/app_exceptions.dart';
 import '../../core/logging/app_logger.dart';
+import '../../domain/entities/scan_flow_mode.dart';
 import '../../domain/entities/scan_mode.dart';
 import '../../domain/entities/storage_folder.dart';
+import '../../domain/lighting/flash_mode.dart';
+import '../../domain/lighting/light_metric.dart';
+import '../../domain/lighting/low_light_debouncer.dart';
+import '../../domain/lighting/low_light_policy.dart';
+import '../../domain/ports/flash_preference_store.dart';
+import '../../domain/ports/light_meter.dart';
 import '../../domain/scan/scan_flow.dart' show ScanFlowCancellation;
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/recognize_pages.dart';
@@ -25,6 +32,8 @@ class ScanCubit extends Cubit<ScanState> {
     required this._storeScanPages,
     required this._recognizePages,
     required this._tempStore,
+    required this._flashStore,
+    required this._lightMeter,
     required this._logger,
   }) : super(const ScanState());
 
@@ -34,7 +43,19 @@ class ScanCubit extends Cubit<ScanState> {
   final StoreScanPages _storeScanPages;
   final RecognizePages _recognizePages;
   final ScanTempStore _tempStore;
+  final FlashPreferenceStore _flashStore;
+  final LightMeter _lightMeter;
   final AppLogger _logger;
+
+  /// How the scan goes on after the shot (read with the settings); decides
+  /// what a dark shot does (ADR-030).
+  var _flowMode = ScanFlowMode.preview;
+
+  final _debouncer = LowLightDebouncer();
+  StreamSubscription<LightMetric>? _lightSubscription;
+
+  /// The flash chosen on the screen; On is for this use only.
+  FlashMode _flash = FlashMode.off;
 
   /// Language pack of this scan, read once when the scan starts.
   String? _packId;
@@ -55,6 +76,7 @@ class ScanCubit extends Cubit<ScanState> {
     emit(state.copyWith(phase: ScanPhase.starting));
     final settings = await _loadSettings();
     _packId = settings.ocrPackId;
+    _flowMode = settings.effectiveScanFlowMode;
     final folder = settings.storageFolder;
     final accessible = folder != null && await _hasAccess(folder);
     if (isClosed) return;
@@ -86,9 +108,22 @@ class ScanCubit extends Cubit<ScanState> {
         return;
       }
       emit(
-        state.copyWith(phase: ScanPhase.ready, pages: [...state.pages, page]),
+        state.copyWith(
+          phase: state.mode == ScanMode.single
+              ? ScanPhase.capturing
+              : ScanPhase.ready,
+          pages: [...state.pages, page],
+          clearDarkBar: true,
+        ),
       );
       _readInBackground(page.path);
+      if (state.mode == ScanMode.multi) {
+        // The rate of the shots is not slowed down: the light of the shot is
+        // measured behind the camera screen (ADR-030).
+        unawaited(_assessMulti(page.path));
+        return;
+      }
+      if (await _assessSingle(page.path)) return;
     } on CameraCaptureException catch (error, stackTrace) {
       _logger.error('Capture failed', error, stackTrace);
       if (isClosed) return;
@@ -98,6 +133,150 @@ class ScanCubit extends Cubit<ScanState> {
     if (state.mode == ScanMode.single) await save();
   }
 
+  /// Measures a shot. Never throws; null when it could not be measured (then
+  /// the shot is never called dark).
+  Future<LightMetric?> _measure(String path) async {
+    try {
+      return await _lightMeter.measureFile(path);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Single Page: the decision comes before anything is stored. Returns true
+  /// when the dialog waits for the user (the save is not started).
+  Future<bool> _assessSingle(String path) async {
+    final settings = await _loadSettings();
+    _flowMode = settings.effectiveScanFlowMode;
+    final metric = await _measure(path);
+    if (isClosed || !state.pages.any((p) => p.path == path)) return true;
+    final action = LowLightPolicy.onCapture(
+      metric: metric,
+      mode: ScanMode.single,
+      flow: _flowMode,
+    );
+    switch (action) {
+      case LowLightAction.askNow:
+        emit(
+          state.copyWith(
+            phase: ScanPhase.ready,
+            lightPrompt: LightPrompt.singleShot,
+            darkPages: [path],
+          ),
+        );
+        return true;
+      case LowLightAction.bannerLater:
+        emit(state.copyWith(phase: ScanPhase.ready, darkPages: [path]));
+        return false;
+      case LowLightAction.markPage:
+      case LowLightAction.none:
+        emit(state.copyWith(phase: ScanPhase.ready));
+        return false;
+    }
+  }
+
+  /// Multi Page: a mark, never a stop. The bar offers a new shot of the last
+  /// page; the summary before the send is in [finish].
+  Future<void> _assessMulti(String path) async {
+    final metric = await _measure(path);
+    if (isClosed || !state.pages.any((p) => p.path == path)) return;
+    final action = LowLightPolicy.onCapture(
+      metric: metric,
+      mode: ScanMode.multi,
+      flow: _flowMode,
+    );
+    if (action == LowLightAction.none) return;
+    final isLast = state.pages.last.path == path;
+    emit(
+      state.copyWith(
+        darkPages: [...state.darkPages, path],
+        darkBarPage: action == LowLightAction.markPage && isLast ? path : null,
+      ),
+    );
+  }
+
+  /// The answer to the dialog of the Single shot or to the summary before the
+  /// send (ADR-030).
+  Future<void> resolveLowLight(LowLightChoice choice) async {
+    final prompt = state.lightPrompt;
+    if (prompt == LightPrompt.none) return;
+    switch (choice) {
+      case LowLightChoice.retake:
+        if (prompt == LightPrompt.singleShot) {
+          await _dropDarkPages();
+        } else {
+          // Back to the camera: the user takes the pages again as they wish.
+          emit(state.copyWith(lightPrompt: LightPrompt.none));
+        }
+      case LowLightChoice.continueAnyway:
+        emit(
+          state.copyWith(
+            lightPrompt: LightPrompt.none,
+            darkPages: const [],
+            clearDarkBar: true,
+          ),
+        );
+        await save();
+      case LowLightChoice.continueWithEnhancement:
+        for (final key in state.darkPages) {
+          // The correction is made in the queue; the PDF waits for it.
+          unawaited(_ocr?.requestEnhance(key));
+        }
+        emit(
+          state.copyWith(
+            lightPrompt: LightPrompt.none,
+            darkPages: const [],
+            clearDarkBar: true,
+          ),
+        );
+        await save();
+    }
+  }
+
+  /// "New shot" of a dark Single shot: the shot never reached the folder or
+  /// the Gallery, so dropping it leaves nothing (like the undo of a page).
+  Future<void> _dropDarkPages() async {
+    final paths = [for (final page in state.pages) page.path];
+    for (final path in paths) {
+      await _ocr?.remove(path);
+    }
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        pages: const [],
+        darkPages: const [],
+        lightPrompt: LightPrompt.none,
+        clearDarkBar: true,
+      ),
+    );
+    await _tempStore.delete(paths);
+  }
+
+  /// Multi: "New shot" of the last, dark page: the same as the undo.
+  Future<void> retakeDarkPage() async {
+    final path = state.darkBarPage;
+    if (path == null) return;
+    if (state.pages.isEmpty || state.pages.last.path != path) {
+      emit(state.copyWith(clearDarkBar: true));
+      return;
+    }
+    await deleteLast();
+  }
+
+  /// Closes the bar without a decision; the page stays flagged for the summary.
+  void dismissDarkBar() => emit(state.copyWith(clearDarkBar: true));
+
+  /// Off -> Auto -> On. Off and Auto are remembered, On is for this use only.
+  Future<void> cycleFlash() => setFlash(_flash.next);
+
+  Future<void> setFlash(FlashMode mode) async {
+    if (!state.hasFlash) return;
+    _flash = mode;
+    emit(state.copyWith(flashMode: mode));
+    await _camera.setFlashMode(mode);
+    await _flashStore.save(mode);
+  }
+
   /// Multi-page: removes the last shot.
   Future<void> deleteLast() async {
     if (state.phase != ScanPhase.ready || !state.hasPages) return;
@@ -105,6 +284,11 @@ class ScanCubit extends Cubit<ScanState> {
     emit(
       state.copyWith(
         pages: state.pages.sublist(0, state.pages.length - 1),
+        darkPages: [
+          for (final path in state.darkPages)
+            if (path != removed.path) path,
+        ],
+        clearDarkBar: true,
         captureFailed: false,
         saveCancelled: false,
       ),
@@ -116,6 +300,16 @@ class ScanCubit extends Cubit<ScanState> {
   /// Multi-page "Done".
   Future<void> finish() async {
     if (!state.canFinish) return;
+    final settings = await _loadSettings();
+    _flowMode = settings.effectiveScanFlowMode;
+    if (LowLightPolicy.needsSummary(
+      flow: _flowMode,
+      undecidedDarkPages: state.darkPages.length,
+    )) {
+      // A dark page is never sent silently in One Click.
+      emit(state.copyWith(lightPrompt: LightPrompt.summary));
+      return;
+    }
     await save();
   }
 
@@ -146,6 +340,7 @@ class ScanCubit extends Cubit<ScanState> {
         cancellation: cancellation,
       );
       if (isClosed) return;
+      await _stopLightAnalysis();
       await _camera.close();
       _ocr?.close();
       emit(state.copyWith(phase: ScanPhase.saved, result: stored, ocr: _ocr));
@@ -189,6 +384,7 @@ class ScanCubit extends Cubit<ScanState> {
         state.copyWith(
           phase: ScanPhase.ready,
           pages: const [],
+          darkPages: const [],
           saveCancelled: true,
         ),
       );
@@ -226,6 +422,7 @@ class ScanCubit extends Cubit<ScanState> {
   /// Leaving the scan: nothing of an unfinished scan may stay behind.
   Future<void> cancel() async {
     await _discardUnsavedPages();
+    await _stopLightAnalysis();
     await _camera.close();
   }
 
@@ -236,7 +433,16 @@ class ScanCubit extends Cubit<ScanState> {
     await _stopReading();
     if (!state.hasPages) return;
     final paths = [for (final page in state.pages) page.path];
-    if (!isClosed) emit(state.copyWith(pages: const []));
+    if (!isClosed) {
+      emit(
+        state.copyWith(
+          pages: const [],
+          darkPages: const [],
+          lightPrompt: LightPrompt.none,
+          clearDarkBar: true,
+        ),
+      );
+    }
     await _tempStore.delete(paths);
   }
 
@@ -244,6 +450,7 @@ class ScanCubit extends Cubit<ScanState> {
   Future<void> onBackground() async {
     if (state.phase != ScanPhase.ready) return;
     emit(state.copyWith(phase: ScanPhase.paused));
+    await _stopLightAnalysis();
     await _camera.close();
   }
 
@@ -287,6 +494,13 @@ class ScanCubit extends Cubit<ScanState> {
       await _camera.close();
       return;
     }
+    if (result == CameraOpenResult.ready) {
+      // Off and Auto come from the settings; On lives only in this use, so
+      // after a return from the background it is still On (ADR-030).
+      _flash = state.phase == ScanPhase.paused ? _flash : _flashStore.load();
+      if (_camera.hasFlash) await _camera.setFlashMode(_flash);
+      _startLightAnalysis();
+    }
     final packId = _packId;
     if (result == CameraOpenResult.ready && packId != null) {
       // Loads the models while the user frames the page; best effort.
@@ -295,6 +509,8 @@ class ScanCubit extends Cubit<ScanState> {
     }
     emit(
       state.copyWith(
+        flashMode: _flash,
+        hasFlash: result == CameraOpenResult.ready && _camera.hasFlash,
         phase: switch (result) {
           CameraOpenResult.ready => ScanPhase.ready,
           CameraOpenResult.permissionDenied => ScanPhase.permissionDenied,
@@ -302,6 +518,25 @@ class ScanCubit extends Cubit<ScanState> {
         },
       ),
     );
+  }
+
+  void _startLightAnalysis() {
+    _debouncer.reset();
+    _lightSubscription?.cancel();
+    _lightSubscription = _camera.lightSamples.listen((metric) {
+      if (isClosed) return;
+      final low = _debouncer.add(metric);
+      if (low != state.lowLight) emit(state.copyWith(lowLight: low));
+    });
+    _camera.startLightAnalysis();
+  }
+
+  Future<void> _stopLightAnalysis() async {
+    _camera.stopLightAnalysis();
+    // Not awaited: on a broadcast stream the future can wait for the camera.
+    unawaited(_lightSubscription?.cancel());
+    _lightSubscription = null;
+    if (!isClosed && state.lowLight) emit(state.copyWith(lowLight: false));
   }
 
   Future<bool> _hasAccess(StorageFolder folder) async {
@@ -316,6 +551,7 @@ class ScanCubit extends Cubit<ScanState> {
   @override
   Future<void> close() async {
     await _discardUnsavedPages();
+    await _stopLightAnalysis();
     await _camera.close();
     return super.close();
   }

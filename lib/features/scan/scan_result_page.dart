@@ -166,6 +166,7 @@ class _ScanResultPageState extends State<ScanResultPage> {
                     child: ListView(
                       key: ScanKeys.resultList,
                       children: [
+                        const _LightFixBanner(),
                         const _PdfSection(),
                         if (widget.ocr != null && !discarded)
                           _PdfPagesSection(session: widget.ocr!),
@@ -817,6 +818,75 @@ class _PdfPagesSection extends StatelessWidget {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+/// Banner of the preview for dark pages (ADR-030): "Correct the light" makes
+/// the PDF again with the corrected picture of those pages (kept only where it
+/// reads more words); "Keep as is" leaves the scan alone.
+class _LightFixBanner extends StatelessWidget {
+  const _LightFixBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final cubit = context.read<ScanFlowCubit>();
+    return BlocBuilder<ScanFlowCubit, ScanFlowViewState>(
+      buildWhen: (a, b) =>
+          a.lightFix != b.lightFix ||
+          a.flow != b.flow ||
+          a.discard != b.discard,
+      builder: (context, state) {
+        final scheme = Theme.of(context).colorScheme;
+        if (state.canOfferLightFix) {
+          return Card(
+            key: ScanKeys.lowLightBanner,
+            color: scheme.tertiaryContainer,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    strings.lowLightBannerBody(state.darkPages.length),
+                    style: TextStyle(color: scheme.onTertiaryContainer),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      FilledButton(
+                        key: ScanKeys.lowLightImprove,
+                        onPressed: cubit.improveLight,
+                        child: Text(strings.lowLightImprove),
+                      ),
+                      TextButton(
+                        key: ScanKeys.lowLightKeep,
+                        onPressed: cubit.keepDark,
+                        child: Text(strings.lowLightKeep),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        final text = switch (state.lightFix) {
+          LightFix.working => strings.lowLightImproving,
+          LightFix.improved => strings.lowLightImproved,
+          LightFix.keptOriginal => strings.lowLightImproveKept,
+          LightFix.failed => strings.lowLightImproveFailed,
+          _ => null,
+        };
+        if (text == null || state.discarded) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+          child: Text(key: ScanKeys.lowLightStatus, text),
         );
       },
     );

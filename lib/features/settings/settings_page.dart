@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/navigation/route_paths.dart';
 import '../../domain/entities/app_language.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
@@ -90,6 +91,8 @@ class SettingsPage extends StatelessWidget {
                         _OcrSection(state: state),
                         const SizedBox(height: 32),
                         const _LicensesSection(),
+                        const SizedBox(height: 16),
+                        const _HiddenEntry(),
                       ],
                     )
                   : const Center(child: CircularProgressIndicator()),
@@ -509,6 +512,56 @@ class _OcrSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The app name at the end of the page. Five quick taps open the hidden light
+/// diagnostics (Phase 6.2); nothing else about it looks like a button.
+class _HiddenEntry extends StatefulWidget {
+  const _HiddenEntry();
+
+  @override
+  State<_HiddenEntry> createState() => _HiddenEntryState();
+}
+
+class _HiddenEntryState extends State<_HiddenEntry> {
+  static const _taps = 5;
+  static const _window = Duration(seconds: 3);
+
+  int _count = 0;
+  DateTime? _first;
+
+  void _tap() {
+    final now = DateTime.now();
+    final first = _first;
+    if (first == null || now.difference(first) > _window) {
+      _first = now;
+      _count = 0;
+    }
+    _count++;
+    if (_count >= _taps) {
+      _count = 0;
+      _first = null;
+      context.push(RoutePaths.lightDiagnostics);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: SettingsKeys.hiddenEntry,
+      behavior: HitTestBehavior.opaque,
+      onTap: _tap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            AppStrings.of(context).appTitle,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      ),
     );
   }
 }

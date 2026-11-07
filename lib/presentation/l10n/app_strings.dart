@@ -255,6 +255,44 @@ abstract class AppStrings {
 
   /// What a discard left behind (only the non-empty parts are named).
   String discardPartial(int pictures, bool pdf, int gallery);
+
+  // Phase 6.2: flash, focus, light (ADR-030)
+  String get flashOffLabel;
+  String get flashAutoLabel;
+  String get flashOnLabel;
+  String get lowLightChip;
+  String get lowLightDialogTitle;
+  String get lowLightDialogBody;
+  String get lowLightRetake;
+  String get lowLightContinue;
+  String get lowLightContinueEnhance;
+  String get lowLightBarText;
+  String get lowLightBarRetake;
+  String get lowLightBarDismiss;
+  String get lowLightSummaryTitle;
+  String lowLightSummaryBody(int pages);
+  String get lowLightSummaryBack;
+  String lowLightBannerBody(int pages);
+  String get lowLightImprove;
+  String get lowLightKeep;
+  String get lowLightImproving;
+  String get lowLightImproved;
+  String get lowLightImproveKept;
+  String get lowLightImproveFailed;
+
+  // Hidden light diagnostics (5 taps on the version in Settings)
+  String get lightDiagTitle;
+  String get lightDiagLive;
+  String get lightDiagPaper;
+  String get lightDiagContrast;
+  String get lightDiagLastShot;
+  String get lightDiagNoShot;
+  String get lightDiagTake;
+  String get lightDiagFlashSignal;
+  String get lightDiagThreshold;
+  String get lightDiagLowYes;
+  String get lightDiagLowNo;
+  String get lightDiagNote;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

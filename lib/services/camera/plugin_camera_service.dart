@@ -1,11 +1,17 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
-import 'package:camera/camera.dart';
+import 'package:camera/camera.dart' hide FlashMode;
+import 'package:camera/camera.dart' as plugin show FlashMode;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../core/errors/app_exceptions.dart';
 import '../../domain/entities/captured_page.dart';
+import '../../domain/lighting/flash_mode.dart';
+import '../../domain/lighting/light_metric.dart';
+import '../../domain/lighting/lighting_config.dart';
 import 'camera_service.dart';
 
 /// `camera` plugin implementation (on Android the endorsed CameraX backend).
@@ -25,6 +31,13 @@ class PluginCameraService implements CameraService {
 
   CameraController? _controller;
   int _shots = 0;
+  bool _hasFlash = false;
+  FlashMode _flashMode = FlashMode.off;
+
+  final _samples = StreamController<LightMetric>.broadcast();
+  bool _analysing = false;
+  Future<void>? _loop;
+  int _loopGeneration = 0;
 
   @override
   Future<CameraOpenResult> open() async {
@@ -43,7 +56,9 @@ class PluginCameraService implements CameraService {
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
       await controller.initialize();
-      await controller.setFlashMode(FlashMode.off);
+      await controller.setFlashMode(plugin.FlashMode.off);
+      _flashMode = FlashMode.off;
+      _hasFlash = await _askHasFlash();
       _controller = controller;
       return CameraOpenResult.ready;
     } on CameraException catch (error) {
@@ -69,6 +84,9 @@ class PluginCameraService implements CameraService {
     if (controller == null || !controller.value.isInitialized) {
       throw const CameraCaptureException('Camera is not open');
     }
+    // The analysis stops during the shot and starts again after it.
+    final wasAnalysing = _analysing;
+    await _stopAnalysis();
     try {
       final shot = await controller.takePicture();
       await cacheDirectory.create(recursive: true);
@@ -88,11 +106,14 @@ class PluginCameraService implements CameraService {
       throw CameraCaptureException(error.code);
     } on FileSystemException catch (error) {
       throw CameraCaptureException(error.message);
+    } finally {
+      if (wasAnalysing && _controller == controller) startLightAnalysis();
     }
   }
 
   @override
   Future<void> close() async {
+    await _stopAnalysis();
     final controller = _controller;
     _controller = null;
     await controller?.dispose();
@@ -106,4 +127,154 @@ class PluginCameraService implements CameraService {
       // Nothing more to do; the message on screen still explains the problem.
     }
   }
+
+  Future<bool> _askHasFlash() async {
+    try {
+      return await _systemChannel.invokeMethod<bool>('hasFlashUnit') ?? false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  @override
+  bool get hasFlash => _hasFlash;
+
+  @override
+  FlashMode get flashMode => _flashMode;
+
+  @override
+  Future<void> setFlashMode(FlashMode mode) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized || !_hasFlash) {
+      return;
+    }
+    try {
+      await controller.setFlashMode(switch (mode) {
+        FlashMode.off => plugin.FlashMode.off,
+        FlashMode.auto => plugin.FlashMode.auto,
+        FlashMode.on => plugin.FlashMode.always,
+      });
+      _flashMode = mode;
+    } on CameraException {
+      // The mode stays as it was; the button shows the real one.
+    }
+  }
+
+  @override
+  Future<void> focusAt(Offset point) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final clamped = Offset(point.dx.clamp(0.0, 1.0), point.dy.clamp(0.0, 1.0));
+    try {
+      // CameraX starts one FocusMeteringAction per call; the plugin combines
+      // the two points, and CameraX returns to continuous focus by itself.
+      await controller.setFocusPoint(clamped);
+      await controller.setExposurePoint(clamped);
+    } on CameraException {
+      // Focus is a convenience; a failure changes nothing.
+    }
+  }
+
+  @override
+  Stream<LightMetric> get lightSamples => _samples.stream;
+
+  @override
+  void startLightAnalysis() {
+    final controller = _controller;
+    if (_analysing || controller == null) return;
+    _analysing = true;
+    final generation = ++_loopGeneration;
+    _loop = _analysisLoop(controller, generation);
+  }
+
+  @override
+  void stopLightAnalysis() => unawaited(_stopAnalysis());
+
+  Future<void> _stopAnalysis() async {
+    _analysing = false;
+    _loopGeneration++;
+    final loop = _loop;
+    _loop = null;
+    if (loop != null) await loop;
+  }
+
+  /// Duty cycle: the analyser is switched on only to receive ONE frame, then
+  /// off for [LightingConfig.analysisInterval]. The plugin copies every frame
+  /// it has an analyser for into Dart (about 30 per second, 460 KB each), so
+  /// this is what keeps the cost of a low rate real. The metric is computed in
+  /// a background isolate, never in the UI isolate.
+  Future<void> _analysisLoop(
+    CameraController controller,
+    int generation,
+  ) async {
+    bool alive() =>
+        _analysing &&
+        generation == _loopGeneration &&
+        _controller == controller;
+    while (alive()) {
+      final frame = Completer<CameraImage>();
+      try {
+        await controller.startImageStream((image) {
+          if (!frame.isCompleted) frame.complete(image);
+        });
+      } on CameraException {
+        break;
+      }
+      CameraImage? image;
+      try {
+        image = await frame.future.timeout(const Duration(seconds: 2));
+      } on TimeoutException {
+        image = null;
+      }
+      try {
+        if (controller.value.isStreamingImages) {
+          await controller.stopImageStream();
+        }
+      } on CameraException {
+        break;
+      }
+      if (image != null && alive()) {
+        final metric = await _measure(image);
+        if (metric != null && alive() && !_samples.isClosed) {
+          _samples.add(metric);
+        }
+      }
+      await Future<void>.delayed(LightingConfig.analysisInterval);
+    }
+  }
+
+  Future<LightMetric?> _measure(CameraImage image) async {
+    if (image.planes.isEmpty) return null;
+    final plane = image.planes.first;
+    final job = _LumaJob(
+      TransferableTypedData.fromList([plane.bytes]),
+      image.width,
+      image.height,
+      plane.bytesPerRow,
+    );
+    try {
+      return await Isolate.run(() => _measureLuma(job));
+    } catch (_) {
+      return null;
+    }
+  }
 }
+
+class _LumaJob {
+  const _LumaJob(this.bytes, this.width, this.height, this.rowStride);
+
+  final TransferableTypedData bytes;
+  final int width;
+  final int height;
+  final int rowStride;
+}
+
+LightMetric? _measureLuma(_LumaJob job) => LightMetric.fromLuma(
+  job.bytes.materialize().asUint8List(),
+  width: job.width,
+  height: job.height,
+  rowStride: job.rowStride,
+  stride: LightingConfig.previewStride,
+);

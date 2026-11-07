@@ -8,6 +8,7 @@ import 'package:one_click_scan/services/ocr/ocr_services.dart';
 import 'package:one_click_scan/services/mail/mail_services.dart';
 import 'package:one_click_scan/services/pdf/pdf_services.dart';
 import 'package:one_click_scan/services/camera/camera_service.dart';
+import 'package:one_click_scan/domain/ports/light_meter.dart';
 import 'package:one_click_scan/domain/ports/gallery_service.dart';
 import 'package:one_click_scan/domain/ports/scan_file_store.dart';
 import 'package:one_click_scan/services/scan_files/scan_temp_store.dart';
@@ -98,11 +99,25 @@ Future<GetIt> buildTestContainer({
   GalleryService? gallery,
   ScanTempStore? scanTempStore,
   OcrServices? ocr,
+  LightMeter? lightMeter,
   PdfServices? pdf,
   MailServices? mail,
   AppConfig? config,
   DateTime Function()? clock,
 }) {
+  final baseOcr = ocr ?? const OcrServices.unsupported();
+  final ocrServices = lightMeter == null
+      ? baseOcr
+      : OcrServices(
+          engine: baseOcr.engine,
+          workStore: baseOcr.workStore,
+          headerReader: baseOcr.headerReader,
+          dartMaker: baseOcr.dartMaker,
+          nativeMaker: baseOcr.nativeMaker,
+          cropper: baseOcr.cropper,
+          enhancer: baseOcr.enhancer,
+          lightMeter: lightMeter,
+        );
   return buildContainer(
     config: config ?? testConfig,
     keyValueStore: store ?? InMemoryKeyValueStore(),
@@ -112,7 +127,7 @@ Future<GetIt> buildTestContainer({
     scanFileStore: scanFileStore ?? FakeScanFileStore(),
     gallery: gallery ?? FakeGalleryService(),
     scanTempStore: scanTempStore ?? FakeScanTempStore(),
-    ocr: ocr ?? const OcrServices.unsupported(),
+    ocr: ocrServices,
     pdf: pdf ?? const PdfServices.unsupported(),
     mail: mail ?? const MailServices.unsupported(),
     clock: clock ?? () => DateTime(2026, 10, 21, 19, 5, 12),

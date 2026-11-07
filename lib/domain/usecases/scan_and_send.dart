@@ -7,6 +7,7 @@ import '../entities/mail_send_mode.dart';
 import '../entities/pdf_page_input.dart';
 import '../entities/scan_flow_mode.dart';
 import '../entities/stored_scan.dart';
+import '../lighting/enhancement_gate.dart';
 import '../mail/mail_outcome.dart';
 import '../ports/scan_file_store.dart';
 import '../scan/scan_flow.dart';
@@ -205,7 +206,10 @@ class ScanAndSend {
     final progress = session.snapshots.listen(report);
     unawaited(cancellation.whenCancelled.then((_) => session.cancel()));
     try {
-      return await session.finished;
+      await session.finished;
+      // The snapshot of now, not the one `finished` completed with: a page can
+      // have been read again for the light correction since (ADR-030).
+      return session.snapshot;
     } finally {
       // Not awaited: on a broadcast stream the future can wait for the session.
       unawaited(progress.cancel());
@@ -238,6 +242,16 @@ class ScanAndSend {
       'straightened, whole frame by reason: '
       '${done.wholeFrameReasons.map((k, v) => MapEntry(k.name, v))}',
     );
+    final enhanced = done.pages.where((p) => p.enhancement != null);
+    if (enhanced.isNotEmpty) {
+      int count(EnhancementOutcome outcome) =>
+          enhanced.where((p) => p.enhancement == outcome).length;
+      logger.debug(
+        'Light correction: ${count(EnhancementOutcome.applied)} applied, '
+        '${count(EnhancementOutcome.keptOriginal)} kept the original, '
+        '${count(EnhancementOutcome.failed)} failed',
+      );
+    }
     final stored = await storePdf(
       folder: folder,
       stem: scan.stem,

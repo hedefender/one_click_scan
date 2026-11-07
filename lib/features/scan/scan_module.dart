@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/logging/app_logger.dart';
 import '../../core/navigation/route_paths.dart';
+import '../../domain/ports/flash_preference_store.dart';
+import '../../domain/ports/light_meter.dart';
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/recognize_pages.dart';
 import '../../domain/ports/open_pdf.dart';
+import '../../domain/ports/scan_file_store.dart';
 import '../../domain/usecases/store_scan_pages.dart';
 import '../../domain/usecases/discard_scan.dart';
 import '../../domain/usecases/scan_and_send.dart';
@@ -33,17 +36,21 @@ void registerScanModule(GetIt sl) {
       storeScanPages: sl<StoreScanPages>(),
       recognizePages: sl<RecognizePages>(),
       tempStore: sl<ScanTempStore>(),
+      flashStore: sl<FlashPreferenceStore>(),
+      lightMeter: sl<LightMeter>(),
       logger: sl<AppLogger>(),
     ),
   );
   sl.registerFactoryParam<ScanFlowCubit, ScanResultArgs, void>(
     (args, _) => ScanFlowCubit(
       scan: args.result,
+      darkPages: args.darkPages,
       session: args.ocr,
       loadSettings: sl<LoadSettings>(),
       scanAndSend: sl<ScanAndSend>(),
       discardScan: sl<DiscardScan>(),
       openPdf: sl<OpenPdf>(),
+      fileStore: sl<ScanFileStore>(),
       logger: sl<AppLogger>(),
     ),
   );

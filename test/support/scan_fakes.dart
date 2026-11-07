@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:one_click_scan/domain/lighting/flash_mode.dart';
+import 'package:one_click_scan/domain/lighting/light_metric.dart';
+import 'package:one_click_scan/domain/ports/light_meter.dart';
 import 'package:one_click_scan/core/errors/app_exceptions.dart';
 import 'package:one_click_scan/domain/entities/captured_page.dart';
 import 'package:one_click_scan/domain/entities/storage_folder.dart';
@@ -11,7 +14,22 @@ import 'package:one_click_scan/services/scan_files/scan_temp_store.dart';
 
 /// No real camera. Shots are synthetic paths; nothing is read from a device.
 class FakeCameraService implements CameraService {
-  FakeCameraService({this.openResults = const [CameraOpenResult.ready]});
+  FakeCameraService({
+    this.openResults = const [CameraOpenResult.ready],
+    this.flashAvailable = false,
+  });
+
+  /// What [hasFlash] answers.
+  bool flashAvailable;
+  FlashMode _flash = FlashMode.off;
+  final List<FlashMode> flashSet = <FlashMode>[];
+  final List<Offset> focusPoints = <Offset>[];
+  final _samples = StreamController<LightMetric>.broadcast();
+  int analysisStarts = 0;
+  int analysisStops = 0;
+
+  /// Pushes a preview sample, as the analyser would.
+  void emitSample(LightMetric metric) => _samples.add(metric);
 
   /// Results of successive [open] calls; the last one repeats.
   List<CameraOpenResult> openResults;
@@ -59,6 +77,48 @@ class FakeCameraService implements CameraService {
 
   @override
   Future<void> openAppSettings() async => openSettingsCalls++;
+
+  @override
+  bool get hasFlash => flashAvailable;
+
+  @override
+  FlashMode get flashMode => _flash;
+
+  @override
+  Future<void> setFlashMode(FlashMode mode) async {
+    _flash = mode;
+    flashSet.add(mode);
+  }
+
+  @override
+  Future<void> focusAt(Offset point) async => focusPoints.add(point);
+
+  @override
+  Stream<LightMetric> get lightSamples => _samples.stream;
+
+  @override
+  void startLightAnalysis() => analysisStarts++;
+
+  @override
+  void stopLightAnalysis() => analysisStops++;
+}
+
+/// Light meter that answers by path (default: bright, so nothing is dark).
+class FakeLightMeter implements LightMeter {
+  FakeLightMeter();
+
+  static const bright = LightMetric(paper: 90, contrast: 60);
+  static const dark = LightMetric(paper: 20, contrast: 12);
+
+  final Map<String, LightMetric?> byPath = {};
+  LightMetric? fallback = bright;
+  final List<String> measured = <String>[];
+
+  @override
+  Future<LightMetric?> measureFile(String path) async {
+    measured.add(path);
+    return byPath.containsKey(path) ? byPath[path] : fallback;
+  }
 }
 
 /// In-memory stand-in for the user's folder (no SAF).

@@ -15,6 +15,7 @@ import 'package:one_click_scan/domain/usecases/load_settings.dart';
 import 'package:one_click_scan/domain/usecases/recognize_pages.dart';
 import 'package:one_click_scan/domain/usecases/scan_and_send.dart';
 import 'package:one_click_scan/features/scan/scan_flow_cubit.dart';
+import 'package:one_click_scan/features/scan/scan_flow_state.dart';
 
 import '../../support/fakes.dart';
 import '../../support/mail_fakes.dart';
@@ -47,13 +48,18 @@ void main() {
     ],
   );
 
+  List<String> darkPages = const [];
+  late FakeEnhancer enhancer;
+
   ScanFlowCubit make(OcrSession? s) => ScanFlowCubit(
     scan: scan,
+    darkPages: darkPages,
     session: s,
     loadSettings: container<LoadSettings>(),
     scanAndSend: container<ScanAndSend>(),
     discardScan: container<DiscardScan>(),
     openPdf: pdf.opener,
+    fileStore: store,
     logger: logger,
   );
 
@@ -62,7 +68,8 @@ void main() {
     int pages = 1,
     bool withFolder = true,
   }) async {
-    rig = OcrTestRig();
+    enhancer = FakeEnhancer();
+    rig = OcrTestRig(enhancer: enhancer);
     pdf = PdfTestRig();
     mail = MailTestRig()..storePassword();
     store = FakeScanFileStore()
@@ -104,6 +111,168 @@ void main() {
   tearDown(() async {
     await cubit.close();
     await session.dispose();
+  });
+
+  group('light correction of dark pages (ADR-030)', () {
+    /// The first picture of a page reads [original] words, the corrected
+    /// one [enhanced] words.
+    int scriptOriginal = 3;
+    int scriptEnhanced = 3;
+    void script(int original, int enhanced) {
+      scriptOriginal = original;
+      scriptEnhanced = enhanced;
+    }
+
+    void applyScript() {
+      final original = scriptOriginal;
+      final enhanced = scriptEnhanced;
+      rig.engine.respond = (image) => OcrSuccess(
+        fakeResult([
+          fakeLine(
+            List.filled(
+              enhancer.targets.contains(image.path) ? enhanced : original,
+              'w',
+            ).join(' '),
+          ),
+        ]),
+      );
+    }
+
+    Future<void> startDark({
+      ScanFlowMode flow = ScanFlowMode.preview,
+      List<String> dark = const ['shot1'],
+    }) async {
+      darkPages = dark;
+      await setUpRig(flowMode: flow);
+      applyScript();
+      session.close();
+      await cubit.start();
+      await untilFinal();
+    }
+
+    /// The flow runs again after the correction: wait for the new PDF.
+    Future<void> untilRebuilt() async {
+      for (var i = 0; i < 200; i++) {
+        if (pdf.builder.builds.length >= 2 &&
+            (cubit.state.flow?.isFinal ?? false)) {
+          return;
+        }
+        await pumpEventQueue();
+      }
+      fail('the PDF was not made again: ${cubit.state.flow}');
+    }
+
+    tearDown(() {
+      darkPages = const [];
+      scriptOriginal = 3;
+      scriptEnhanced = 3;
+    });
+
+    test('the banner is offered in the preview, with the PDF stored', () async {
+      await startDark();
+
+      expect(cubit.state.lightFix, LightFix.offered);
+      expect(cubit.state.canOfferLightFix, isTrue);
+    });
+
+    test('One Click has no banner: the decision was made before', () async {
+      await startDark(flow: ScanFlowMode.oneClick, dark: const []);
+
+      expect(cubit.state.lightFix, LightFix.none);
+      expect(cubit.state.canOfferLightFix, isFalse);
+    });
+
+    test(
+      '"Correct the light": the PDF is made again with the better page',
+      () async {
+        script(2, 6);
+        await startDark();
+        final oldPdf = cubit.state.pdf!;
+        final picturesBefore = List.of(store.files('pictures'));
+
+        await cubit.improveLight();
+        await untilRebuilt();
+
+        expect(cubit.state.lightFix, LightFix.improved);
+        expect(pdf.builder.builds, hasLength(2));
+        // The old PDF was deleted by its URI; the new one has the same name.
+        expect(store.deletedUris, contains(oldPdf.uri));
+        expect(store.files('pdf'), [oldPdf.fileName]);
+        expect(cubit.state.pdf, isNotNull);
+        expect(cubit.state.flow, isA<FlowAwaitingDecision>());
+        // The originals are not touched.
+        expect(store.files('pictures'), picturesBefore);
+      },
+    );
+
+    test(
+      'the corrected page loses words: the PDF keeps the original',
+      () async {
+        script(8, 3);
+        await startDark();
+
+        await cubit.improveLight();
+
+        expect(cubit.state.lightFix, LightFix.keptOriginal);
+        expect(pdf.builder.builds, hasLength(1));
+        expect(store.files('pdf'), hasLength(1));
+        expect(store.deletedUris, isEmpty);
+        expect(cubit.state.pdf, isNotNull);
+      },
+    );
+
+    test('a correction that cannot be made leaves the PDF alone', () async {
+      script(8, 9);
+      await startDark();
+      enhancer.succeed = false;
+
+      await cubit.improveLight();
+
+      expect(cubit.state.lightFix, LightFix.failed);
+      expect(pdf.builder.builds, hasLength(1));
+      expect(store.files('pdf'), hasLength(1));
+    });
+
+    test('Discard is not offered while the correction runs', () async {
+      script(2, 6);
+      await startDark();
+      enhancer.gate = Completer<void>();
+
+      final running = cubit.improveLight();
+      await pumpEventQueue();
+
+      expect(cubit.state.lightFix, LightFix.working);
+      expect(cubit.state.canDiscard, isFalse);
+      expect(cubit.state.busy, isTrue);
+
+      enhancer.gate!.complete();
+      await running;
+      await untilRebuilt();
+      expect(cubit.state.canDiscard, isTrue);
+    });
+
+    test('"Keep as is": nothing changes and the banner goes', () async {
+      await startDark();
+
+      cubit.keepDark();
+
+      expect(cubit.state.lightFix, LightFix.dismissed);
+      expect(cubit.state.canOfferLightFix, isFalse);
+      expect(enhancer.sources, isEmpty);
+    });
+
+    test('Discard after the correction deletes the new PDF too', () async {
+      script(2, 6);
+      await startDark();
+      await cubit.improveLight();
+      await untilRebuilt();
+
+      await cubit.discard();
+
+      expect(store.files('pdf'), isEmpty);
+      expect(store.files('pictures'), isEmpty);
+      expect(rig.workStore.files, isEmpty);
+    });
   });
 
   group('preview', () {

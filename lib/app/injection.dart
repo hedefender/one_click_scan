@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 
 import '../core/config/app_config.dart';
 import '../core/logging/app_logger.dart';
+import '../data/datasources/key_value_flash_preference_store.dart';
 import '../data/datasources/key_value_gallery_counter_store.dart';
 import '../data/datasources/key_value_store.dart';
 import '../data/datasources/settings_local_data_source.dart';
@@ -23,7 +24,10 @@ import '../domain/ports/link_opener.dart';
 import '../domain/ports/mail_app_finder.dart';
 import '../domain/ports/mail_credential_store.dart';
 import '../domain/ports/mail_sender.dart';
+import '../domain/ports/flash_preference_store.dart';
+import '../domain/ports/light_meter.dart';
 import '../domain/usecases/discard_scan.dart';
+import '../domain/usecases/enhance_page_light.dart';
 import '../domain/usecases/scan_and_send.dart';
 import '../domain/usecases/send_scan_pdf.dart';
 import '../domain/usecases/prepare_image_for_ocr.dart';
@@ -91,6 +95,9 @@ Future<GetIt> buildContainer({
   sl.registerSingleton<MailProviderRegistry>(mail.providers);
 
   // Data.
+  sl.registerLazySingleton<FlashPreferenceStore>(
+    () => KeyValueFlashPreferenceStore(sl<KeyValueStore>()),
+  );
   sl.registerLazySingleton<SettingsLocalDataSource>(
     () => SettingsLocalDataSource(
       store: sl<KeyValueStore>(),
@@ -192,8 +199,12 @@ Future<GetIt> buildContainer({
       straighten: ocr.cropper == null
           ? null
           : StraightenPage(cropper: ocr.cropper!, workStore: ocr.workStore),
+      enhance: ocr.enhancer == null
+          ? null
+          : EnhancePageLight(enhancer: ocr.enhancer!, workStore: ocr.workStore),
     ),
   );
+  sl.registerSingleton<LightMeter>(ocr.lightMeter ?? const NoLightMeter());
 
   // Feature modules.
   registerFirstRunModule(sl);

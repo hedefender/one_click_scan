@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,8 +8,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/navigation/route_paths.dart';
 import '../../domain/entities/captured_page.dart';
 import '../../domain/entities/scan_mode.dart';
+import '../../domain/lighting/flash_mode.dart';
+import '../../domain/lighting/low_light_policy.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../services/camera/camera_service.dart';
+import 'focus_tap_layer.dart';
 import 'scan_cubit.dart';
 import 'scan_keys.dart';
 import 'scan_result_args.dart';
@@ -96,38 +100,99 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
       listener: (context, state) {
         context.pushReplacement(
           RoutePaths.scanResult,
-          extra: ScanResultArgs(result: state.result!, ocr: state.ocr),
+          extra: ScanResultArgs(
+            result: state.result!,
+            ocr: state.ocr,
+            darkPages: state.darkPages,
+          ),
         );
       },
       builder: (context, state) {
         final saving = state.phase == ScanPhase.saving;
-        return PopScope(
-          canPop: !state.hasUnsavedPages && !saving,
-          onPopInvokedWithResult: (didPop, _) {
-            if (didPop) return;
-            if (saving) {
-              _confirmStopSaving();
-            } else {
-              _confirmLeave();
-            }
-          },
-          // Camera-app layout: the preview fills the screen and every control
-          // floats above it, so nothing shrinks the picture.
-          child: Scaffold(
-            extendBodyBehindAppBar: true,
-            backgroundColor: Colors.black,
-            appBar: AppBar(
-              backgroundColor: Colors.black45,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              centerTitle: true,
-              title: _ModeSelector(state: state),
-            ),
-            body: _Body(state: state, onSettings: _openSettings),
-          ),
+        return BlocListener<ScanCubit, ScanState>(
+          listenWhen: (previous, current) =>
+              previous.lightPrompt != current.lightPrompt &&
+              current.lightPrompt != LightPrompt.none,
+          listener: (context, state) => _askAboutDarkShot(state),
+          child: _scaffold(context, state, saving),
         );
       },
+    );
+  }
+
+  /// The dialog of a dark Single shot, or the summary before the send. Three
+  /// choices; closing it any other way counts as "retake" / "back".
+  Future<void> _askAboutDarkShot(ScanState state) async {
+    final cubit = context.read<ScanCubit>();
+    final strings = AppStrings.of(context);
+    final summary = state.lightPrompt == LightPrompt.summary;
+    final choice = await showDialog<LowLightChoice>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        key: ScanKeys.lowLightDialog,
+        title: Text(
+          summary ? strings.lowLightSummaryTitle : strings.lowLightDialogTitle,
+        ),
+        content: Text(
+          summary
+              ? strings.lowLightSummaryBody(state.darkPages.length)
+              : strings.lowLightDialogBody,
+        ),
+        actions: [
+          TextButton(
+            key: ScanKeys.lowLightRetake,
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(LowLightChoice.retake),
+            child: Text(
+              summary ? strings.lowLightSummaryBack : strings.lowLightRetake,
+            ),
+          ),
+          TextButton(
+            key: ScanKeys.lowLightContinue,
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(LowLightChoice.continueAnyway),
+            child: Text(strings.lowLightContinue),
+          ),
+          FilledButton(
+            key: ScanKeys.lowLightEnhance,
+            onPressed: () =>
+                Navigator.of(dialogContext)
+                    .pop(LowLightChoice.continueWithEnhancement),
+            child: Text(strings.lowLightContinueEnhance),
+          ),
+        ],
+      ),
+    );
+    await cubit.resolveLowLight(choice ?? LowLightChoice.retake);
+  }
+
+  Widget _scaffold(BuildContext context, ScanState state, bool saving) {
+    return PopScope(
+      canPop: !state.hasUnsavedPages && !saving,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (saving) {
+          _confirmStopSaving();
+        } else {
+          _confirmLeave();
+        }
+      },
+      // Camera-app layout: the preview fills the screen and every control
+      // floats above it, so nothing shrinks the picture.
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black45,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: true,
+          title: _ModeSelector(state: state),
+        ),
+        body: _Body(state: state, onSettings: _openSettings),
+      ),
     );
   }
 }
@@ -223,7 +288,11 @@ class _Viewfinder extends StatelessWidget {
         if (_showsPreview)
           Center(
             key: ScanKeys.preview,
-            child: context.read<CameraService>().buildPreview(context),
+            child: FocusTapLayer(
+              onFocus: (point) =>
+                  unawaited(context.read<CameraService>().focusAt(point)),
+              child: context.read<CameraService>().buildPreview(context),
+            ),
           ),
         if (state.phase == ScanPhase.starting)
           const Center(child: CircularProgressIndicator()),
@@ -329,6 +398,13 @@ class _Viewfinder extends StatelessWidget {
               ),
             ),
           ),
+        if (state.hasFlash && _showsPreview)
+          Positioned(
+            left: 12,
+            top: MediaQuery.paddingOf(context).top + kToolbarHeight + 8,
+            child: _FlashAndLight(state: state),
+          ),
+        if (state.darkBarPage != null) _DarkBar(state: state),
         if (state.captureFailed)
           Align(
             alignment: Alignment.topCenter,
@@ -670,6 +746,119 @@ class _SideActions extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Flash button (top left, under the app bar, like a camera app) with the
+/// "low light" mark next to it.
+class _FlashAndLight extends StatelessWidget {
+  const _FlashAndLight({required this.state});
+
+  final ScanState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final cubit = context.read<ScanCubit>();
+    final (icon, label) = switch (state.flashMode) {
+      FlashMode.off => (Icons.flash_off, strings.flashOffLabel),
+      FlashMode.auto => (Icons.flash_auto, strings.flashAutoLabel),
+      FlashMode.on => (Icons.flash_on, strings.flashOnLabel),
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Semantics(
+          button: true,
+          label: label,
+          child: Material(
+            color: _panelColor,
+            shape: const CircleBorder(),
+            child: IconButton(
+              key: ScanKeys.flashButton,
+              tooltip: label,
+              color: state.flashMode == FlashMode.on
+                  ? Colors.amber
+                  : Colors.white,
+              onPressed: state.phase == ScanPhase.ready
+                  ? cubit.cycleFlash
+                  : null,
+              icon: Icon(icon),
+            ),
+          ),
+        ),
+        if (state.lowLight) ...[
+          const SizedBox(width: 8),
+          Container(
+            key: ScanKeys.lowLightChip,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade800,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              strings.lowLightChip,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Non-blocking bar for the last Multi shot that was dark. The capture button
+/// stays active; the page is flagged for the summary before the send.
+class _DarkBar extends StatelessWidget {
+  const _DarkBar({required this.state});
+
+  final ScanState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final cubit = context.read<ScanCubit>();
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Container(
+        key: ScanKeys.darkBar,
+        margin: EdgeInsets.fromLTRB(
+          12,
+          MediaQuery.paddingOf(context).top + kToolbarHeight + 64,
+          12,
+          12,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade900,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                strings.lowLightBarText,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+            TextButton(
+              key: ScanKeys.darkBarRetake,
+              onPressed: cubit.retakeDarkPage,
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              child: Text(strings.lowLightBarRetake),
+            ),
+            IconButton(
+              key: ScanKeys.darkBarDismiss,
+              tooltip: strings.lowLightBarDismiss,
+              color: Colors.white,
+              onPressed: cubit.dismissDarkBar,
+              icon: const Icon(Icons.close),
+            ),
+          ],
         ),
       ),
     );

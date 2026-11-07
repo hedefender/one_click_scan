@@ -681,3 +681,38 @@ all-at-once case.
   phone, the same as in the phone's own camera app. The camera of the app is not changed.
 - **Light:** in bad light or on a dark background the crop is not applied (whole frame). Section "Phase 6.2" of
   `ROADMAP.md` records a proposal for that (a milder light normalisation for the detection only).
+
+
+## Phase 6.2: the light metric on the synthetic scenes
+
+Tool: `dart run tool/light_metric_eval.dart` (invented receipts only; the scenes of the unit tests, tilted, light scaled down like a lower exposure, metric from a 160 px copy as the after-shot check does). Threshold: paper level below **40** is "low light" (ADR-030).
+
+The model is **linear** (a phone raises its exposure in the dark, so real numbers differ): the table says how the metric behaves, and the threshold is calibrated on the phone with the diagnostics screen (`PHASE_6_2_VALIDATION.md`).
+
+| scene | light | paper | contrast | low light |
+|---|---|---|---|---|
+| receipt on a table | 100% | 98.8 | 89.4 | no |
+| receipt on a table | 70% | 69.4 | 62.7 | no |
+| receipt on a table | 50% | 49.4 | 44.7 | no |
+| receipt on a table | 40% | 39.6 | 36.1 | YES |
+| receipt on a table | 30% | 29.8 | 27.1 | YES |
+| receipt on a table | 20% | 19.6 | 18.0 | YES |
+| receipt on a table | 12% | 11.8 | 11.0 | YES |
+| receipt on a dark background | 100% | 98.8 | 89.4 | no |
+| receipt on a dark background | 70% | 69.4 | 62.7 | no |
+| receipt on a dark background | 50% | 49.4 | 44.7 | no |
+| receipt on a dark background | 40% | 39.6 | 36.1 | YES |
+| receipt on a dark background | 30% | 29.8 | 27.1 | YES |
+| receipt on a dark background | 20% | 19.6 | 18.0 | YES |
+| receipt on a dark background | 12% | 11.8 | 11.0 | YES |
+| faint thermal receipt on a table | 100% | 72.2 | 24.3 | no |
+| faint thermal receipt on a table | 70% | 50.6 | 16.9 | no |
+| faint thermal receipt on a table | 50% | 36.1 | 12.2 | YES |
+| faint thermal receipt on a table | 40% | 28.6 | 9.8 | YES |
+| faint thermal receipt on a table | 30% | 21.6 | 7.5 | YES |
+| faint thermal receipt on a table | 20% | 14.1 | 4.7 | YES |
+| faint thermal receipt on a table | 12% | 8.6 | 3.1 | YES |
+
+Reading: the paper level follows the light almost one to one (a page and a dark background give the same numbers because the percentile is the paper, not the background), the contrast follows it too, and the faint thermal scene has a lower paper level at full light (72) and a contrast of only 24, so such a receipt crosses 40 earlier (at about 50% of the light). The contrast is not used for the warning.
+
+**Item E of the request (detection of the page on a picture with a mild light flattening):** not measured in this phase, no claim and nothing built.

@@ -5,6 +5,27 @@ import '../../domain/ports/open_pdf.dart';
 import '../../domain/scan/scan_flow.dart';
 import '../../domain/usecases/discard_scan.dart';
 
+/// Where the light correction of the dark pages is (preview mode, ADR-030).
+enum LightFix {
+  /// No dark page, or the decision was made before (One Click).
+  none,
+
+  /// Dark pages wait for the user: the banner is shown.
+  offered,
+  working,
+
+  /// The corrected picture is in the PDF (at least one page).
+  improved,
+
+  /// The corrected picture read fewer or as many words: the PDF kept the
+  /// original (the safety valve).
+  keptOriginal,
+  failed,
+
+  /// The user chose "Keep as is".
+  dismissed,
+}
+
 /// What happened to a discard asked for by the user.
 enum DiscardPhase { none, running, done }
 
@@ -19,6 +40,8 @@ class ScanFlowViewState extends Equatable {
     this.discard = DiscardPhase.none,
     this.discardOutcome,
     this.openProblem,
+    this.darkPages = const <String>[],
+    this.lightFix = LightFix.none,
   });
 
   /// The last state of the flow; null until it has started.
@@ -37,9 +60,23 @@ class ScanFlowViewState extends Equatable {
   /// The last attempt to open the PDF did not work (no viewer, or an error).
   final OpenPdfResult? openProblem;
 
+  /// Keys of the pages flagged dark (see `ScanResultArgs.darkPages`).
+  final List<String> darkPages;
+  final LightFix lightFix;
+
+  /// The banner with "Correct the light" is shown (preview, PDF stored, the
+  /// user has not decided).
+  bool get canOfferLightFix =>
+      previewMode &&
+      lightFix == LightFix.offered &&
+      darkPages.isNotEmpty &&
+      flow is FlowAwaitingDecision &&
+      discard == DiscardPhase.none;
+
   /// Work is running and leaving the screen would lose it.
   bool get busy =>
       discard == DiscardPhase.running ||
+      lightFix == LightFix.working ||
       switch (flow) {
         null || FlowRecognizing() || FlowBuildingPdf() => true,
         FlowSending() || FlowSharing() => true,
@@ -66,6 +103,7 @@ class ScanFlowViewState extends Equatable {
       previewMode &&
       pdf != null &&
       discard != DiscardPhase.running &&
+      lightFix != LightFix.working &&
       !discarded &&
       switch (flow) {
         FlowAwaitingDecision() => true,
@@ -82,14 +120,19 @@ class ScanFlowViewState extends Equatable {
     DiscardOutcome? discardOutcome,
     OpenPdfResult? openProblem,
     bool clearOpenProblem = false,
+    bool clearPdf = false,
+    List<String>? darkPages,
+    LightFix? lightFix,
   }) {
     return ScanFlowViewState(
       flow: flow ?? this.flow,
       previewMode: previewMode ?? this.previewMode,
-      pdf: pdf ?? this.pdf,
+      pdf: clearPdf ? null : pdf ?? this.pdf,
       discard: discard ?? this.discard,
       discardOutcome: discardOutcome ?? this.discardOutcome,
       openProblem: clearOpenProblem ? null : openProblem ?? this.openProblem,
+      darkPages: darkPages ?? this.darkPages,
+      lightFix: lightFix ?? this.lightFix,
     );
   }
 
@@ -101,5 +144,7 @@ class ScanFlowViewState extends Equatable {
     discard,
     discardOutcome,
     openProblem,
+    darkPages,
+    lightFix,
   ];
 }

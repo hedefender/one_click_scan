@@ -59,5 +59,24 @@ abstract final class ScanKeys {
   static const mailFailure = Key('scan.result.mail.failure');
   static const mailDraft = Key('scan.result.mail.draft');
 
+  // Phase 6.2
+  static const flashButton = Key('scan.flash');
+  static const lowLightChip = Key('scan.lowLight.chip');
+  static const focusRing = Key('scan.focus.ring');
+  static const lowLightDialog = Key('scan.lowLight.dialog');
+  static const lowLightRetake = Key('scan.lowLight.retake');
+  static const lowLightContinue = Key('scan.lowLight.continue');
+  static const lowLightEnhance = Key('scan.lowLight.enhance');
+  static const darkBar = Key('scan.lowLight.bar');
+  static const darkBarRetake = Key('scan.lowLight.bar.retake');
+  static const darkBarDismiss = Key('scan.lowLight.bar.dismiss');
+  static const lowLightBanner = Key('scan.result.lowLight.banner');
+  static const lowLightImprove = Key('scan.result.lowLight.improve');
+  static const lowLightKeep = Key('scan.result.lowLight.keep');
+  static const lowLightStatus = Key('scan.result.lowLight.status');
+  static const lightDiagLive = Key('scan.lightDiag.live');
+  static const lightDiagShot = Key('scan.lightDiag.shot');
+  static const lightDiagTake = Key('scan.lightDiag.take');
+
   static Key resultFile(String fileName) => Key('scan.result.file.$fileName');
 }

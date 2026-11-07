@@ -7,10 +7,12 @@ import '../entities/ocr_progress.dart';
 import '../entities/page_crop_outcome.dart';
 import '../entities/upright_image.dart';
 import '../imaging/page_crop_config.dart';
+import '../lighting/enhancement_gate.dart';
 import '../ocr/confidence_filter.dart';
 import '../ocr/ocr_cancellation.dart';
 import '../ports/ocr_engine.dart';
 import '../ports/ocr_work_store.dart';
+import 'enhance_page_light.dart';
 import 'prepare_image_for_ocr.dart';
 import 'straighten_page.dart';
 
@@ -28,6 +30,7 @@ class OcrPageState extends Equatable {
     this.image,
     this.crop,
     this.workingCopyDeleted = false,
+    this.enhancement,
   });
 
   /// Identifies the page (the path of the captured shot).
@@ -51,6 +54,9 @@ class OcrPageState extends Equatable {
   /// The file of [image] was deleted (the PDF is stored, ADR-018).
   final bool workingCopyDeleted;
 
+  /// What the light correction did, when the user asked for it (ADR-030).
+  final EnhancementOutcome? enhancement;
+
   /// The picture of the page can still be read from the cache.
   bool get hasWorkingFile => image != null && !workingCopyDeleted;
 
@@ -63,6 +69,7 @@ class OcrPageState extends Equatable {
     image,
     crop,
     workingCopyDeleted,
+    enhancement,
   ];
 }
 
@@ -126,6 +133,7 @@ class OcrSession {
     required this._prepare,
     required this._workStore,
     this._straighten,
+    this._enhance,
     this.prepareAhead = PageCropConfig.prepareAhead,
   });
 
@@ -137,6 +145,10 @@ class OcrSession {
   /// The crop step; null on a platform without one (every page keeps the whole
   /// frame and has no crop outcome).
   final StraightenPage? _straighten;
+
+  /// The light correction (`flat`); null where there is none. Only used for a
+  /// page the user asked about, see [requestEnhance].
+  final EnhancePageLight? _enhance;
 
   /// How many prepared pages may wait for the engine.
   final int prepareAhead;
@@ -181,6 +193,37 @@ class OcrSession {
     if (!entry.processing) await _discard(entry);
     _emit();
     _pump();
+  }
+
+  /// The user asked for the light correction of a page (ADR-030). The page is
+  /// read as usual; then the corrected picture is read too and the version
+  /// with **more words** is kept (a tie keeps the original). A page that is
+  /// already read is read again only in its corrected version. Completes when
+  /// the page is done again; the value is true when the corrected picture was
+  /// kept (false: nothing to do, not possible, or the original was kept).
+  Future<bool> requestEnhance(String key) async {
+    final index = _entries.indexWhere((e) => e.key == key);
+    if (index < 0 || _enhance == null || _disposed) return false;
+    final e = _entries[index];
+    if (e.enhance || e.enhancement != null) return false;
+    final waiter = Completer<void>();
+    if (e.status == OcrPageStatus.done) {
+      final outcome = e.outcome;
+      if (e.image == null || e.fileDeleted || outcome is! OcrSuccess) {
+        return false;
+      }
+      e.enhance = true;
+      e.reusedOutcome = outcome;
+      e.waiters.add(waiter);
+      e.status = OcrPageStatus.ready;
+      _emit();
+      _pump();
+    } else {
+      e.enhance = true;
+      e.waiters.add(waiter);
+    }
+    await waiter.future;
+    return e.enhancement == EnhancementOutcome.applied;
   }
 
   /// No more pages are coming.
@@ -348,23 +391,13 @@ class OcrSession {
       }
       e.status = OcrPageStatus.recognizing;
       _emit();
-      OcrOutcome outcome;
-      try {
-        outcome = await _engine.recognize(
-          e.image!,
-          packId: packId,
-          cancellation: e.cancellation,
-          onProgress: (progress) {
-            if (e.removed || e.status != OcrPageStatus.recognizing) return;
-            e.progress = progress;
-            _emit();
-          },
-        );
-      } catch (_) {
-        outcome = const OcrFailed(OcrFailureReason.engineError);
-      }
-      if (outcome is OcrSuccess) {
-        outcome = OcrSuccess(applyConfidenceFilter(outcome.result));
+      OcrOutcome outcome = e.reusedOutcome ?? await _recognize(e, e.image!);
+      e.reusedOutcome = null;
+      if (e.enhance &&
+          _enhance != null &&
+          !e.cancellation.isCancelled &&
+          !_readingStopped) {
+        outcome = await _enhancePass(e, outcome);
       }
       _finish(e, outcome);
     } finally {
@@ -373,10 +406,76 @@ class OcrSession {
     }
   }
 
+  Future<OcrOutcome> _recognize(_Entry e, UprightImage image) async {
+    OcrOutcome outcome;
+    try {
+      outcome = await _engine.recognize(
+        image,
+        packId: packId,
+        cancellation: e.cancellation,
+        onProgress: (progress) {
+          if (e.removed || e.status != OcrPageStatus.recognizing) return;
+          e.progress = progress;
+          _emit();
+        },
+      );
+    } catch (_) {
+      outcome = const OcrFailed(OcrFailureReason.engineError);
+    }
+    if (outcome is OcrSuccess) {
+      outcome = OcrSuccess(applyConfidenceFilter(outcome.result));
+    }
+    return outcome;
+  }
+
+  /// The light correction with its safety valve (ADR-030): the corrected
+  /// picture is read too, and the version with more words is the page. The
+  /// picture and the text always come from the same version.
+  Future<OcrOutcome> _enhancePass(_Entry e, OcrOutcome original) async {
+    final current = e.image!;
+    e.progress = const OcrProgress(OcrStage.preparingImage);
+    _emit();
+    final improved = await _enhance!(current, cancellation: e.cancellation);
+    if (improved == null) {
+      e.enhancement = EnhancementOutcome.failed;
+      return original;
+    }
+    if (e.cancellation.isCancelled || _readingStopped) {
+      await _deleteFile(improved.path);
+      return original;
+    }
+    final second = await _recognize(e, improved);
+    final choice = chooseByWords(
+      originalWords: countWords(original),
+      enhancedWords: countWords(second),
+    );
+    if (choice == EnhancementChoice.enhanced && !e.cancellation.isCancelled) {
+      e.image = improved;
+      e.enhancement = EnhancementOutcome.applied;
+      await _deleteFile(current.path);
+      return second;
+    }
+    await _deleteFile(improved.path);
+    e.enhancement = EnhancementOutcome.keptOriginal;
+    return original;
+  }
+
+  Future<void> _deleteFile(String path) async {
+    try {
+      await _workStore.delete(path);
+    } catch (_) {
+      // The cache is purged at the next start-up anyway.
+    }
+  }
+
   void _finish(_Entry e, OcrOutcome outcome) {
     e.status = OcrPageStatus.done;
     e.progress = null;
     e.outcome = outcome;
+    for (final waiter in e.waiters) {
+      if (!waiter.isCompleted) waiter.complete();
+    }
+    e.waiters.clear();
     if (!e.removed) _emit();
   }
 
@@ -423,6 +522,16 @@ class _Entry {
   bool get processing => preparing || reading;
   var removed = false;
 
+  /// The user asked for the light correction of this page.
+  var enhance = false;
+  EnhancementOutcome? enhancement;
+
+  /// The reading to start from when the page is read again for the correction.
+  OcrOutcome? reusedOutcome;
+
+  /// Completed when the page is done (see `OcrSession.requestEnhance`).
+  final waiters = <Completer<void>>[];
+
   /// The file of [image] was deleted by `releaseWorkingCopies`.
   var fileDeleted = false;
 
@@ -434,6 +543,7 @@ class _Entry {
     image: image,
     crop: crop,
     workingCopyDeleted: fileDeleted,
+    enhancement: enhancement,
   );
 }
 
@@ -444,6 +554,7 @@ class RecognizePages {
     required this._prepare,
     required this._workStore,
     this.straighten,
+    this.enhance,
   });
 
   final OcrEngine _engine;
@@ -453,6 +564,9 @@ class RecognizePages {
   /// The crop step of every page; null where there is none.
   final StraightenPage? straighten;
 
+  /// The light correction, only on request of the user (ADR-030).
+  final EnhancePageLight? enhance;
+
   /// A new session for one scan, with the language pack chosen by the user.
   OcrSession start({required String packId}) => OcrSession(
     packId: packId,
@@ -460,6 +574,7 @@ class RecognizePages {
     prepare: _prepare,
     workStore: _workStore,
     straighten: straighten,
+    enhance: enhance,
   );
 
   /// Loads the models ahead of time (when the camera opens).

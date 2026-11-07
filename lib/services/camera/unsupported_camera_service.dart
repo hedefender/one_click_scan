@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 
 import '../../core/errors/app_exceptions.dart';
 import '../../domain/entities/captured_page.dart';
+import '../../domain/lighting/flash_mode.dart';
+import '../../domain/lighting/light_metric.dart';
 import 'camera_service.dart';
 
 /// Used on platforms without an implementation, and as the container default.
@@ -24,4 +26,25 @@ class UnsupportedCameraService implements CameraService {
 
   @override
   Future<void> openAppSettings() async {}
+
+  @override
+  bool get hasFlash => false;
+
+  @override
+  FlashMode get flashMode => FlashMode.off;
+
+  @override
+  Future<void> setFlashMode(FlashMode mode) async {}
+
+  @override
+  Future<void> focusAt(Offset point) async {}
+
+  @override
+  Stream<LightMetric> get lightSamples => const Stream<LightMetric>.empty();
+
+  @override
+  void startLightAnalysis() {}
+
+  @override
+  void stopLightAnalysis() {}
 }

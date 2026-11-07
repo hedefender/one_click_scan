@@ -753,3 +753,133 @@ with a mild light flattening used only for the detection, and a lowered area bou
 small receipts. No gain of time is claimed when all pages arrive at once (measured on
 the phone: 56.4 s before against 65.4 s with the crop): the gain is in hiding the time
 between the shots.
+
+
+## ADR-030 Flash, tap-to-focus, low light detection and the optional light correction (Phase 6.2)
+
+**Decisions of the user (binding):** a flash button at the top left with Off / Auto / On
+(default Off); tap-to-focus; a low light check before and after the shot; in One Click a
+dark shot stops the flow with three choices; the shadow removal (`flat`) is **only a choice
+of the user**, with a safety valve. The rest below is what was decided to build that.
+
+### Flash
+
+- `FlashMode { off, auto, on }` in `domain/lighting/`. The camera port
+  (`CameraService`) got `hasFlash`, `flashMode`, `setFlashMode`. The implementation uses
+  the `camera` plugin (`FlashMode.off/auto/always`): in CameraX this is the flash mode of
+  the **`ImageCapture`** (it fires on the shot), never the torch.
+- **Only Off and Auto are remembered.** `FlashMode.storedName` writes On as Auto, and
+  `fromStored` reads a missing value as Off and a stored `on` as Auto. So the app can
+  **never start with a full flash**; On is always a new choice, and it lives in the cubit
+  for the current use (it survives the app going to the background and back, because the
+  cubit stays). The store is `FlashPreferenceStore` (port in `domain/ports/`,
+  `KeyValueFlashPreferenceStore` over the existing key/value store, key
+  `camera.flashMode`), not part of `AppSettings`: it is a camera-screen habit, not a
+  setting the user edits.
+- **No flash, no button.** The plugin has no call for it, so `SystemHandler.kt` answers
+  `hasFlashUnit` from `CameraCharacteristics.FLASH_INFO_AVAILABLE` of the back camera
+  (a yes/no crosses the channel).
+- The button is under the app bar at the left (the app bar's own top-left place is the
+  Back arrow), in Single and Multi, with a state icon and EL/EN accessibility labels.
+- **Finding, "flash required" signal:** the `camera` plugin does **not** expose the
+  auto-exposure state of CameraX. `ImageCapture` with the Auto flash mode decides inside
+  CameraX (the AE pre-capture). The signal could only be had with Camera2 interop
+  (`Camera2CameraInfo` / a capture callback) in our own native code bound to the same camera
+  session, which the plugin does not allow. So the diagnostics screen shows it as `n/a`, and
+  the "low light" decision uses our own brightness metric. Not verified on a phone.
+
+### Tap-to-focus
+
+- A tap on the preview calls `setFocusPoint` and `setExposurePoint` of the plugin (one
+  `FocusMeteringAction` for focus and metering at the point) with the point as fractions of
+  the preview. The ring is a static circle (no running animation) that disappears by itself
+  after 1.5 s. CameraX cancels the action by itself after its own time and the camera goes
+  back to continuous focus.
+- The size used for the fractions is the size of the preview widget itself (a test caught
+  that the first version used the size of the free area around it).
+- **Report only, not changed:** the flow of the shot does not wait for the focus. In CameraX
+  the `ImageCapture` in its default mode (minimize latency) runs an AF/AE pre-capture only
+  when the flash is needed (or the AF mode is not continuous); otherwise it takes the frame
+  at once. This is from the CameraX documentation and was **not** measured on a phone. A
+  short wait for the focus lock would make sense only if the phone check shows blurred shots
+  of close text; it was not added.
+
+### The metric of the light
+
+- From the **Y (luma) level** of a reduced picture: the **paper level** (95th percentile)
+  and the **contrast** (95th minus 5th percentile), both 0 to 100. The mean alone misleads
+  (it depends on how much text there is; a unit test shows the paper level does not).
+- **Decision:** a picture is "dark" when the paper level is **below
+  `LightingConfig.minPaperLevel` = 40** (the middle of the 30 to 50 range of the user). It is
+  the only place the threshold is applied (`LightingConfig.isLowLight`), and every constant
+  of the detection is in that one file with a comment on what raises or lowers it. The
+  contrast is **not** a reason to warn: more light does not give faded ink back (thermal
+  paper); it is shown on the diagnostics screen.
+- **Synthetic evaluation** (`tool/light_metric_eval.dart`, table in
+  `IMAGE_SPIKE_RESULTS.md`): a page on a table or on a dark background gives paper = light
+  level x 0.99, so 40 separates "40% of the light" from "50%". This is a **linear**
+  model: a real phone raises the exposure in the dark, so the real numbers must come from
+  the diagnostics screen (`PHASE_6_2_VALIDATION.md`), and the threshold is a starting value.
+  A faint thermal receipt lowers the paper level too (72 at full light in the synthetic
+  scene), so such a receipt in dim light can be called dark earlier: part of the phone check.
+- **Before the shot:** the plugin gives **every** frame of the analyser to Dart (about 30 a
+  second, 460 KB each) and has no rate option. So the analyser is switched on only to
+  receive **one** frame and off again for 400 ms (`startImageStream` / `stopImageStream`):
+  about 2.5 samples a second, with nothing copied in between. The metric is computed in a
+  background isolate on a transferred buffer (every 6th pixel of the Y plane), never in
+  the UI isolate. The analysis stops during a shot and when the camera closes. The mark
+  "Low light" next to the flash button changes only after **two samples in a row agree**
+  (`LowLightDebouncer`). The cost on the preview was measured on the emulator, see
+  `PHASE_6_2_VALIDATION.md`.
+- **After the shot:** `FileLightMeter` makes a 160 px copy with the native decoder
+  (`inSampleSize`, the 12 MP picture is never decoded), takes the metric in an isolate and
+  deletes the copy at once (ADR-018).
+
+### The flow of the warning
+
+| Case | What happens |
+|---|---|
+| One Click, **Single** | Measured **before** `save()`. A dark shot stops the flow with a dialog: **New shot** (the shot was never stored, so only the cache is cleaned, like the undo of a page: nothing in `./pictures`, nothing in the Gallery), **Continue anyway**, **Continue with light correction** (the page is marked for the correction in the queue, then the scan goes on) |
+| One Click, **Multi** | The shot is measured **behind** the camera screen (the rhythm is not slowed). A dark page is only marked; a non-blocking bar says "Dark shot: retake?" with "New shot" (= the undo of that page) and a close button. The capture button stays active. At "Done" the **summary** appears when a page is flagged and has no decision (back to the camera / continue anyway / continue with correction): a dark page is **never sent silently** |
+| **Preview** | No interruption. The flagged pages go to the result screen: a banner with **Correct the light** and **Keep as is** |
+
+The original is stored at "Done" (Multi) or right after the decision (Single), so there
+is nothing to delete when the user retakes a shot. The decision logic is pure
+(`LowLightPolicy`) and tested without a screen.
+
+### The light correction (`flat`)
+
+- **Only an action of the user.** There is no switch that applies it to every scan. The
+  code of the spike was moved to `services/imaging/flatten_light.dart` (pure Dart,
+  unchanged method), run by `IsolateLightEnhancer` in its own isolate that is killed on
+  a cancel or a timeout (20 s), like the crop (ADR-029).
+- **Safety valve (`OcrSession.requestEnhance`):** the corrected picture is read too, and the
+  version with **more words** is the page (a tie keeps the original). The picture of the PDF
+  and its text layer come from the **same** version, the rejected picture is deleted, and
+  the PDF never loses content. The cost of the second reading applies only to a page the
+  user asked about. A page that is already read is read again **only in its corrected
+  version**.
+- **Preview banner:** after the correction the PDF is made again; the old PDF is deleted
+  **first, by its URI**, so the new one has the same name (the other order would leave
+  `-2`). If the new PDF fails, the usual "try again" of the PDF is there and the pictures are
+  untouched. The originals are never read or changed by any of this (tests compare them byte
+  for byte).
+- Words are only counted, never kept or logged; the log has numbers only.
+
+### The diagnostics screen
+
+Hidden: five taps on the app name at the end of Settings (3 s window). It opens its own
+camera, shows the live paper level and contrast, the threshold, "would warn" yes/no, a test
+shot (measured and deleted at once) with the same numbers, the flash button (not remembered)
+for with/without flash, and the `flash required` signal as `n/a`. It stores no picture and no
+text.
+
+### Limits
+
+- The real flash, the real light of a room and the focus of a real lens cannot be tested on the
+  emulator; they are in `PHASE_6_2_VALIDATION.md` for the phone.
+- The threshold is a starting value to be set from the numbers of the phone.
+- A shot that cannot be measured is never called dark (a missing meter or a decode error
+  gives no warning), so the feature can only add a question, never block a scan.
+- Not built (item E of the request): detection with a mild light flattening only for the
+  detection of the page. No measurement was made, so no claim.

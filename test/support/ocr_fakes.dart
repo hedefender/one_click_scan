@@ -12,7 +12,9 @@ import 'package:one_click_scan/domain/ocr/ocr_config.dart';
 import 'package:one_click_scan/domain/ports/image_header_reader.dart';
 import 'package:one_click_scan/domain/ports/ocr_engine.dart';
 import 'package:one_click_scan/domain/ports/ocr_work_store.dart';
+import 'package:one_click_scan/domain/ports/light_enhancer.dart';
 import 'package:one_click_scan/domain/ports/page_cropper.dart';
+import 'package:one_click_scan/domain/usecases/enhance_page_light.dart';
 import 'package:one_click_scan/domain/ports/upright_image_maker.dart';
 import 'package:one_click_scan/domain/usecases/prepare_image_for_ocr.dart';
 import 'package:one_click_scan/domain/usecases/recognize_pages.dart';
@@ -259,9 +261,32 @@ class FakeMaker implements UprightImageMaker {
   }
 }
 
+/// Scripted light enhancer: writes nothing, only says whether it "wrote".
+class FakeEnhancer implements LightEnhancer {
+  bool succeed = true;
+  Completer<void>? gate;
+  final List<String> sources = [];
+  final List<String> targets = [];
+
+  @override
+  Future<bool> enhance({
+    required String source,
+    required String target,
+    required int jpegQuality,
+    required Duration timeout,
+    OcrCancellation? cancellation,
+  }) async {
+    sources.add(source);
+    targets.add(target);
+    final g = gate;
+    if (g != null) await g.future;
+    return succeed;
+  }
+}
+
 /// Everything a session test needs, wired like the real container.
 class OcrTestRig {
-  OcrTestRig({FakeOcrEngine? engine, this.cropper})
+  OcrTestRig({FakeOcrEngine? engine, this.cropper, this.enhancer})
     : engine = engine ?? FakeOcrEngine(),
       header = FakeHeaderReader(),
       dartMaker = FakeMaker('dart'),
@@ -280,8 +305,14 @@ class OcrTestRig {
       straighten: cropper == null
           ? null
           : StraightenPage(cropper: cropper!, workStore: workStore),
+      enhance: enhancer == null
+          ? null
+          : EnhancePageLight(enhancer: enhancer!, workStore: workStore),
     );
   }
+
+  /// The light correction; none unless a test gives one.
+  final FakeEnhancer? enhancer;
 
   /// The crop of the pages; none unless a test gives one.
   final PageCropper? cropper;
@@ -294,6 +325,7 @@ class OcrTestRig {
     dartMaker: dartMaker,
     nativeMaker: nativeMaker,
     cropper: cropper,
+    enhancer: enhancer,
   );
 
   final FakeOcrEngine engine;

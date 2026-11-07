@@ -5,7 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/logging/app_logger.dart';
 import '../../domain/entities/scan_flow_mode.dart';
 import '../../domain/entities/stored_scan.dart';
+import '../../domain/lighting/enhancement_gate.dart';
 import '../../domain/ports/open_pdf.dart';
+import '../../domain/ports/scan_file_store.dart';
 import '../../domain/scan/scan_flow.dart';
 import '../../domain/usecases/discard_scan.dart';
 import '../../domain/usecases/load_settings.dart';
@@ -22,20 +24,26 @@ import 'scan_flow_state.dart';
 class ScanFlowCubit extends Cubit<ScanFlowViewState> {
   ScanFlowCubit({
     required this.scan,
+    this.darkPages = const <String>[],
     required this._session,
     required this._loadSettings,
     required this._scanAndSend,
     required this._discardScan,
     required this._openPdf,
+    required this._fileStore,
     required this._logger,
-  }) : super(const ScanFlowViewState());
+  }) : super(ScanFlowViewState(darkPages: darkPages));
 
   final StoredScan scan;
+
+  /// Pages flagged dark that have no decision (preview mode).
+  final List<String> darkPages;
   final OcrSession? _session;
   final LoadSettings _loadSettings;
   final ScanAndSend _scanAndSend;
   final DiscardScan _discardScan;
   final OpenPdf _openPdf;
+  final ScanFileStore _fileStore;
   final AppLogger _logger;
 
   StreamSubscription<ScanFlowState>? _subscription;
@@ -46,9 +54,13 @@ class ScanFlowCubit extends Cubit<ScanFlowViewState> {
     if (_subscription != null) return;
     final settings = await _loadSettings();
     if (isClosed) return;
+    final preview = settings.effectiveScanFlowMode == ScanFlowMode.preview;
     emit(
       state.copyWith(
-        previewMode: settings.effectiveScanFlowMode == ScanFlowMode.preview,
+        previewMode: preview,
+        lightFix: preview && darkPages.isNotEmpty
+            ? LightFix.offered
+            : LightFix.none,
       ),
     );
     _launch();
@@ -82,6 +94,59 @@ class ScanFlowCubit extends Cubit<ScanFlowViewState> {
   void _onDone() {
     _subscription = null;
     _cancellation = null;
+  }
+
+  /// "Correct the light" of the banner (ADR-030): the dark pages are read
+  /// again in their corrected version (the version with more words is kept per
+  /// page), and when a corrected picture was kept the PDF is made again. The old
+  /// PDF is deleted first, by its URI, so the new one has the same name; if the
+  /// new one fails, the usual "try again" of the PDF is there and the pictures
+  /// are untouched. The originals are never read or changed.
+  Future<void> improveLight() async {
+    final session = _session;
+    if (!state.canOfferLightFix || session == null) return;
+    emit(state.copyWith(lightFix: LightFix.working));
+    var applied = 0;
+    var kept = 0;
+    for (final key in darkPages) {
+      if (isClosed) return;
+      final used = await session.requestEnhance(key);
+      final page = session.snapshot.pages.where((p) => p.key == key);
+      final outcome = page.isEmpty ? null : page.first.enhancement;
+      if (used) applied++;
+      if (outcome == EnhancementOutcome.keptOriginal) kept++;
+    }
+    if (isClosed) return;
+    // Numbers only.
+    _logger.debug('Light correction: $applied applied, $kept kept original');
+    if (applied == 0) {
+      emit(
+        state.copyWith(
+          lightFix: kept > 0 ? LightFix.keptOriginal : LightFix.failed,
+        ),
+      );
+      return;
+    }
+    final old = state.pdf;
+    if (old != null) {
+      try {
+        await _fileStore.deleteByUri(old.uri);
+      } catch (error, stackTrace) {
+        _logger.error(
+          'The old PDF was not deleted',
+          error.runtimeType,
+          stackTrace,
+        );
+      }
+    }
+    emit(state.copyWith(clearPdf: true, lightFix: LightFix.improved));
+    _launch();
+  }
+
+  /// "Keep as is": the pages stay as they are, the banner goes.
+  void keepDark() {
+    if (state.lightFix != LightFix.offered) return;
+    emit(state.copyWith(lightFix: LightFix.dismissed));
   }
 
   /// Stops the reading or the send. Pictures already stored stay; no PDF is
