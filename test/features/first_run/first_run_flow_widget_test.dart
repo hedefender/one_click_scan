@@ -23,7 +23,7 @@ void main() {
     await tester.pumpWidget(OneClickScanApp(container: container));
     await tester.pumpAndSettle();
 
-    expect(find.text('Step 1 of 5'), findsOneWidget);
+    expect(find.text('Step 1 of 6'), findsOneWidget);
     expect(find.byKey(HomeKeys.scanAndSend), findsNothing);
   });
 
@@ -35,7 +35,7 @@ void main() {
     await tester.tap(find.text('Ελληνικά'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Βήμα 1 από 5'), findsOneWidget);
+    expect(find.text('Βήμα 1 από 6'), findsOneWidget);
     expect(find.text('Επόμενο'), findsOneWidget);
   });
 
@@ -47,7 +47,7 @@ void main() {
     await tapNext(tester); // welcome -> folder
     await tapNext(tester); // no folder chosen
     expect(find.text('Choose a folder to continue.'), findsOneWidget);
-    expect(find.text('Step 2 of 5'), findsOneWidget);
+    expect(find.text('Step 2 of 6'), findsOneWidget);
 
     await tester.tap(find.byKey(FirstRunKeys.pickFolder));
     await tester.pumpAndSettle();
@@ -57,7 +57,7 @@ void main() {
     await tapNext(tester); // nothing filled in
     expect(find.text('Choose a provider.'), findsOneWidget);
     expect(find.text('Invalid email address.'), findsOneWidget);
-    expect(find.text('Step 3 of 5'), findsOneWidget);
+    expect(find.text('Step 3 of 6'), findsOneWidget);
   });
 
   testWidgets('completing the wizard stores settings and opens home', (
@@ -82,10 +82,13 @@ void main() {
     await tapNext(tester); // mail
 
     await tapNext(tester); // gallery
-    expect(find.text('Finish'), findsOneWidget);
     await tester.tap(find.byKey(FirstRunKeys.flowPreview));
     await tester.pumpAndSettle();
-    await tapNext(tester); // flow -> finish
+    await tapNext(tester); // flow -> the guide page
+    expect(find.text('Step 6 of 6'), findsOneWidget);
+    expect(find.text('Finish'), findsOneWidget);
+    expect(find.byKey(HomeKeys.scanAndSend), findsNothing);
+    await tapNext(tester); // guide -> finish
 
     expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
     expect(find.text('SCAN & SEND'), findsOneWidget);
@@ -128,7 +131,7 @@ void main() {
     ) async {
       await toFlowStep(tester);
 
-      expect(find.text('Step 5 of 5'), findsOneWidget);
+      expect(find.text('Step 5 of 6'), findsOneWidget);
       expect(find.text('One Click (no preview)'), findsOneWidget);
       expect(find.text('With preview'), findsOneWidget);
       expect(find.byKey(FirstRunKeys.flowError), findsOneWidget);
@@ -154,11 +157,12 @@ void main() {
       await tester.tap(find.byKey(FirstRunKeys.flowOneClick));
       await tester.pumpAndSettle();
       expect(nextButton(tester).onPressed, isNotNull);
-      await tapNext(tester);
+      await tapNext(tester); // flow -> the guide page
 
       final saved = await container<SettingsRepository>().load();
       expect(saved.scanFlowMode, ScanFlowMode.oneClick);
       expect(saved.firstRunCompleted, isTrue);
+      await tapNext(tester); // guide -> finish
       expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
     });
 

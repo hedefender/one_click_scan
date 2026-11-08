@@ -1,6 +1,9 @@
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/lighting/lighting_config.dart';
 import '../../domain/mail/mail_outcome.dart';
+import '../../domain/scan/page_budget_config.dart';
 import 'app_strings.dart';
+import 'guide_section.dart';
 
 class AppStringsEn extends AppStrings {
   const AppStringsEn();
@@ -124,6 +127,22 @@ class AppStringsEn extends AppStrings {
 
   @override
   String scanPageCount(int count) => 'Pages: $count';
+
+  @override
+  String scanPageCountOf(int count, int max) => 'Pages: $count/$max';
+
+  @override
+  String scanPagesLeft(int count) => count == 1
+      ? 'About 1 more page will fit in the email (approximate).'
+      : 'About $count more pages will fit in the email (approximate).';
+
+  @override
+  String get scanPageLimitReached =>
+      'The PDF would go over the email size limit. Tap "Done" to send it, '
+      'then scan the remaining pages as a new document.';
+
+  @override
+  String get scanCapturing => 'Taking photo...';
 
   @override
   String get scanSaving => 'Saving...';
@@ -927,4 +946,194 @@ class AppStringsEn extends AppStrings {
   @override
   String get lightDiagNote =>
       'No picture or text is stored, only numbers on the screen.';
+
+  // ----- Guide, Help, first Multi Page hint (Phase 6.3) -----
+
+  @override
+  String get wizardChangeLater => 'You can change this later in Settings.';
+
+  @override
+  String get mailChoiceNote =>
+      'Provider: the email account the scan is sent from. Recipient: the '
+      'address that receives it, usually your own email.';
+
+  @override
+  String get guideTitle => 'Before you start';
+
+  @override
+  String get guideIntro => 'The basics, in a few words.';
+
+  @override
+  String get guideLastLine =>
+      'You can always find the above in Settings, under Help.';
+
+  @override
+  String get guideClose => 'Close';
+
+  @override
+  List<GuideSection> get guideSections {
+    final torchMinutes = LightingConfig.torchIdleTimeout.inMinutes;
+    final maxPages = PageBudgetConfig.defaultHardMaxPages;
+    final gmail = providerMegabytes(MailProviderId.gmail);
+    final other = providerMegabytes(MailProviderId.outlook);
+    return [
+      const GuideSection(
+        id: GuideSectionId.mode,
+        title: 'How it works',
+        inWizard: true,
+        lines: [
+          'Single page: one photo and the scan is done.',
+          'Multiple pages: take as many pages as you need, then tap "Done".',
+          'You change the mode on the camera screen, before the first page.',
+        ],
+        details: [
+          'With One Click, the scan is sent as soon as it is ready. With '
+              'preview, you see the PDF first and then send or discard it. '
+              'You change it in Settings, under Scan.',
+        ],
+      ),
+      GuideSection(
+        id: GuideSectionId.flash,
+        title: 'Flash and light',
+        inWizard: true,
+        lines: [
+          'Off: no light.',
+          'Auto: the flash fires on the shot, when needed.',
+          'Torch (On): the light stays on while you are on the camera screen.',
+          'The torch switches itself off after $torchMinutes minutes without '
+              'a shot. When you reopen the app, "On" goes back to "Auto".',
+        ],
+        details: const [
+          'The flash button only shows if the phone has a flash.',
+          'When you leave the camera screen, the torch goes out. If you come '
+              'back to the same scan with "On", it lights again.',
+        ],
+      ),
+      const GuideSection(
+        id: GuideSectionId.lowLight,
+        title: 'Low light',
+        inWizard: true,
+        lines: [
+          'The "Low light" mark or the "Dark shot" message means the page is '
+              'dark and the text may not be read well.',
+          'Add light, turn on the torch, or tap "New shot".',
+        ],
+        details: [
+          'After a dark shot you can continue anyway or ask for a light '
+              'correction. The correction is simple and does not rescue very '
+              'dark pages; then a new shot is the best choice.',
+        ],
+      ),
+      const GuideSection(
+        id: GuideSectionId.tips,
+        title: 'Tips for a good shot',
+        inWizard: true,
+        lines: [
+          'Good light, even across the whole page.',
+          'Avoid the shadow of your hand or phone on the page.',
+          'On glossy paper avoid reflections: tilt the page a little or '
+              'change the angle.',
+          'Put the page on a background that stands out from the paper (for '
+              'example a dark table for white paper).',
+          'Hold the phone steady. Tap on the page to focus.',
+        ],
+        details: [
+          'Keep the whole page inside the frame and the phone parallel to the '
+              'paper, so the text does not look slanted.',
+        ],
+      ),
+      GuideSection(
+        id: GuideSectionId.multi,
+        title: 'Multiple pages and the limit',
+        inWizard: true,
+        lines: [
+          'Take the pages one after the other. The arrow undoes the last one.',
+          'Tap "Done" when you finish, to save and send.',
+          'Limit: up to $maxPages pages, and the PDF must fit in one email '
+              '(about $gmail MB for Gmail, about $other MB for Outlook and '
+              'Yahoo).',
+          'From the 5th page you see "page/limit". The limit is an estimate '
+              'and changes with the size of the pages.',
+        ],
+        details: const [
+          'When you reach the limit, taking photos stops. Tap "Done" and scan '
+              'the remaining pages as a new document.',
+          'Before sending, the final PDF is checked again and, if it is too '
+              'large, it is not sent.',
+        ],
+      ),
+      GuideSection(
+        id: GuideSectionId.email,
+        title: 'Email and app password',
+        lines: const [
+          'The app sends from the account you chose, with an app password and '
+              'not with your normal password.',
+          'You make the password in your account at the provider. The steps '
+              'for each provider are in Settings, under Email.',
+        ],
+        details: [mailGuideWhat, mailGuideReminder, mailGuideOutlook],
+      ),
+      const GuideSection(
+        id: GuideSectionId.cancel,
+        title: 'Cancel and Discard',
+        inWizard: true,
+        lines: [
+          'If you leave the camera before the scan is saved, the pages you '
+              'took are deleted (the app asks first).',
+          'If you tap "Cancel" while the photos are being saved, nothing '
+              'stays. If you cancel later, the photos (and the PDF, if it was '
+              'made) stay saved and the email is not sent.',
+          '"Discard" on a finished scan deletes the images, the PDF and the '
+              'copy in the Gallery. It cannot be undone.',
+        ],
+      ),
+      const GuideSection(
+        id: GuideSectionId.privacy,
+        title: 'Privacy',
+        inWizard: true,
+        lines: [
+          'The text is read on your phone. Nothing is sent anywhere, except '
+              'the email that you send.',
+          'If you turn on saving to the Gallery, the photos app of the phone '
+              '(for example Google Photos) may sync the copies. The app does '
+              'not control that.',
+        ],
+      ),
+      const GuideSection(
+        id: GuideSectionId.notCovered,
+        title: 'What the app does not cover',
+        lines: [
+          'The app does not fix bad shots and does not do advanced image '
+              'improvement. There is only a simple light correction, when you '
+              'ask for it.',
+          'The quality of the PDF and of the text depends on the shot: light, '
+              'shadow, focus, reflection.',
+          'Check the PDF and the text before you rely on them, especially '
+              'amounts and dates.',
+        ],
+      ),
+    ];
+  }
+
+  @override
+  String get helpTitle => 'Help';
+
+  @override
+  String get helpEntry => 'Help';
+
+  @override
+  String get helpEntryNote =>
+      'How scanning works, tips for good shots, limits and privacy.';
+
+  @override
+  String get helpSeeGuideAgain => 'See the guide again';
+
+  @override
+  String get helpOpenMailSettings => 'Open email settings';
+
+  @override
+  String get multiHintTitle => 'Multiple pages';
+
+  @override
+  String get multiHintOk => 'Got it';
 }

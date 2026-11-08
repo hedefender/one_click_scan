@@ -29,6 +29,16 @@ class IoOcrWorkStore implements OcrWorkStore {
   }
 
   @override
+  Future<int?> sizeOf(String path) async {
+    try {
+      final file = File(path);
+      return await file.exists() ? await file.length() : null;
+    } on FileSystemException {
+      return null;
+    }
+  }
+
+  @override
   Future<void> purgeAll() async {
     try {
       if (await directory.exists()) await directory.delete(recursive: true);

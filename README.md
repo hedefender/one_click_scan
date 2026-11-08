@@ -62,7 +62,8 @@ From [`docs/ROADMAP.md`](docs/ROADMAP.md):
 | 4, 4.1 | E-mail: app password, share route, guide | Done |
 | 5, 5.1 | One Click / preview, cancel everywhere, automatic return | Done |
 | 6.0 to 6.2.1 | Crop and straighten, flash and flashlight, focus, low light, optional light correction | Done on the emulator, phone check pending |
-| 6.3, 6.4 | Small-page option, reading order on tilted pages | Proposals, only if the phone check asks |
+| 6.3 | Polish: page limit for Multi Page, guide and Help, busy capture button | Done on the emulator, phone check pending |
+| 6.4, 6.5 | Reading order on tilted pages, small-page option | Proposals, only if the phone check asks |
 | 7 | Review of the Budget integration | Later |
 | 8 | Mail OAuth (before any public release) | Planned ([`docs/MAIL_OAUTH_PLAN.md`](docs/MAIL_OAUTH_PLAN.md)) |
 
@@ -103,7 +104,7 @@ pinned SHA-256; it fails loudly on a mismatch. Without them the Android build an
 fail with a message that names the missing file. The models are under the Apache-2.0 license of
 PaddleOCR (see [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md)).
 
-**Tests.** `flutter test` runs 1178 unit, cubit and widget tests (they need the models, nothing else).
+**Tests.** `flutter test` runs 1249 unit, cubit and widget tests (they need the models, nothing else).
 Integration tests (`integration_test/`) run on an Android emulator; `tool/run_integration_test.sh <device-id> <test file>`
 installs the app, grants the camera permission and runs one test. Release smoke test (R8 on): `tool/run_ocr_release_smoke.sh <device-id>`.
 Use an Android emulator or a device you do not mind installing test builds on.
@@ -115,6 +116,13 @@ Use an Android emulator or a device you do not mind installing test builds on.
 - **Backup route:** "Open in e-mail app" opens the provider's own mail app with the PDF attached.
 - **Outlook.com:** for now only through the backup route.
 - **Later:** official sign-in (OAuth) is planned, see [`docs/MAIL_OAUTH_PLAN.md`](docs/MAIL_OAUTH_PLAN.md).
+
+## Non-goals
+
+- The app does not fix bad shots. The result depends on the photo (light, shadow, focus,
+  reflection); there is only a simple light correction, when you ask for it.
+- It does not do advanced image enhancement (no sharpening, no document filters).
+- It does not send data to a cloud service for OCR. The text is read on the phone.
 
 ## Known limitations
 
@@ -133,7 +141,7 @@ Each phase starts with an architecture note and, for risky choices, a spike with
 (`docs/*_SPIKE_RESULTS.md`), then a plan, code and tests. The code is written with an AI coding
 assistant (Claude Code) under written rules ([`CLAUDE.md`](CLAUDE.md)); the assistant never commits,
 and every phase ends with a manual check on a real device before the next one starts. There are
-1178 automated tests. The checks are in [`docs/PHASE_6_2_VALIDATION.md`](docs/PHASE_6_2_VALIDATION.md)
+1249 automated tests. The checks are in [`docs/PHASE_6_2_VALIDATION.md`](docs/PHASE_6_2_VALIDATION.md)
 and its siblings; the document index is [`docs/README.md`](docs/README.md).
 
 ## License and contact

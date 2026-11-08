@@ -741,6 +741,41 @@ synthetic shadow, the source is untouched, cancel and timeout leave no file), cu
 (real OCR, PDF, meter and `flat`) and `integration_test/light_camera_test.dart` (real camera
 plugin: analyser cost, sample rate, shot while analysing, focus).
 
+### 8k. Page limit, guide and Help (Phase 6.3, ADR-032)
+
+**Page budget.** `domain/scan/page_budget_estimator.dart` (`PageBudgetEstimator.evaluate`
+returns a `PageBudget`) and `page_budget_config.dart` are pure. The limit comes from
+`MailSizePolicy.maxAttachmentBytes(provider)`. The sizes come from the queue: `OcrSession`
+asks `OcrWorkStore.sizeOf` for the working copy after the crop (that file is the picture of the
+page in the PDF) and reports it as `OcrPageState.imageBytes`; `ScanCubit` subscribes to the
+snapshots of the session and keeps `pageBytes` (by the path of the shot) in `ScanState`;
+`ScanState.budget` is computed from the pages and these sizes, so it is always consistent;
+`canCapture` is false at the limit (Multi only). `ScanPage` shows `n/XX`, the "still fits"
+message and the reason of a blocked shot. The final `MailSizePolicy.fits` check in the send is
+unchanged.
+
+**The capture button.** `PluginCameraService.capture` records `lastCaptureTimings` (the stages of
+the last shot, numbers only). `_stopAnalysis` wakes the analyser loop through a completer, so a
+shot does not wait for its sleep. The button shows the busy state while the phase is `capturing`.
+
+**Guide and Help.** `AppStrings.guideSections` (title, lines, details, `inWizard`) is the one
+source of the text. `presentation/guide/guide_view.dart` draws it and is used by the wizard
+(`first_run/first_run_page.dart`, step `FirstRunStep.guide`, which asks nothing) and by
+`features/help/` (`HelpPage`, `GuidePage`, routes `RoutePaths.help` and `helpGuide`, no
+registration in the container). Features do not import each other: the wizard and Help share
+the widget through `presentation/`, and Settings reaches Help by its route path. The hint of the
+first Multi Page uses `MultiPageHintStore` (port in `domain/ports/`, key/value implementation in
+`data/datasources/`).
+
+**Testing.** `page_budget_estimator_test.dart` (the arithmetic, the limits, when the counter
+shows), `scan_page_budget_cubit_test.dart` (sizes from the queue, the block at the limit, the
+provider), `scan_page_budget_widget_test.dart` (counter, message, block, undo, both flows, the busy
+button, the first-open hint), `help_widget_test.dart` and `first_run_guide_widget_test.dart`
+(Help, "See the guide again", the last page of the wizard, one text for both), the measurement of
+the accuracy `test/services/pdf/page_budget_accuracy_test.dart` (real PDF writer), and on the
+emulator `integration_test/capture_timing_test.dart` (the stages of a shot and the rate of the
+analyser).
+
 ## 9. Testing strategy
 
 | Level | What | Where |

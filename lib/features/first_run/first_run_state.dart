@@ -8,7 +8,8 @@ import '../../domain/entities/scan_flow_mode.dart';
 import '../../domain/entities/storage_folder.dart';
 import '../../domain/validation/mail_settings_validation.dart';
 
-enum FirstRunStep { welcome, folder, mail, gallery, flow }
+/// [guide] is the last page: it asks nothing, it only shows the guide.
+enum FirstRunStep { welcome, folder, mail, gallery, flow, guide }
 
 enum FirstRunError {
   folderMissing,
@@ -80,6 +81,7 @@ class FirstRunState extends Equatable {
     switch (forStep) {
       case FirstRunStep.welcome:
       case FirstRunStep.gallery:
+      case FirstRunStep.guide:
         return const <FirstRunError>{};
       case FirstRunStep.flow:
         return flowMode == null

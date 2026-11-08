@@ -4,6 +4,7 @@ import '../../domain/entities/captured_page.dart';
 import '../../domain/entities/scan_mode.dart';
 import '../../domain/entities/stored_scan.dart';
 import '../../domain/lighting/flash_mode.dart';
+import '../../domain/scan/page_budget_estimator.dart';
 import '../../domain/usecases/recognize_pages.dart';
 
 /// A question about a dark shot that waits for the user (ADR-030).
@@ -57,6 +58,9 @@ class ScanState extends Equatable {
     this.veryDarkPages = const <String>[],
     this.torchLit = false,
     this.torchIdleOff = false,
+    this.budgetEstimator,
+    this.pageBytes = const <String, int>{},
+    this.showMultiHint = false,
   });
 
   final ScanPhase phase;
@@ -106,6 +110,30 @@ class ScanState extends Equatable {
   /// Auto: the screen shows its short message once.
   final bool torchIdleOff;
 
+  /// Multi Page was chosen for the first time: the screen shows the short
+  /// hint once (Phase 6.3).
+  final bool showMultiHint;
+
+  /// How many pages fit in the PDF the provider takes (ADR-032); null until
+  /// the settings are read.
+  final PageBudgetEstimator? budgetEstimator;
+
+  /// Size in bytes of the picture of each page as it goes in the PDF, by the
+  /// path of the shot; a page that is not prepared yet has no entry.
+  final Map<String, int> pageBytes;
+
+  /// The page budget of the Multi scan now; null in Single mode, where the one
+  /// page needs none, and before the settings are read.
+  PageBudget? get budget {
+    final estimator = budgetEstimator;
+    if (estimator == null || mode != ScanMode.multi) return null;
+    return estimator.evaluate([for (final page in pages) pageBytes[page.path]]);
+  }
+
+  /// Multi: the scan has as many pages as the PDF may have. The shot is not
+  /// allowed; "Done" is (the final size check stays as the safety net).
+  bool get pageLimitReached => hasPages && (budget?.reached ?? false);
+
   /// A flagged page is so dark that a retake is advised before anything else.
   bool get darkNeedsRetake => darkPages.any(veryDarkPages.contains);
 
@@ -113,7 +141,9 @@ class ScanState extends Equatable {
 
   /// Taking photos is possible.
   bool get canCapture =>
-      phase == ScanPhase.ready && lightPrompt == LightPrompt.none;
+      phase == ScanPhase.ready &&
+      lightPrompt == LightPrompt.none &&
+      !pageLimitReached;
 
   /// The mode switch is locked once a multi-page scan has pages.
   bool get canChangeMode => phase == ScanPhase.ready && pages.isEmpty;
@@ -145,6 +175,9 @@ class ScanState extends Equatable {
     List<String>? veryDarkPages,
     bool? torchLit,
     bool? torchIdleOff,
+    PageBudgetEstimator? budgetEstimator,
+    Map<String, int>? pageBytes,
+    bool? showMultiHint,
   }) {
     return ScanState(
       phase: phase ?? this.phase,
@@ -163,6 +196,9 @@ class ScanState extends Equatable {
       veryDarkPages: veryDarkPages ?? this.veryDarkPages,
       torchLit: torchLit ?? this.torchLit,
       torchIdleOff: torchIdleOff ?? this.torchIdleOff,
+      budgetEstimator: budgetEstimator ?? this.budgetEstimator,
+      pageBytes: pageBytes ?? this.pageBytes,
+      showMultiHint: showMultiHint ?? this.showMultiHint,
     );
   }
 
@@ -184,5 +220,8 @@ class ScanState extends Equatable {
     veryDarkPages,
     torchLit,
     torchIdleOff,
+    budgetEstimator,
+    pageBytes,
+    showMultiHint,
   ];
 }

@@ -6,6 +6,10 @@ abstract final class RoutePaths {
   static const scanResult = '/scan/result';
   static const ocrResult = '/scan/ocr';
 
+  /// Help (Settings) and the guide page it can show again (Phase 6.3).
+  static const help = '/settings/help';
+  static const helpGuide = '/settings/help/guide';
+
   /// Hidden: five taps on the app name in Settings (Phase 6.2).
   static const lightDiagnostics = '/settings/light-diagnostics';
 

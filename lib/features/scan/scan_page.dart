@@ -11,6 +11,7 @@ import '../../domain/entities/scan_mode.dart';
 import '../../domain/lighting/flash_mode.dart';
 import '../../domain/lighting/low_light_policy.dart';
 import '../../presentation/l10n/app_strings.dart';
+import '../../presentation/l10n/guide_section.dart';
 import '../../services/camera/camera_service.dart';
 import 'focus_tap_layer.dart';
 import 'scan_cubit.dart';
@@ -126,6 +127,11 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
             ),
             BlocListener<ScanCubit, ScanState>(
               listenWhen: (previous, current) =>
+                  !previous.showMultiHint && current.showMultiHint,
+              listener: (context, state) => _showMultiHint(),
+            ),
+            BlocListener<ScanCubit, ScanState>(
+              listenWhen: (previous, current) =>
                   !previous.torchIdleOff && current.torchIdleOff,
               listener: (context, state) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -141,6 +147,47 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
           child: _scaffold(context, state, saving),
         );
       },
+    );
+  }
+
+  /// The short hint the first time Multi Page is chosen: how it works, "Done",
+  /// the limit and how to cancel. The lines are the ones of the guide
+  /// (`AppStrings.guideSections`), so the hint cannot differ from Help.
+  Future<void> _showMultiHint() async {
+    final cubit = context.read<ScanCubit>();
+    final strings = AppStrings.of(context);
+    final sections = {for (final s in strings.guideSections) s.id: s};
+    final lines = [
+      ...sections[GuideSectionId.multi]!.lines.take(3),
+      sections[GuideSectionId.cancel]!.lines.first,
+    ];
+    unawaited(cubit.multiHintShown());
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: ScanKeys.multiHint,
+        title: Text(strings.multiHintTitle),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final line in lines)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(line),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            key: ScanKeys.multiHintOk,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(strings.multiHintOk),
+          ),
+        ],
+      ),
     );
   }
 
@@ -452,6 +499,7 @@ class _Viewfinder extends StatelessWidget {
             child: _FlashAndLight(state: state),
           ),
         if (state.darkBarPage != null) _DarkBar(state: state),
+        if (state.budget != null && state.hasPages) _BudgetNote(state: state),
         if (state.captureFailed)
           Align(
             alignment: Alignment.topCenter,
@@ -563,7 +611,7 @@ class _ControlsOverlay extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (showThumbnails) _SideThumbnails(pages: state.pages),
+                    if (showThumbnails) _SideThumbnails(state: state),
                     _SideActions(state: state),
                   ],
                 ),
@@ -578,7 +626,7 @@ class _ControlsOverlay extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (showThumbnails) _BottomThumbnails(pages: state.pages),
+                if (showThumbnails) _BottomThumbnails(state: state),
                 _BottomActions(state: state),
               ],
             ),
@@ -589,10 +637,20 @@ class _ControlsOverlay extends StatelessWidget {
   }
 }
 
-class _BottomThumbnails extends StatelessWidget {
-  const _BottomThumbnails({required this.pages});
+/// "Pages: 3" at first, "Pages: 5/18" once the budget shows its limit.
+String _pageCountText(AppStrings strings, ScanState state) {
+  final budget = state.budget;
+  return budget != null && budget.showCounter
+      ? strings.scanPageCountOf(budget.pageCount, budget.maxPages)
+      : strings.scanPageCount(state.pages.length);
+}
 
-  final List<CapturedPage> pages;
+class _BottomThumbnails extends StatelessWidget {
+  const _BottomThumbnails({required this.state});
+
+  final ScanState state;
+
+  List<CapturedPage> get pages => state.pages;
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +680,8 @@ class _BottomThumbnails extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            strings.scanPageCount(pages.length),
+            _pageCountText(strings, state),
+            key: ScanKeys.pageCounter,
             style: const TextStyle(color: Colors.white),
           ),
         ],
@@ -632,9 +691,11 @@ class _BottomThumbnails extends StatelessWidget {
 }
 
 class _SideThumbnails extends StatelessWidget {
-  const _SideThumbnails({required this.pages});
+  const _SideThumbnails({required this.state});
 
-  final List<CapturedPage> pages;
+  final ScanState state;
+
+  List<CapturedPage> get pages => state.pages;
 
   @override
   Widget build(BuildContext context) {
@@ -646,7 +707,8 @@ class _SideThumbnails extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            strings.scanPageCount(pages.length),
+            _pageCountText(strings, state),
+            key: ScanKeys.pageCounter,
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white),
           ),
@@ -682,20 +744,35 @@ class _CaptureButton extends StatelessWidget {
     final cubit = context.read<ScanCubit>();
     final scheme = Theme.of(context).colorScheme;
 
+    // While a shot is being taken the button says so: dimmed with a small
+    // spinner, so a quick second tap is not mistaken for an app that hangs.
+    final busy = state.phase == ScanPhase.capturing;
     return Semantics(
       button: true,
-      label: strings.scanCaptureButton,
+      label: busy ? strings.scanCapturing : strings.scanCaptureButton,
       child: GestureDetector(
         key: ScanKeys.capture,
         onTap: state.canCapture ? cubit.capture : null,
         child: Container(
           width: 72,
           height: 72,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 4),
             color: state.canCapture ? scheme.primary : Colors.white24,
           ),
+          child: busy
+              ? const SizedBox(
+                  key: ScanKeys.captureBusy,
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: Colors.white,
+                  ),
+                )
+              : null,
         ),
       ),
     );
@@ -854,6 +931,52 @@ class _FlashAndLight extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// The page budget (ADR-032): "still fits about N pages" when two or fewer are
+/// left, and the reason why the shot is not allowed once the limit is reached.
+class _BudgetNote extends StatelessWidget {
+  const _BudgetNote({required this.state});
+
+  final ScanState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final budget = state.budget!;
+    if (!budget.reached && !budget.nearLimit) return const SizedBox.shrink();
+    final strings = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final reached = budget.reached;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Container(
+        key: reached ? ScanKeys.pageLimitReached : ScanKeys.pageBudgetNote,
+        margin: EdgeInsets.fromLTRB(
+          12,
+          MediaQuery.paddingOf(context).top +
+              kToolbarHeight +
+              (state.darkBarPage != null ? 124 : 64),
+          12,
+          12,
+        ),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: reached ? scheme.errorContainer : scheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          reached
+              ? strings.scanPageLimitReached
+              : strings.scanPagesLeft(budget.remaining),
+          style: TextStyle(
+            color: reached
+                ? scheme.onErrorContainer
+                : scheme.onSecondaryContainer,
+          ),
+        ),
+      ),
     );
   }
 }

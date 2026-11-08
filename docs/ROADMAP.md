@@ -31,7 +31,8 @@ and the order of the first roadmap.)
 | 6.1 | `PageCropper` port and a pure Dart implementation (A3) as a step of the `OcrSession` queue, pipelining of the preparation with the reading (depth 2): crop only into the working copy (the PDF and the OCR), originals untouched, whole frame when not sure | **Done on the PC and the emulator; phone check by the user pending** (`PHASE_6_1_VALIDATION.md`). Decision ADR-029; architecture `ARCHITECTURE.md` 8i. The preview shows the pages as they are in the PDF (a named deviation from ADR-018) |
 | 6.2 | **Flash, tap-to-focus, low light detection, optional light correction** (ADR-030): flash button at the top left (Off / Auto / On; Off and Auto remembered, On only for the current use and stored as Auto), no button on a phone without flash; tap-to-focus with a ring; paper-level and contrast metric from the Y level, threshold 40 in ONE place (`LightingConfig`); a low-rate preview analyser (duty cycle, off the UI isolate) and the check after the shot; in One Click a dark Single shot stops with a dialog (new shot / continue / continue with correction), in Multi a non-blocking bar and a summary before the send; in the preview a banner; the shadow removal (`flat`) only as an action of the user, with a safety valve (the version with more OCR words wins); hidden light diagnostics screen (five taps on the app name in Settings) | **Done on the emulator; phone check and calibration of the threshold by the user pending** (`PHASE_6_2_VALIDATION.md`). The real flash, the real light and the real lens are not testable on the emulator. The `flash required` signal is not available through the camera plugin. |
 | 6.2.1 | **Torch for flash On, the light mark with the torch, a second light threshold, clean `flutter analyze`** (ADR-031): On is the continuous torch on the preview (Auto and Off unchanged), put out on every exit from the camera screen, idle timeout 120 s back to Auto with a message, samples dropped for 500 ms after a torch change, `enhancementHelpsMinPaperLevel` (40, equal to the warning threshold for now) changes the words to "retake first", torch lines on the diagnostics screen, `spikes/**` excluded from the analyzer | **Done on the emulator; the real LED, the settling, the heat and the dusk calibration pending** (`PHASE_6_2_1_VALIDATION.md`). |
-| 6.3 | (proposal, only if the phone check asks for it) small pages option (lowered area bound), the check on the crop alone, A1 instead of A3, the measured camera check (wait for focus before the shutter) | Each one on its own evidence from real documents |
+| 6.3 | **Polish: dynamic page limit for Multi Page, the guide in the wizard and Help, the first-open hint of Multi Page, the busy capture button** (ADR-032): up to 25 pages and the size limit of the provider with a margin of 0.9 (the estimate is computed again after every page, from the size of the prepared page), "n/XX" from page 5 and the "still fits" message, the shot blocked at the limit; a last wizard page and a Help screen from one text (with "What the app does not cover" only in Help); the wait of the capture button measured (535 ms of our own wait for the analyser removed) | **Done on the emulator; the real sizes, the margin and the phone feel pending** (`PHASE_6_3_VALIDATION.md`). |
+| 6.5 | (proposal, only if the phone check asks for it) small pages option (lowered area bound), the check on the crop alone, A1 instead of A3, the measured camera check (wait for focus before the shutter) | Each one on its own evidence from real documents |
 | 6.4 | (proposal) Reading order on tilted pages (the Phase 2 finding): only if it shows on real receipts after 6.1; not reproduced on synthetic pages | |
 | 7 | Revisit the Budget integration (only if Scan needs to change something) | No dependency between the apps |
 | 8 | **Mail OAuth and public release readiness** (milestone: done **before any public release**) | Replaces the app password with the official sign-in of Google (`gmail.send`) and Microsoft (Graph `Mail.Send` or SMTP XOAUTH2); Yahoo stays on app password or share. Needs the final package id, a release signing key, a public privacy policy, a homepage, a demo video, a Google verification that can take months (`MAIL_OAUTH_PLAN.md` sections 5 and 6). The non-code items should start early and in parallel **Also: the first-run wizard gets the app password step, a guide per provider, and an explanation for Outlook/Hotmail** (why the app password may not work there). |
@@ -90,10 +91,26 @@ real request.
 
 ## Polish phase
 
-Things the user asked for after the phase checks. Nothing here is started.
+Things the user asked for after the phase checks. **Done as Phase 6.3** (ADR-032), on the
+emulator; the phone check is pending (`PHASE_6_3_VALIDATION.md`).
 
-1. **Multi Page, quick shots:** the capture button is inactive for about 0.5 s after a
-   shot (accepted as it is). The **first** time Multi Page is opened it should show a short
-   information pop-up with a **mini guide of the functions** (the flash button, tap to focus,
-   the undo of the last page, "Done", what the "low light" mark and the dark-shot bar mean).
-2. Anything else that comes out of the phone checks (to be added here as it appears).
+1. **Multi Page, quick shots:** the wait of the capture button was measured. About half of it
+   was our own wait for the light analyser and is gone; the rest is the camera taking the
+   picture, and the button now shows that it is busy. The **first** time Multi Page is opened a
+   short pop-up with four lines shows once (how it works, "Done", the page limit, how to
+   cancel). The longer mini guide of the functions (flash, focus, undo, the low-light mark) is
+   in the Help screen.
+2. **Guide:** a last page of the wizard and a Help screen in Settings (one text for both).
+3. Anything else that comes out of the phone checks (to be added here as it appears).
+
+## Non-goals
+
+What the app does not try to do, so nobody expects it:
+
+- **It does not fix bad shots.** A blurred, dark or reflective photo gives a poor PDF; the
+  guide says how to take a good one. There is only a simple light correction, when the user
+  asks for it.
+- **It does not do advanced image enhancement.** Crop and straighten of the page and that light
+  correction are all there is; no sharpening, no colour or document filters.
+- **It does not send data to a cloud service for OCR.** The text is read on the phone; the only
+  thing that leaves it is the e-mail the user sends.

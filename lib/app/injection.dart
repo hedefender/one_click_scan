@@ -3,6 +3,8 @@ import 'package:get_it/get_it.dart';
 import '../core/config/app_config.dart';
 import '../core/logging/app_logger.dart';
 import '../data/datasources/key_value_flash_preference_store.dart';
+import '../data/datasources/key_value_multi_page_hint_store.dart';
+import '../domain/ports/multi_page_hint_store.dart';
 import '../data/datasources/key_value_gallery_counter_store.dart';
 import '../data/datasources/key_value_store.dart';
 import '../data/datasources/settings_local_data_source.dart';
@@ -97,6 +99,9 @@ Future<GetIt> buildContainer({
   // Data.
   sl.registerLazySingleton<FlashPreferenceStore>(
     () => KeyValueFlashPreferenceStore(sl<KeyValueStore>()),
+  );
+  sl.registerLazySingleton<MultiPageHintStore>(
+    () => KeyValueMultiPageHintStore(sl<KeyValueStore>()),
   );
   sl.registerLazySingleton<SettingsLocalDataSource>(
     () => SettingsLocalDataSource(

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:get_it/get_it.dart';
 import 'package:one_click_scan/app/injection.dart';
 import 'package:one_click_scan/core/config/app_config.dart';
 import 'package:one_click_scan/core/logging/app_logger.dart';
+import 'package:one_click_scan/data/datasources/key_value_multi_page_hint_store.dart';
 import 'package:one_click_scan/data/datasources/key_value_store.dart';
 import 'package:one_click_scan/domain/entities/storage_folder.dart';
 import 'package:one_click_scan/services/ocr/ocr_services.dart';
@@ -104,7 +107,15 @@ Future<GetIt> buildTestContainer({
   MailServices? mail,
   AppConfig? config,
   DateTime Function()? clock,
+
+  /// The first-open hint of Multi Page is shown once; most tests are not about
+  /// it and start with it already seen.
+  bool multiHintSeen = true,
 }) {
+  final keyValue = store ?? InMemoryKeyValueStore();
+  if (multiHintSeen) {
+    unawaited(keyValue.setBool(KeyValueMultiPageHintStore.keySeen, true));
+  }
   final baseOcr = ocr ?? const OcrServices.unsupported();
   final ocrServices = lightMeter == null
       ? baseOcr
@@ -120,7 +131,7 @@ Future<GetIt> buildTestContainer({
         );
   return buildContainer(
     config: config ?? testConfig,
-    keyValueStore: store ?? InMemoryKeyValueStore(),
+    keyValueStore: keyValue,
     folderPicker: picker ?? FakeStorageFolderPicker(),
     logger: logger ?? RecordingLogger(),
     camera: camera ?? FakeCameraService(),
