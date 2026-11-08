@@ -60,6 +60,7 @@ void main() {
     await tapKey(FirstRunKeys.next); // mail
     await tapKey(FirstRunKeys.next); // gallery
     await tapKey(FirstRunKeys.flowPreview);
+    await tapKey(FirstRunKeys.next); // flow -> guide page
     await tapKey(FirstRunKeys.next); // finish
     expect(find.byKey(HomeKeys.scanAndSend), findsOneWidget);
 

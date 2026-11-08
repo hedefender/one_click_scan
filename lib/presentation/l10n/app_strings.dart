@@ -5,6 +5,7 @@ import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/mail/mail_outcome.dart';
 import 'app_strings_el.dart';
 import 'app_strings_en.dart';
+import 'guide_section.dart';
 
 /// Hand-written localization (EL/EN). Adding a getter here forces both
 /// languages to implement it, so translations can never silently go missing.
@@ -22,6 +23,22 @@ abstract class AppStrings {
   }
 
   String get appTitle;
+
+  // Guide, Help and the first Multi Page hint (Phase 6.3, ADR-032)
+  String get wizardChangeLater;
+  String get mailChoiceNote;
+  String get guideTitle;
+  String get guideIntro;
+  String get guideLastLine;
+  String get guideClose;
+  List<GuideSection> get guideSections;
+  String get helpTitle;
+  String get helpEntry;
+  String get helpEntryNote;
+  String get helpSeeGuideAgain;
+  String get helpOpenMailSettings;
+  String get multiHintTitle;
+  String get multiHintOk;
 
   // Wizard chrome
   String wizardStepIndicator(int current, int total);
@@ -76,6 +93,10 @@ abstract class AppStrings {
   String get scanDone;
   String get scanDeleteLast;
   String scanPageCount(int count);
+  String scanPageCountOf(int count, int max);
+  String scanPagesLeft(int count);
+  String get scanPageLimitReached;
+  String get scanCapturing;
   String get scanSaving;
   String get scanRetry;
   String get scanPermissionDenied;

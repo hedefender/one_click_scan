@@ -210,6 +210,14 @@ void main() {
         cubit.selectFlowMode(ScanFlowMode.oneClick);
         await cubit.next();
 
+        // Everything is saved at the last setting; the guide page that follows
+        // only informs (ADR-032).
+        expect(cubit.state.step, FirstRunStep.guide);
+        expect(cubit.state.completed, isFalse);
+        expect((await LoadSettings(repository)()).firstRunCompleted, isTrue);
+
+        await cubit.next();
+
         expect(cubit.state.completed, isTrue);
         final saved = await LoadSettings(repository)();
         expect(saved.firstRunCompleted, isTrue);
@@ -253,6 +261,7 @@ void main() {
         await fresh.next(); // gallery
         fresh.selectFlowMode(mode);
         await fresh.next();
+        await fresh.next(); // the guide page
 
         final saved = await LoadSettings(container<SettingsRepository>())();
         expect(saved.scanFlowMode, mode);

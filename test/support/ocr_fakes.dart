@@ -214,6 +214,14 @@ class InMemoryOcrWorkStore implements OcrWorkStore {
     deleted.add(path);
   }
 
+  /// Sizes the tests give to working copies (path -> bytes); a path without
+  /// an entry has the [defaultBytes].
+  final Map<String, int> sizes = {};
+  int? defaultBytes;
+
+  @override
+  Future<int?> sizeOf(String path) async => sizes[path] ?? defaultBytes;
+
   @override
   Future<void> purgeAll() async {
     files.clear();

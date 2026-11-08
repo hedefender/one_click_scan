@@ -91,6 +91,13 @@ class FirstRunCubit extends Cubit<FirstRunState> {
     final snapshot = state;
     if (snapshot.completed) return;
 
+    // The guide page asks nothing: everything was saved at the flow step, so
+    // leaving it only ends the wizard (ADR-032).
+    if (snapshot.step == FirstRunStep.guide) {
+      emit(state.copyWith(completed: true, showErrors: false));
+      return;
+    }
+
     if (snapshot.errorsFor(snapshot.step).isNotEmpty) {
       emit(snapshot.copyWith(showErrors: true));
       return;
@@ -99,10 +106,6 @@ class FirstRunCubit extends Cubit<FirstRunState> {
     await _persist(snapshot);
     if (isClosed) return;
 
-    if (snapshot.step == FirstRunStep.flow) {
-      emit(state.copyWith(completed: true, showErrors: false));
-      return;
-    }
     emit(
       state.copyWith(
         step: FirstRunStep.values[snapshot.step.index + 1],
@@ -137,13 +140,16 @@ class FirstRunCubit extends Cubit<FirstRunState> {
           (current) => current.copyWith(saveToGallery: snapshot.saveToGallery),
         );
       case FirstRunStep.flow:
-        // The last step: the wizard is complete only when the user has chosen.
+        // The last setting: the wizard is complete (the app is usable) only
+        // when the user has chosen. The guide page follows and only informs.
         await _updateSettings(
           (current) => current.copyWith(
             scanFlowMode: snapshot.flowMode,
             firstRunCompleted: true,
           ),
         );
+      case FirstRunStep.guide:
+        break;
     }
   }
 }

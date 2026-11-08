@@ -31,6 +31,7 @@ class OcrPageState extends Equatable {
     this.crop,
     this.workingCopyDeleted = false,
     this.enhancement,
+    this.imageBytes,
   });
 
   /// Identifies the page (the path of the captured shot).
@@ -57,6 +58,12 @@ class OcrPageState extends Equatable {
   /// What the light correction did, when the user asked for it (ADR-030).
   final EnhancementOutcome? enhancement;
 
+  /// Size of the file of [image] in bytes: the size the page has in the PDF.
+  /// Known as soon as the page is prepared and cropped (before the reading),
+  /// so the page budget can use it between the shots (ADR-032). Null before
+  /// that or when the file could not be measured.
+  final int? imageBytes;
+
   /// The picture of the page can still be read from the cache.
   bool get hasWorkingFile => image != null && !workingCopyDeleted;
 
@@ -70,6 +77,7 @@ class OcrPageState extends Equatable {
     crop,
     workingCopyDeleted,
     enhancement,
+    imageBytes,
   ];
 }
 
@@ -369,6 +377,7 @@ class OcrSession {
         e.image = result.image;
         e.crop = result.outcome;
       }
+      e.imageBytes = await _sizeOf(e.image!.path);
       if (e.cancellation.isCancelled || _readingStopped) {
         _finish(e, const OcrCancelled());
         return;
@@ -451,6 +460,7 @@ class OcrSession {
     );
     if (choice == EnhancementChoice.enhanced && !e.cancellation.isCancelled) {
       e.image = improved;
+      e.imageBytes = await _sizeOf(improved.path);
       e.enhancement = EnhancementOutcome.applied;
       await _deleteFile(current.path);
       return second;
@@ -458,6 +468,14 @@ class OcrSession {
     await _deleteFile(improved.path);
     e.enhancement = EnhancementOutcome.keptOriginal;
     return original;
+  }
+
+  Future<int?> _sizeOf(String path) async {
+    try {
+      return await _workStore.sizeOf(path);
+    } catch (_) {
+      return null; // The budget then uses the average of the other pages.
+    }
   }
 
   Future<void> _deleteFile(String path) async {
@@ -515,6 +533,9 @@ class _Entry {
   UprightImage? image;
   PageCropOutcome? crop;
 
+  /// Size of the file of [image] (see [OcrPageState.imageBytes]).
+  int? imageBytes;
+
   /// A stage of this page is running (a removed page is cleaned up when the
   /// last one ends).
   var preparing = false;
@@ -544,6 +565,7 @@ class _Entry {
     crop: crop,
     workingCopyDeleted: fileDeleted,
     enhancement: enhancement,
+    imageBytes: imageBytes,
   );
 }
 

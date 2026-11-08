@@ -90,6 +90,7 @@ class SettingsPage extends StatelessWidget {
                         const SizedBox(height: 32),
                         _OcrSection(state: state),
                         const SizedBox(height: 32),
+                        const _HelpSection(),
                         const _LicensesSection(),
                         const SizedBox(height: 16),
                         const _HiddenEntry(),
@@ -562,6 +563,24 @@ class _HiddenEntryState extends State<_HiddenEntry> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Opens the Help screen (Phase 6.3): the guide of the wizard, and more.
+class _HelpSection extends StatelessWidget {
+  const _HelpSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return ListTile(
+      key: SettingsKeys.helpEntry,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.help_outline),
+      title: Text(strings.helpEntry),
+      subtitle: Text(strings.helpEntryNote),
+      onTap: () => context.push(RoutePaths.help),
     );
   }
 }

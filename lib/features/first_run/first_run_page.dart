@@ -7,6 +7,7 @@ import '../../domain/entities/app_language.dart';
 import '../../domain/entities/destination_mode.dart';
 import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/entities/scan_flow_mode.dart';
+import '../../presentation/guide/guide_view.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../presentation/l10n/mail_provider_labels.dart';
 import 'first_run_cubit.dart';
@@ -27,7 +28,7 @@ class FirstRunPage extends StatelessWidget {
       builder: (context, state) {
         final cubit = context.read<FirstRunCubit>();
         final isFirst = state.step == FirstRunStep.welcome;
-        final isLast = state.step == FirstRunStep.flow;
+        final isLast = state.step == FirstRunStep.guide;
         final busy = state.folderStatus == FolderPickStatus.picking;
 
         return Scaffold(
@@ -51,6 +52,7 @@ class FirstRunPage extends StatelessWidget {
                       FirstRunStep.mail => _MailStep(state: state),
                       FirstRunStep.gallery => _GalleryStep(state: state),
                       FirstRunStep.flow => _FlowStep(state: state),
+                      FirstRunStep.guide => const _GuideStep(),
                     },
                   ),
                 ),
@@ -67,7 +69,10 @@ class FirstRunPage extends StatelessWidget {
                       const Spacer(),
                       FilledButton(
                         key: FirstRunKeys.next,
-                        onPressed: busy || (isLast && state.flowMode == null)
+                        onPressed:
+                            busy ||
+                                (state.step == FirstRunStep.flow &&
+                                    state.flowMode == null)
                             ? null
                             : cubit.next,
                         child: Text(
@@ -178,7 +183,10 @@ class _FolderStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepTitle(strings.folderTitle, strings.folderBody),
+        _StepTitle(
+          strings.folderTitle,
+          '${strings.folderBody}\n\n${strings.wizardChangeLater}',
+        ),
         FilledButton.tonalIcon(
           key: FirstRunKeys.pickFolder,
           onPressed: busy ? null : cubit.pickFolder,
@@ -243,7 +251,11 @@ class _MailStepState extends State<_MailStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepTitle(strings.mailTitle, strings.mailBody),
+        _StepTitle(
+          strings.mailTitle,
+          '${strings.mailBody}\n\n${strings.mailChoiceNote}\n\n'
+          '${strings.wizardChangeLater}',
+        ),
         Text(strings.providerLabel, style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         SegmentedButton<MailProviderId>(
@@ -334,7 +346,10 @@ class _GalleryStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepTitle(strings.galleryTitle, strings.galleryNote),
+        _StepTitle(
+          strings.galleryTitle,
+          '${strings.galleryNote}\n\n${strings.wizardChangeLater}',
+        ),
         SwitchListTile(
           key: FirstRunKeys.gallerySwitch,
           contentPadding: EdgeInsets.zero,
@@ -396,6 +411,37 @@ class _FlowStep extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// The last page: what the choices above do not cover, as short lines. It asks
+/// nothing. The Help screen shows the same text, in more detail (ADR-032).
+class _GuideStep extends StatelessWidget {
+  const _GuideStep();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _StepTitle(strings.guideTitle, strings.guideIntro),
+        GuideSectionsView(
+          sections: [
+            for (final section in strings.guideSections)
+              if (section.inWizard) section,
+          ],
+        ),
+        Text(
+          strings.guideLastLine,
+          key: GuideKeys.lastLine,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }

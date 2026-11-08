@@ -29,6 +29,10 @@ class PluginCameraService implements CameraService {
   final Directory cacheDirectory;
   final MethodChannel _systemChannel;
 
+  /// How long the stages of the last shot took (numbers only, for the
+  /// measurements of `PHASE_6_3_VALIDATION.md`); null before the first shot.
+  CaptureTimings? lastCaptureTimings;
+
   CameraController? _controller;
   int _shots = 0;
   bool _hasFlash = false;
@@ -39,6 +43,7 @@ class PluginCameraService implements CameraService {
   bool _analysing = false;
   Future<void>? _loop;
   int _loopGeneration = 0;
+  Completer<void>? _stopSignal;
 
   @override
   Future<CameraOpenResult> open() async {
@@ -88,9 +93,12 @@ class PluginCameraService implements CameraService {
     }
     // The analysis stops during the shot and starts again after it.
     final wasAnalysing = _analysing;
+    final watch = Stopwatch()..start();
     await _stopAnalysis();
+    final stopped = watch.elapsed;
     try {
       final shot = await controller.takePicture();
+      final taken = watch.elapsed;
       await cacheDirectory.create(recursive: true);
       _shots++;
       final target = File(
@@ -103,6 +111,11 @@ class PluginCameraService implements CameraService {
       } on FileSystemException {
         // The plugin's own cache file; the system clears it eventually.
       }
+      lastCaptureTimings = CaptureTimings(
+        stopAnalysis: stopped,
+        takePicture: taken - stopped,
+        store: watch.elapsed - taken,
+      );
       return CapturedPage(path: target.path, order: order);
     } on CameraException catch (error) {
       throw CameraCaptureException(error.code);
@@ -227,7 +240,8 @@ class PluginCameraService implements CameraService {
     if (_analysing || controller == null) return;
     _analysing = true;
     final generation = ++_loopGeneration;
-    _loop = _analysisLoop(controller, generation);
+    final stop = _stopSignal = Completer<void>();
+    _loop = _analysisLoop(controller, generation, stop.future);
   }
 
   @override
@@ -236,6 +250,11 @@ class PluginCameraService implements CameraService {
   Future<void> _stopAnalysis() async {
     _analysing = false;
     _loopGeneration++;
+    // Wakes the loop from its sleep or from its wait for a frame: a shot never
+    // waits out the rest of the interval (measured: about half a second).
+    final signal = _stopSignal;
+    _stopSignal = null;
+    if (signal != null && !signal.isCompleted) signal.complete();
     final loop = _loop;
     _loop = null;
     if (loop != null) await loop;
@@ -249,6 +268,7 @@ class PluginCameraService implements CameraService {
   Future<void> _analysisLoop(
     CameraController controller,
     int generation,
+    Future<void> stopped,
   ) async {
     bool alive() =>
         _analysing &&
@@ -265,7 +285,10 @@ class PluginCameraService implements CameraService {
       }
       CameraImage? image;
       try {
-        image = await frame.future.timeout(const Duration(seconds: 2));
+        image = await Future.any<CameraImage?>([
+          frame.future.timeout(const Duration(seconds: 2)),
+          stopped.then((_) => null),
+        ]);
       } on TimeoutException {
         image = null;
       }
@@ -282,7 +305,11 @@ class PluginCameraService implements CameraService {
           _samples.add(metric);
         }
       }
-      await Future<void>.delayed(LightingConfig.analysisInterval);
+      if (!alive()) break;
+      await Future.any<void>([
+        Future<void>.delayed(LightingConfig.analysisInterval),
+        stopped,
+      ]);
     }
   }
 
@@ -319,3 +346,30 @@ LightMetric? _measureLuma(_LumaJob job) => LightMetric.fromLuma(
   rowStride: job.rowStride,
   stride: LightingConfig.previewStride,
 );
+
+/// The stages of one shot of [PluginCameraService.capture]; the button of the
+/// camera screen is inactive for their sum.
+class CaptureTimings {
+  const CaptureTimings({
+    required this.stopAnalysis,
+    required this.takePicture,
+    required this.store,
+  });
+
+  /// Waiting for the light analyser to step aside.
+  final Duration stopAnalysis;
+
+  /// The camera takes the picture (`takePicture`).
+  final Duration takePicture;
+
+  /// The file is moved to the app cache.
+  final Duration store;
+
+  Duration get total => stopAnalysis + takePicture + store;
+
+  @override
+  String toString() =>
+      'stopAnalysis ${stopAnalysis.inMilliseconds} ms, takePicture '
+      '${takePicture.inMilliseconds} ms, store ${store.inMilliseconds} ms '
+      '(total ${total.inMilliseconds} ms)';
+}

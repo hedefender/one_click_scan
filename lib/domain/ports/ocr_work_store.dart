@@ -5,6 +5,11 @@ abstract interface class OcrWorkStore {
 
   Future<void> delete(String path);
 
+  /// Size of the file in bytes, or null when it cannot be read. The picture of
+  /// a working copy is what goes into the PDF, so its size is the size the
+  /// page will have there (ADR-032).
+  Future<int?> sizeOf(String path);
+
   /// Removes everything (leftovers of a killed run, at start-up).
   Future<void> purgeAll();
 }

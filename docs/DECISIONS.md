@@ -995,3 +995,106 @@ The plain `flutter analyze` is the command again.
 - The torch of a shot taken while the analyser runs: whether the analyser's rebinds switch the
   torch off is the first thing to check on the phone. If they do, the fix is to light it again
   after each rebind (not built, so as not to flicker the light on a guess).
+
+## ADR-032 Dynamic page limit for Multi Page, one guide text for the wizard and Help, the busy capture button (Phase 6.3, Polish)
+
+**Why.** A Multi Page scan could grow until the final PDF no longer fitted in a message the
+provider takes; the user only learned it at the end (`MailTooLarge`). The user also asked for
+a guide in the wizard and in Settings, a first-open hint for Multi Page, and a look at the
+capture button that stays inactive for about half a second after a shot.
+
+### The page limit
+
+- **Hard maximum 25 pages** (`PageBudgetConfig.hardMaxPages`, one place).
+- **Size limit = the limit of the provider**, from the one source that already exists:
+  `MailSizePolicy.maxAttachmentBytes(provider)` (about 18.2 MB for Gmail, about 14.6 MB for
+  Outlook and Yahoo). No second table of numbers. The same limit holds for the share route
+  (same provider). With no provider chosen, the strictest limit is used.
+- **XX = min(25, floor((limit * margin - fixed) / average page))**, margin 0.9
+  (`PageBudgetConfig.margin`). It is computed again after **every** page and can go up or down.
+  At least one page is always allowed (a page bigger than the whole limit leaves XX = 1 and the
+  final check says no).
+- **What is known between the shots (found in the code, not assumed).** The PDF is built at the
+  end, but the `OcrSession` prepares every page in the background right after its shot: the
+  upright working copy and the crop (Phase 6.1). **That JPEG goes into the PDF as it is**
+  (`pdf_writer.dart`: "a JPEG goes in without new compression"). So the size of that file is
+  the size the page has in the PDF, and it is known before the reading (OCR) of the page.
+  `OcrWorkStore.sizeOf` reads it and `OcrPageState.imageBytes` carries it; `ScanCubit` listens
+  to the session and keeps `pageBytes` in the state. A page that is not prepared yet (quick
+  shots) counts as the average of the others; before any page is known a fallback of 1.5 MB
+  is used. The size of the original shot is **not** used (it is a different file, much bigger).
+- **Estimator in `domain/scan/`** (`PageBudgetEstimator`, `PageBudgetConfig`): pure Dart, the
+  limit and the numbers are injected. The overheads are measured, not guessed
+  (`test/services/pdf/page_budget_accuracy_test.dart`): about 3.5 KB once and about 1 KB per
+  page of 120 words; the defaults are 24 KB and 3 KB (on purpose above the measurement: Greek
+  text and dense pages use more).
+- **Display.** Before page 5: "Pages: 3" as before. From page 5, or earlier when the pages
+  already use more than half of the limit: "Pages: 5/18". With 2 or fewer pages left: a short
+  message that about N pages still fit (approximate). At XX: the shot is blocked (the button
+  dims) with a message that explains it and suggests "Done" and a new document for the rest.
+  If the estimate falls below the pages already taken, **no page is removed**: the limit is
+  simply reached. "Done" always stays possible. One Click Multi and Multi with preview are
+  the same cubit, so both behave the same.
+- **The final check stays.** `SendScanPdf` still refuses a PDF over the limit (`MailTooLarge`);
+  the budget is only a way to avoid getting there.
+
+### How good is the estimate (measured, synthetic pages)
+
+- **Sum error** (measured pictures plus overheads against the real PDF written by the real
+  writer): mean 1.0 %, max 1.5 % (the defaults overestimate a little, on purpose).
+- **Projection error** (what the budget expects for the whole scan from the first k pages,
+  against the real PDF): mean 11 %, max 47 % when the pages are very different (a blank page,
+  a text page and a photo page in one scan). This is **larger than the 10 % margin**, as the
+  request asked to check. It does not decide the outcome, because the budget is computed again
+  after every page and the stop is decided on the **real sum so far**.
+- **What decides the outcome** was simulated: scans taken up to the limit of the budget, 2000
+  per case, three kinds of scans (same kind of page; a mix of text, photo and blank pages;
+  small pages first and photos later). **With margin 0.9 no scan went over the limit; the worst
+  one used 99 % of it** (mix). With 0.95 about 5 % of the mixed scans went over. The mean
+  fill is 88 % at 0.9. The page sizes of the simulation are assumed, so the number waits for
+  the phone check (`PHASE_6_3_VALIDATION.md`). **Proposal:** keep 0.9 for now; if the phone
+  check shows a scan above 97 % of the limit, lower it to 0.85 (worst 94 %, mean fill 83 %).
+
+### One text for the wizard and Help
+
+- `AppStrings.guideSections` is the only place with the guide text, per language: sections with
+  a title, short `lines`, longer `details`, and a flag `inWizard`. The last page of the wizard
+  shows the short lines of the `inWizard` sections; Help shows all sections with their details;
+  the first-open hint of Multi Page takes its lines from the `multi` and `cancel` sections. They
+  cannot differ. The numbers in the texts (25 pages, 2 minutes, 18 and 14 MB) come from the
+  constants and the provider limits, not from copies.
+- **Help only:** the e-mail steps (the existing texts of the app-password guide are reused) and
+  **"What the app does not cover"**. The last page of the wizard does not have them.
+- **The wizard has a sixth step** after the last setting, the guide page. It asks nothing.
+  **Everything, including `firstRunCompleted`, is saved at the last setting**, as before, so
+  the guide page never blocks a working app. "Finish" on the guide page only goes home. An
+  install that finished the wizard earlier sees the guide through Help, "See the guide again",
+  which is a plain page without any question.
+- **First-open hint of Multi Page:** `MultiPageHintStore` (a flag in the key/value store, nothing
+  of the user). Shown once, when Multi is chosen for the first time; the flag is written when it
+  is shown, so a killed app does not repeat it.
+
+### The capture button (measured on the emulator)
+
+The button is inactive while `PluginCameraService.capture` runs. Measured with 12 quick shots
+while the light analyser runs: **waiting for the analyser 535 ms on average (max 807), taking
+the picture 509 ms, moving the file about 40 ms, total about 1.08 s.** The wait for the analyser
+was **our** delay: `_stopAnalysis` waited for the loop to wake from its sleep of 400 ms. It now
+wakes at once when a stop is asked (the image stream is still stopped before `takePicture`, as
+before, so the order and the safety of the stages are the same): **22 ms on average, total about
+0.6 s.** What is left is the camera itself (`takePicture`), which is native and not ours to
+shorten, so the button now shows that it is busy (dimmed, a small spinner, the label "Taking
+photo..."). The phone numbers are different and wait for the check.
+
+### The rate of the analyser samples (only a finding)
+
+About 1.3 samples a second on the emulator against the 2.5 of the design. The 2.5 was
+1 / 400 ms, which leaves out the cycle itself (open the image stream, wait for one frame, close
+it, measure): about 380 to 415 ms, so one sample every 780 to 820 ms. Not a defect, and
+nothing was changed. Whether the phone is faster is for the phone check.
+
+### Not done
+
+- No new package. No change to the order or the safety of the stages of the queue (cancel,
+  Discard, the torch).
+- The real values of the margin and of the fallback page size wait for real shots.

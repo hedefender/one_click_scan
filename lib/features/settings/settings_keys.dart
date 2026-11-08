@@ -11,6 +11,7 @@ abstract final class SettingsKeys {
   static const gallerySwitch = Key('settings.gallerySwitch');
   static const oneClickSwitch = Key('settings.oneClickSwitch');
   static const licenses = Key('settings.licenses');
+  static const helpEntry = Key('settings.helpEntry');
   static const hiddenEntry = Key('settings.hiddenEntry');
   static const password = Key('settings.mail.password');
   static const passwordToggle = Key('settings.mail.passwordToggle');

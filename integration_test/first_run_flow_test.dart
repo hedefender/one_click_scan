@@ -40,7 +40,7 @@ void main() {
 
     // --- First launch: wizard ---
     await launch();
-    expect(find.text('Step 1 of 5'), findsOneWidget);
+    expect(find.text('Step 1 of 6'), findsOneWidget);
 
     await tester.tap(find.byKey(FirstRunKeys.next));
     await tester.pumpAndSettle();
@@ -64,6 +64,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(FirstRunKeys.flowPreview));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(FirstRunKeys.next)); // flow -> guide page
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(FirstRunKeys.next)); // Finish
     await tester.pumpAndSettle();

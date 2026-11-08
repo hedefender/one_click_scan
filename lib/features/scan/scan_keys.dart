@@ -80,5 +80,13 @@ abstract final class ScanKeys {
   static const lightDiagShot = Key('scan.lightDiag.shot');
   static const lightDiagTake = Key('scan.lightDiag.take');
 
+  // Phase 6.3
+  static const pageCounter = Key('scan.pageCounter');
+  static const pageBudgetNote = Key('scan.pageBudget.note');
+  static const pageLimitReached = Key('scan.pageBudget.reached');
+  static const captureBusy = Key('scan.capture.busy');
+  static const multiHint = Key('scan.multiHint');
+  static const multiHintOk = Key('scan.multiHint.ok');
+
   static Key resultFile(String fileName) => Key('scan.result.file.$fileName');
 }

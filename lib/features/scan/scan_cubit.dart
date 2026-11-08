@@ -14,7 +14,11 @@ import '../../domain/lighting/lighting_config.dart';
 import '../../domain/lighting/low_light_debouncer.dart';
 import '../../domain/lighting/low_light_policy.dart';
 import '../../domain/ports/flash_preference_store.dart';
+import '../../domain/mail/mail_provider.dart';
 import '../../domain/ports/light_meter.dart';
+import '../../domain/ports/multi_page_hint_store.dart';
+import '../../domain/scan/page_budget_config.dart';
+import '../../domain/scan/page_budget_estimator.dart';
 import '../../domain/scan/scan_flow.dart' show ScanFlowCancellation;
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/recognize_pages.dart';
@@ -40,6 +44,9 @@ class ScanCubit extends Cubit<ScanState> {
     this._torchIdleTimeout = LightingConfig.torchIdleTimeout,
     this._torchSettleDelay = LightingConfig.torchSettleDelay,
     this._helpsMinPaperLevel = LightingConfig.enhancementHelpsMinPaperLevel,
+    this._multiPageHints,
+    this._providers = MailProviderRegistry.standard,
+    this._budgetConfig = const PageBudgetConfig(),
   }) : super(const ScanState());
 
   final LoadSettings _loadSettings;
@@ -56,6 +63,15 @@ class ScanCubit extends Cubit<ScanState> {
   final Duration _torchIdleTimeout;
   final Duration _torchSettleDelay;
   final double _helpsMinPaperLevel;
+
+  /// The size limit of the provider and the numbers of the page budget
+  /// (ADR-032); injectable so the tests need no real sizes.
+  final MailProviderRegistry _providers;
+
+  /// Remembers that the first-open hint of Multi Page was shown; null in
+  /// tests that do not need it (no hint then).
+  final MultiPageHintStore? _multiPageHints;
+  final PageBudgetConfig _budgetConfig;
 
   /// How the scan goes on after the shot (read with the settings); decides
   /// what a dark shot does (ADR-030).
@@ -87,6 +103,14 @@ class ScanCubit extends Cubit<ScanState> {
     final settings = await _loadSettings();
     _packId = settings.ocrPackId;
     _flowMode = settings.effectiveScanFlowMode;
+    final providerId = settings.mailProvider;
+    final estimator = providerId == null
+        ? PageBudgetEstimator.strictest(_providers.all, config: _budgetConfig)
+        : PageBudgetEstimator.forProvider(
+            _providers.resolve(providerId),
+            config: _budgetConfig,
+          );
+    emit(state.copyWith(budgetEstimator: estimator));
     final folder = settings.storageFolder;
     final accessible = folder != null && await _hasAccess(folder);
     if (isClosed) return;
@@ -99,7 +123,16 @@ class ScanCubit extends Cubit<ScanState> {
 
   void setMode(ScanMode mode) {
     if (!state.canChangeMode) return;
-    emit(state.copyWith(mode: mode));
+    final hints = _multiPageHints;
+    final firstMulti = mode == ScanMode.multi && hints != null && !hints.seen;
+    emit(state.copyWith(mode: mode, showMultiHint: firstMulti));
+  }
+
+  /// The first-open hint of Multi Page is on the screen: it never shows again
+  /// (the flag is stored at once, so a killed app does not repeat it).
+  Future<void> multiHintShown() async {
+    if (state.showMultiHint) emit(state.copyWith(showMultiHint: false));
+    await _multiPageHints?.markSeen();
   }
 
   Future<void> capture() async {
@@ -483,6 +516,8 @@ class ScanCubit extends Cubit<ScanState> {
       await _torchOff();
       await _stopLightAnalysis();
       await _camera.close();
+      unawaited(_ocrSubscription?.cancel());
+      _ocrSubscription = null;
       _ocr?.close();
       emit(state.copyWith(phase: ScanPhase.saved, result: stored, ocr: _ocr));
     } on ScanStoreCancelled {
@@ -619,12 +654,35 @@ class ScanCubit extends Cubit<ScanState> {
   void _readInBackground(String path) {
     final packId = _packId;
     if (packId == null) return;
-    final session = _ocr ??= _recognizePages.start(packId: packId);
+    var session = _ocr;
+    if (session == null) {
+      session = _ocr = _recognizePages.start(packId: packId);
+      // The size of each prepared page feeds the page budget (ADR-032).
+      _ocrSubscription = session.snapshots.listen(_onOcrSnapshot);
+    }
     session.add(path, path);
   }
 
+  StreamSubscription<OcrSessionSnapshot>? _ocrSubscription;
+
+  void _onOcrSnapshot(OcrSessionSnapshot snapshot) {
+    if (isClosed) return;
+    final bytes = <String, int>{
+      for (final page in snapshot.pages)
+        if (page.imageBytes != null && !page.workingCopyDeleted)
+          page.key: page.imageBytes!,
+    };
+    if (_sameBytes(bytes, state.pageBytes)) return;
+    emit(state.copyWith(pageBytes: bytes));
+  }
+
+  bool _sameBytes(Map<String, int> a, Map<String, int> b) =>
+      a.length == b.length && a.entries.every((e) => b[e.key] == e.value);
+
   /// The scan was abandoned: stop reading and drop the working copies.
   Future<void> _stopReading() async {
+    unawaited(_ocrSubscription?.cancel());
+    _ocrSubscription = null;
     final session = _ocr;
     _ocr = null;
     if (session != null) {

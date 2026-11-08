@@ -110,6 +110,9 @@ class _NoopWorkStore implements OcrWorkStore {
   Future<void> delete(String path) async {}
 
   @override
+  Future<int?> sizeOf(String path) async => null;
+
+  @override
   Future<void> purgeAll() async {}
 }
 

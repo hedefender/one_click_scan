@@ -1,6 +1,9 @@
 import '../../domain/entities/mail_provider_id.dart';
+import '../../domain/lighting/lighting_config.dart';
 import '../../domain/mail/mail_outcome.dart';
+import '../../domain/scan/page_budget_config.dart';
 import 'app_strings.dart';
+import 'guide_section.dart';
 
 class AppStringsEl extends AppStrings {
   const AppStringsEl();
@@ -126,6 +129,22 @@ class AppStringsEl extends AppStrings {
 
   @override
   String scanPageCount(int count) => 'Σελίδες: $count';
+
+  @override
+  String scanPageCountOf(int count, int max) => 'Σελίδες: $count/$max';
+
+  @override
+  String scanPagesLeft(int count) => count == 1
+      ? 'Χωράει ακόμα περίπου 1 σελίδα στο email (κατά προσέγγιση).'
+      : 'Χωράνε ακόμα περίπου $count σελίδες στο email (κατά προσέγγιση).';
+
+  @override
+  String get scanPageLimitReached =>
+      'Το PDF θα ξεπερνούσε το όριο μεγέθους του email. Πάτα «Τέλος» για να '
+      'σταλεί και σάρωσε τις υπόλοιπες σελίδες ως νέο έγγραφο.';
+
+  @override
+  String get scanCapturing => 'Λήψη...';
 
   @override
   String get scanSaving => 'Αποθήκευση...';
@@ -949,4 +968,198 @@ class AppStringsEl extends AppStrings {
   @override
   String get lightDiagNote =>
       'Δεν αποθηκεύεται εικόνα ή κείμενο, μόνο νούμερα στην οθόνη.';
+
+  // ----- Guide, Help, first Multi Page hint (Phase 6.3) -----
+
+  @override
+  String get wizardChangeLater =>
+      'Μπορείς να το αλλάξεις αργότερα στις Ρυθμίσεις.';
+
+  @override
+  String get mailChoiceNote =>
+      'Πάροχος: το email από το οποίο στέλνεται η σάρωση. '
+      'Παραλήπτης: η διεύθυνση που τη λαμβάνει, συνήθως το δικό σου email.';
+
+  @override
+  String get guideTitle => 'Πριν ξεκινήσεις';
+
+  @override
+  String get guideIntro => 'Τα βασικά, με λίγα λόγια.';
+
+  @override
+  String get guideLastLine =>
+      'Τα παραπάνω τα βρίσκεις πάντα στις Ρυθμίσεις, στο Βοήθεια.';
+
+  @override
+  String get guideClose => 'Κλείσιμο';
+
+  @override
+  List<GuideSection> get guideSections {
+    final torchMinutes = LightingConfig.torchIdleTimeout.inMinutes;
+    final maxPages = PageBudgetConfig.defaultHardMaxPages;
+    final gmail = providerMegabytes(MailProviderId.gmail);
+    final other = providerMegabytes(MailProviderId.outlook);
+    return [
+      const GuideSection(
+        id: GuideSectionId.mode,
+        title: 'Τρόπος λειτουργίας',
+        inWizard: true,
+        lines: [
+          'Μία σελίδα: μία λήψη και η σάρωση ολοκληρώνεται.',
+          'Πολλές σελίδες: τραβάς όσες σελίδες θέλεις και πατάς «Τέλος».',
+          'Αλλάζεις τρόπο από την κάμερα, πριν τραβήξεις την πρώτη σελίδα.',
+        ],
+        details: [
+          'Με το One Click, η σάρωση στέλνεται αμέσως μόλις τελειώσει. Με '
+              'προεπισκόπηση, βλέπεις πρώτα το PDF και μετά το στέλνεις ή το '
+              'απορρίπτεις. Το αλλάζεις στις Ρυθμίσεις, στην ενότητα Σάρωση.',
+        ],
+      ),
+      GuideSection(
+        id: GuideSectionId.flash,
+        title: 'Φλας και φωτισμός',
+        inWizard: true,
+        lines: [
+          'Κλειστό: χωρίς φως.',
+          'Αυτόματο: το φλας ανάβει στη λήψη, όταν χρειάζεται.',
+          'Φακός (On): το φως μένει αναμμένο όσο είσαι στην κάμερα.',
+          'Ο φακός σβήνει μόνος του μετά από $torchMinutes λεπτά χωρίς λήψη. '
+              'Όταν ξανανοίξεις την εφαρμογή, το «On» γυρίζει σε «Αυτόματο».',
+        ],
+        details: const [
+          'Το κουμπί του φλας φαίνεται μόνο αν το κινητό έχει φλας.',
+          'Όταν βγεις από την κάμερα, ο φακός σβήνει. Αν γυρίσεις στην ίδια '
+              'σάρωση με επιλογή «On», ανάβει ξανά.',
+        ],
+      ),
+      const GuideSection(
+        id: GuideSectionId.lowLight,
+        title: 'Χαμηλός φωτισμός',
+        inWizard: true,
+        lines: [
+          'Η ένδειξη «Χαμηλός φωτισμός» ή το μήνυμα «Σκοτεινή λήψη» σημαίνει '
+              'ότι η σελίδα είναι σκοτεινή και το κείμενο ίσως δεν διαβαστεί '
+              'καλά.',
+          'Πρόσθεσε φως, άναψε τον φακό ή πάτα «Νέα λήψη».',
+        ],
+        details: [
+          'Μετά από μια σκοτεινή λήψη μπορείς να συνεχίσεις ούτως ή άλλως ή '
+              'να ζητήσεις διόρθωση φωτός. Η διόρθωση είναι απλή και δεν '
+              'σώζει πολύ σκοτεινές σελίδες· τότε η νέα λήψη είναι η καλύτερη '
+              'επιλογή.',
+        ],
+      ),
+      const GuideSection(
+        id: GuideSectionId.tips,
+        title: 'Συμβουλές για καλή λήψη',
+        inWizard: true,
+        lines: [
+          'Καλό φως, ομοιόμορφο πάνω σε όλη τη σελίδα.',
+          'Απόφυγε τη σκιά του χεριού ή του κινητού πάνω στη σελίδα.',
+          'Σε γυαλιστερό χαρτί απόφυγε την αντανάκλαση: γείρε λίγο τη σελίδα '
+              'ή άλλαξε γωνία.',
+          'Βάλε τη σελίδα σε φόντο που ξεχωρίζει από το χαρτί (π.χ. σκούρο '
+              'τραπέζι για λευκό χαρτί).',
+          'Κράτα το κινητό σταθερό. Πάτα πάνω στη σελίδα για εστίαση.',
+        ],
+        details: [
+          'Η σελίδα να είναι ολόκληρη μέσα στο πλαίσιο και το κινητό παράλληλο '
+              'με το χαρτί, ώστε το κείμενο να μη φαίνεται λοξό.',
+        ],
+      ),
+      GuideSection(
+        id: GuideSectionId.multi,
+        title: 'Πολλές σελίδες και όριο',
+        inWizard: true,
+        lines: [
+          'Τράβα τη μία σελίδα μετά την άλλη. Με το βελάκι αναιρείς την '
+              'τελευταία.',
+          'Πάτα «Τέλος» όταν τελειώσεις, για να αποθηκευτεί και να σταλεί.',
+          'Όριο: έως $maxPages σελίδες, και το PDF να χωράει σε ένα email '
+              '(περίπου $gmail MB στο Gmail, περίπου $other MB σε Outlook και '
+              'Yahoo).',
+          'Από την 5η σελίδα φαίνεται «σελίδα/όριο». Το όριο είναι εκτίμηση '
+              'και αλλάζει ανάλογα με το μέγεθος των σελίδων.',
+        ],
+        details: const [
+          'Όταν φτάσεις το όριο, η λήψη σταματά. Πάτα «Τέλος» και σάρωσε τις '
+              'υπόλοιπες σελίδες ως νέο έγγραφο.',
+          'Πριν την αποστολή το τελικό PDF ελέγχεται ξανά και, αν είναι πολύ '
+              'μεγάλο, δεν στέλνεται.',
+        ],
+      ),
+      GuideSection(
+        id: GuideSectionId.email,
+        title: 'Email και κωδικός εφαρμογής',
+        lines: const [
+          'Η εφαρμογή στέλνει από τον λογαριασμό που διάλεξες, με κωδικό '
+              'εφαρμογής και όχι με τον κανονικό σου κωδικό.',
+          'Τον κωδικό τον φτιάχνεις στον λογαριασμό σου στον πάροχο. Τα βήματα '
+              'ανά πάροχο υπάρχουν στις Ρυθμίσεις, στην ενότητα Email.',
+        ],
+        details: [mailGuideWhat, mailGuideReminder, mailGuideOutlook],
+      ),
+      const GuideSection(
+        id: GuideSectionId.cancel,
+        title: 'Ακύρωση και Απόρριψη',
+        inWizard: true,
+        lines: [
+          'Αν φύγεις από την κάμερα πριν αποθηκευτεί η σάρωση, οι σελίδες που '
+              'τράβηξες διαγράφονται (η εφαρμογή ρωτά πρώτα).',
+          'Αν πατήσεις «Ακύρωση» την ώρα που αποθηκεύονται οι φωτογραφίες, δεν '
+              'μένει τίποτα. Αν ακυρώσεις αργότερα, οι φωτογραφίες (και το '
+              'PDF, αν έγινε) μένουν αποθηκευμένες και το email δεν στέλνεται.',
+          'Η «Απόρριψη» μιας ολοκληρωμένης σάρωσης σβήνει τις εικόνες, το PDF '
+              'και το αντίγραφο στη Gallery. Δεν αναιρείται.',
+        ],
+      ),
+      const GuideSection(
+        id: GuideSectionId.privacy,
+        title: 'Ιδιωτικότητα',
+        inWizard: true,
+        lines: [
+          'Η ανάγνωση του κειμένου γίνεται στο κινητό σου. Δεν στέλνεται '
+              'τίποτα πουθενά, εκτός από το email που στέλνεις εσύ.',
+          'Αν ανοίξεις την αποθήκευση στη Gallery, η εφαρμογή φωτογραφιών του '
+              'κινητού (π.χ. Google Photos) μπορεί να συγχρονίσει τα '
+              'αντίγραφα. Αυτό δεν το ελέγχει η εφαρμογή.',
+        ],
+      ),
+      const GuideSection(
+        id: GuideSectionId.notCovered,
+        title: 'Τι δεν καλύπτει η εφαρμογή',
+        lines: [
+          'Η εφαρμογή δεν διορθώνει κακές λήψεις και δεν κάνει προχωρημένη '
+              'βελτίωση εικόνας. Υπάρχει μόνο μια απλή διόρθωση φωτός, όταν τη '
+              'ζητήσεις.',
+          'Η ποιότητα του PDF και του κειμένου εξαρτάται από τη λήψη: φως, '
+              'σκιά, εστίαση, αντανάκλαση.',
+          'Έλεγξε το PDF και το κείμενο πριν βασιστείς σε αυτά, ιδίως σε '
+              'ποσά και ημερομηνίες.',
+        ],
+      ),
+    ];
+  }
+
+  @override
+  String get helpTitle => 'Βοήθεια';
+
+  @override
+  String get helpEntry => 'Βοήθεια';
+
+  @override
+  String get helpEntryNote =>
+      'Πώς δουλεύει η σάρωση, συμβουλές λήψης, όρια και ιδιωτικότητα.';
+
+  @override
+  String get helpSeeGuideAgain => 'Δες ξανά τον οδηγό';
+
+  @override
+  String get helpOpenMailSettings => 'Άνοιγμα ρυθμίσεων email';
+
+  @override
+  String get multiHintTitle => 'Πολλές σελίδες';
+
+  @override
+  String get multiHintOk => 'Κατάλαβα';
 }

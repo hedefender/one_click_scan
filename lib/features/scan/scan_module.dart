@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/navigation/route_paths.dart';
 import '../../domain/ports/flash_preference_store.dart';
+import '../../domain/mail/mail_provider.dart';
 import '../../domain/ports/light_meter.dart';
+import '../../domain/ports/multi_page_hint_store.dart';
 import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/recognize_pages.dart';
 import '../../domain/ports/open_pdf.dart';
@@ -39,6 +41,8 @@ void registerScanModule(GetIt sl) {
       flashStore: sl<FlashPreferenceStore>(),
       lightMeter: sl<LightMeter>(),
       logger: sl<AppLogger>(),
+      multiPageHints: sl<MultiPageHintStore>(),
+      providers: sl<MailProviderRegistry>(),
     ),
   );
   sl.registerFactoryParam<ScanFlowCubit, ScanResultArgs, void>(
