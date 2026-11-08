@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Offset;
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -9,6 +10,7 @@ import '../../domain/entities/scan_mode.dart';
 import '../../domain/entities/storage_folder.dart';
 import '../../domain/lighting/flash_mode.dart';
 import '../../domain/lighting/light_metric.dart';
+import '../../domain/lighting/lighting_config.dart';
 import '../../domain/lighting/low_light_debouncer.dart';
 import '../../domain/lighting/low_light_policy.dart';
 import '../../domain/ports/flash_preference_store.dart';
@@ -35,6 +37,9 @@ class ScanCubit extends Cubit<ScanState> {
     required this._flashStore,
     required this._lightMeter,
     required this._logger,
+    this._torchIdleTimeout = LightingConfig.torchIdleTimeout,
+    this._torchSettleDelay = LightingConfig.torchSettleDelay,
+    this._helpsMinPaperLevel = LightingConfig.enhancementHelpsMinPaperLevel,
   }) : super(const ScanState());
 
   final LoadSettings _loadSettings;
@@ -46,6 +51,11 @@ class ScanCubit extends Cubit<ScanState> {
   final FlashPreferenceStore _flashStore;
   final LightMeter _lightMeter;
   final AppLogger _logger;
+
+  /// Injectable so the torch rules are tested without waiting (ADR-031).
+  final Duration _torchIdleTimeout;
+  final Duration _torchSettleDelay;
+  final double _helpsMinPaperLevel;
 
   /// How the scan goes on after the shot (read with the settings); decides
   /// what a dark shot does (ADR-030).
@@ -102,6 +112,8 @@ class ScanCubit extends Cubit<ScanState> {
       ),
     );
     try {
+      _resetTorchIdle();
+      await _torchReadyForShot();
       final page = await _camera.capture(order: state.pages.length + 1);
       if (isClosed) {
         await _tempStore.delete([page.path]);
@@ -116,6 +128,7 @@ class ScanCubit extends Cubit<ScanState> {
           clearDarkBar: true,
         ),
       );
+      _resetTorchIdle();
       _readInBackground(page.path);
       if (state.mode == ScanMode.multi) {
         // The rate of the shots is not slowed down: the light of the shot is
@@ -155,6 +168,10 @@ class ScanCubit extends Cubit<ScanState> {
       mode: ScanMode.single,
       flow: _flowMode,
     );
+    final veryDark = [
+      if (LowLightPolicy.retakeFirst(metric, helpsMin: _helpsMinPaperLevel))
+        path,
+    ];
     switch (action) {
       case LowLightAction.askNow:
         emit(
@@ -162,11 +179,18 @@ class ScanCubit extends Cubit<ScanState> {
             phase: ScanPhase.ready,
             lightPrompt: LightPrompt.singleShot,
             darkPages: [path],
+            veryDarkPages: veryDark,
           ),
         );
         return true;
       case LowLightAction.bannerLater:
-        emit(state.copyWith(phase: ScanPhase.ready, darkPages: [path]));
+        emit(
+          state.copyWith(
+            phase: ScanPhase.ready,
+            darkPages: [path],
+            veryDarkPages: veryDark,
+          ),
+        );
         return false;
       case LowLightAction.markPage:
       case LowLightAction.none:
@@ -190,6 +214,11 @@ class ScanCubit extends Cubit<ScanState> {
     emit(
       state.copyWith(
         darkPages: [...state.darkPages, path],
+        veryDarkPages: [
+          ...state.veryDarkPages,
+          if (LowLightPolicy.retakeFirst(metric, helpsMin: _helpsMinPaperLevel))
+            path,
+        ],
         darkBarPage: action == LowLightAction.markPage && isLast ? path : null,
       ),
     );
@@ -274,7 +303,118 @@ class ScanCubit extends Cubit<ScanState> {
     _flash = mode;
     emit(state.copyWith(flashMode: mode));
     await _camera.setFlashMode(mode);
+    // Off and Auto put the torch out inside setFlashMode; On lights it here
+    // (when the camera is on screen) after the mode is applied.
+    _noteTorch();
+    await _syncTorch();
     await _flashStore.save(mode);
+  }
+
+  /// Tap-to-focus. The tap also counts as use for the torch timeout.
+  Future<void> focusAt(Offset point) {
+    _resetTorchIdle();
+    return _camera.focusAt(point);
+  }
+
+  /// The message of the idle timeout was shown.
+  void torchIdleOffShown() {
+    if (state.torchIdleOff) emit(state.copyWith(torchIdleOff: false));
+  }
+
+  // ----- Torch (flash On), ADR-031 -----
+
+  Timer? _idleTimer;
+  Timer? _settleTimer;
+  bool _settling = false;
+  bool _inactive = false;
+  bool _torchNoted = false;
+  Future<void> _torchQueue = Future<void>.value();
+
+  /// The torch must be lit exactly while the camera is on the screen, the
+  /// choice is On, and nothing (dialog, error, save, background) covers it.
+  bool get _torchWanted =>
+      _flash == FlashMode.on &&
+      _camera.hasFlash &&
+      !_inactive &&
+      !isClosed &&
+      (state.phase == ScanPhase.ready || state.phase == ScanPhase.capturing) &&
+      state.lightPrompt == LightPrompt.none &&
+      !state.captureFailed;
+
+  /// Brings the real torch to what it must be. Serial, so two quick changes
+  /// cannot cross each other.
+  Future<void> _syncTorch() {
+    return _torchQueue = _torchQueue.then((_) async {
+      final want = _torchWanted;
+      if (want != _camera.torchLit) await _camera.setTorchLit(want);
+      _noteTorch();
+    });
+  }
+
+  /// Bookkeeping when the real torch changed: forget the old samples, wait for
+  /// the exposure to settle, restart the timeout.
+  void _noteTorch() {
+    final lit = _camera.torchLit;
+    if (lit == _torchNoted) return;
+    _torchNoted = lit;
+    if (isClosed) return;
+    _debouncer.restart();
+    _settling = true;
+    _settleTimer?.cancel();
+    _settleTimer = Timer(_torchSettleDelay, () => _settling = false);
+    _resetTorchIdle();
+    emit(state.copyWith(torchLit: lit));
+  }
+
+  /// The shot waits for a torch that was lit a moment ago to settle.
+  Future<void> _torchReadyForShot() async {
+    await _syncTorch();
+    if (_camera.torchLit && _settling) {
+      await Future<void>.delayed(_torchSettleDelay);
+    }
+  }
+
+  void _resetTorchIdle() {
+    _idleTimer?.cancel();
+    _idleTimer = null;
+    if (_camera.torchLit && !isClosed) {
+      _idleTimer = Timer(_torchIdleTimeout, _onTorchIdle);
+    }
+  }
+
+  Future<void> _onTorchIdle() async {
+    _idleTimer = null;
+    if (isClosed || !_camera.torchLit) return;
+    emit(state.copyWith(torchIdleOff: true));
+    await setFlash(FlashMode.auto);
+  }
+
+  /// Puts the torch out at once (until the camera is wanted again).
+  Future<void> _torchOff() async {
+    _idleTimer?.cancel();
+    _idleTimer = null;
+    await _camera.setTorchLit(false);
+    _noteTorch();
+  }
+
+  @override
+  void onChange(Change<ScanState> change) {
+    super.onChange(change);
+    final before = change.currentState;
+    final after = change.nextState;
+    if (before.phase != after.phase ||
+        before.lightPrompt != after.lightPrompt ||
+        before.captureFailed != after.captureFailed) {
+      // Runs after this emit, never inside it.
+      unawaited(_syncTorch());
+    }
+  }
+
+  /// The screen lost the focus (lock screen, notifications, a system dialog):
+  /// the torch goes out at once and comes back with [onForeground].
+  Future<void> onInactive() async {
+    _inactive = true;
+    await _torchOff();
   }
 
   /// Multi-page: removes the last shot.
@@ -340,6 +480,7 @@ class ScanCubit extends Cubit<ScanState> {
         cancellation: cancellation,
       );
       if (isClosed) return;
+      await _torchOff();
       await _stopLightAnalysis();
       await _camera.close();
       _ocr?.close();
@@ -422,6 +563,7 @@ class ScanCubit extends Cubit<ScanState> {
   /// Leaving the scan: nothing of an unfinished scan may stay behind.
   Future<void> cancel() async {
     await _discardUnsavedPages();
+    await _torchOff();
     await _stopLightAnalysis();
     await _camera.close();
   }
@@ -450,6 +592,7 @@ class ScanCubit extends Cubit<ScanState> {
   Future<void> onBackground() async {
     if (state.phase != ScanPhase.ready) return;
     emit(state.copyWith(phase: ScanPhase.paused));
+    await _torchOff();
     await _stopLightAnalysis();
     await _camera.close();
   }
@@ -457,6 +600,10 @@ class ScanCubit extends Cubit<ScanState> {
   /// App came back: reopen the camera, or re-check a denied permission (the
   /// user may have granted it in the system settings).
   Future<void> onForeground() async {
+    if (_inactive) {
+      _inactive = false;
+      unawaited(_syncTorch());
+    }
     switch (state.phase) {
       case ScanPhase.paused:
         await _openCamera();
@@ -501,6 +648,9 @@ class ScanCubit extends Cubit<ScanState> {
       if (_camera.hasFlash) await _camera.setFlashMode(_flash);
       _startLightAnalysis();
     }
+    // A camera that was (re)opened has its torch out; the light comes back
+    // after the screen shows the camera again, when the choice is On.
+    _noteTorch();
     final packId = _packId;
     if (result == CameraOpenResult.ready && packId != null) {
       // Loads the models while the user frames the page; best effort.
@@ -524,7 +674,8 @@ class ScanCubit extends Cubit<ScanState> {
     _debouncer.reset();
     _lightSubscription?.cancel();
     _lightSubscription = _camera.lightSamples.listen((metric) {
-      if (isClosed) return;
+      // Samples taken while the torch settles are dropped (ADR-031).
+      if (isClosed || _settling) return;
       final low = _debouncer.add(metric);
       if (low != state.lowLight) emit(state.copyWith(lowLight: low));
     });
@@ -551,8 +702,11 @@ class ScanCubit extends Cubit<ScanState> {
   @override
   Future<void> close() async {
     await _discardUnsavedPages();
+    await _torchOff();
     await _stopLightAnalysis();
     await _camera.close();
+    _settleTimer?.cancel();
+    _idleTimer?.cancel();
     return super.close();
   }
 }

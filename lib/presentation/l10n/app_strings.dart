@@ -273,6 +273,19 @@ abstract class AppStrings {
   String lowLightSummaryBody(int pages);
   String get lowLightSummaryBack;
   String lowLightBannerBody(int pages);
+
+  // Phase 6.2.1: torch and the second light threshold (ADR-031)
+  String get torchIdleOffMessage;
+  String get lowLightDialogBodyVeryDark;
+  String lowLightSummaryBodyVeryDark(int pages);
+  String lowLightBannerBodyVeryDark(int pages);
+  String get lightDiagTorch;
+  String get lightDiagTorchLit;
+  String get lightDiagTorchOut;
+  String get lightDiagTorchSince;
+  String get lightDiagSampleAfterTorch;
+  String get lightDiagYes;
+  String get lightDiagNo;
   String get lowLightImprove;
   String get lowLightKeep;
   String get lowLightImproving;

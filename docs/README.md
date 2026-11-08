@@ -39,7 +39,7 @@ plus the manual checks for a real phone: [0](PHASE_0_VALIDATION.md), [0.5](PHASE
 [1.5](PHASE_1_5_VALIDATION.md), [1.6](PHASE_1_6_VALIDATION.md), [2](PHASE_2_VALIDATION.md),
 [2.1](PHASE_2_1_VALIDATION.md), [3](PHASE_3_VALIDATION.md), [4](PHASE_4_VALIDATION.md),
 [5](PHASE_5_VALIDATION.md), [6.0](PHASE_6_0_VALIDATION.md), [6.1](PHASE_6_1_VALIDATION.md),
-[6.2](PHASE_6_2_VALIDATION.md). The latest is the best example of the format.
+[6.2](PHASE_6_2_VALIDATION.md), [6.2.1](PHASE_6_2_1_VALIDATION.md). The latest is the best example of the format.
 [`PHASE_0_PLAN.md`](PHASE_0_PLAN.md) is the original plan of the skeleton phase.
 
 ## Historical

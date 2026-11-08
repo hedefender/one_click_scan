@@ -54,6 +54,9 @@ class ScanState extends Equatable {
     this.darkPages = const <String>[],
     this.lightPrompt = LightPrompt.none,
     this.darkBarPage,
+    this.veryDarkPages = const <String>[],
+    this.torchLit = false,
+    this.torchIdleOff = false,
   });
 
   final ScanPhase phase;
@@ -92,6 +95,20 @@ class ScanState extends Equatable {
   /// The last Multi shot was dark: the non-blocking bar offers a new shot.
   final String? darkBarPage;
 
+  /// Of [darkPages], the shots so dark that the light correction is not
+  /// expected to repair them (ADR-031): the warning advises a retake first.
+  final List<String> veryDarkPages;
+
+  /// The torch is really lit now (flash On, camera on screen).
+  final bool torchLit;
+
+  /// The torch was put out by the idle timeout and the choice went back to
+  /// Auto: the screen shows its short message once.
+  final bool torchIdleOff;
+
+  /// A flagged page is so dark that a retake is advised before anything else.
+  bool get darkNeedsRetake => darkPages.any(veryDarkPages.contains);
+
   bool get hasPages => pages.isNotEmpty;
 
   /// Taking photos is possible.
@@ -125,6 +142,9 @@ class ScanState extends Equatable {
     LightPrompt? lightPrompt,
     String? darkBarPage,
     bool clearDarkBar = false,
+    List<String>? veryDarkPages,
+    bool? torchLit,
+    bool? torchIdleOff,
   }) {
     return ScanState(
       phase: phase ?? this.phase,
@@ -140,6 +160,9 @@ class ScanState extends Equatable {
       darkPages: darkPages ?? this.darkPages,
       lightPrompt: lightPrompt ?? this.lightPrompt,
       darkBarPage: clearDarkBar ? null : darkBarPage ?? this.darkBarPage,
+      veryDarkPages: veryDarkPages ?? this.veryDarkPages,
+      torchLit: torchLit ?? this.torchLit,
+      torchIdleOff: torchIdleOff ?? this.torchIdleOff,
     );
   }
 
@@ -158,5 +181,8 @@ class ScanState extends Equatable {
     darkPages,
     lightPrompt,
     darkBarPage,
+    veryDarkPages,
+    torchLit,
+    torchIdleOff,
   ];
 }

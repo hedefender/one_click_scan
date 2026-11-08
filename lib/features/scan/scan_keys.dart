@@ -63,6 +63,8 @@ abstract final class ScanKeys {
   static const flashButton = Key('scan.flash');
   static const lowLightChip = Key('scan.lowLight.chip');
   static const focusRing = Key('scan.focus.ring');
+  static const torchIdleOff = Key('scan.torch.idleOff');
+  static const lowLightBannerRetake = Key('scan.result.lowLight.retake');
   static const lowLightDialog = Key('scan.lowLight.dialog');
   static const lowLightRetake = Key('scan.lowLight.retake');
   static const lowLightContinue = Key('scan.lowLight.continue');

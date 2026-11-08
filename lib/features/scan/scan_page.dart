@@ -40,13 +40,19 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   }
 
   /// The camera is released in the background and reopened on return. Only
-  /// `paused` counts: `inactive` also happens while the permission dialog is
-  /// shown, and closing the camera then would break the first start.
+  /// `paused` counts for the camera: `inactive` also happens while the
+  /// permission dialog is shown, and closing the camera then would break the
+  /// first start. `inactive` only puts the torch out (ADR-031).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final cubit = context.read<ScanCubit>();
     if (state == AppLifecycleState.paused) {
       cubit.onBackground();
+    } else if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      // The torch goes out at once (lock screen, notifications); the camera
+      // itself stays open, so a permission dialog does not break the start.
+      unawaited(cubit.onInactive());
     } else if (state == AppLifecycleState.resumed) {
       cubit.onForeground();
     }
@@ -104,16 +110,34 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
             result: state.result!,
             ocr: state.ocr,
             darkPages: state.darkPages,
+            darkNeedsRetake: state.darkNeedsRetake,
           ),
         );
       },
       builder: (context, state) {
         final saving = state.phase == ScanPhase.saving;
-        return BlocListener<ScanCubit, ScanState>(
-          listenWhen: (previous, current) =>
-              previous.lightPrompt != current.lightPrompt &&
-              current.lightPrompt != LightPrompt.none,
-          listener: (context, state) => _askAboutDarkShot(state),
+        return MultiBlocListener(
+          listeners: [
+            BlocListener<ScanCubit, ScanState>(
+              listenWhen: (previous, current) =>
+                  previous.lightPrompt != current.lightPrompt &&
+                  current.lightPrompt != LightPrompt.none,
+              listener: (context, state) => _askAboutDarkShot(state),
+            ),
+            BlocListener<ScanCubit, ScanState>(
+              listenWhen: (previous, current) =>
+                  !previous.torchIdleOff && current.torchIdleOff,
+              listener: (context, state) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    key: ScanKeys.torchIdleOff,
+                    content: Text(AppStrings.of(context).torchIdleOffMessage),
+                  ),
+                );
+                context.read<ScanCubit>().torchIdleOffShown();
+              },
+            ),
+          ],
           child: _scaffold(context, state, saving),
         );
       },
@@ -126,6 +150,9 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     final cubit = context.read<ScanCubit>();
     final strings = AppStrings.of(context);
     final summary = state.lightPrompt == LightPrompt.summary;
+    // So dark that the correction is not expected to help: a retake comes
+    // first (the primary button), the other choices stay (ADR-031).
+    final retakeFirst = state.darkNeedsRetake;
     final choice = await showDialog<LowLightChoice>(
       context: context,
       barrierDismissible: false,
@@ -136,35 +163,56 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         ),
         content: Text(
           summary
-              ? strings.lowLightSummaryBody(state.darkPages.length)
-              : strings.lowLightDialogBody,
+              ? (retakeFirst
+                    ? strings.lowLightSummaryBodyVeryDark(
+                        state.darkPages.length,
+                      )
+                    : strings.lowLightSummaryBody(state.darkPages.length))
+              : (retakeFirst
+                    ? strings.lowLightDialogBodyVeryDark
+                    : strings.lowLightDialogBody),
         ),
         actions: [
-          TextButton(
+          _lightAction(
+            dialogContext,
             key: ScanKeys.lowLightRetake,
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(LowLightChoice.retake),
-            child: Text(
-              summary ? strings.lowLightSummaryBack : strings.lowLightRetake,
-            ),
+            choice: LowLightChoice.retake,
+            label: summary
+                ? strings.lowLightSummaryBack
+                : strings.lowLightRetake,
+            primary: retakeFirst,
           ),
-          TextButton(
+          _lightAction(
+            dialogContext,
             key: ScanKeys.lowLightContinue,
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(LowLightChoice.continueAnyway),
-            child: Text(strings.lowLightContinue),
+            choice: LowLightChoice.continueAnyway,
+            label: strings.lowLightContinue,
+            primary: false,
           ),
-          FilledButton(
+          _lightAction(
+            dialogContext,
             key: ScanKeys.lowLightEnhance,
-            onPressed: () =>
-                Navigator.of(dialogContext)
-                    .pop(LowLightChoice.continueWithEnhancement),
-            child: Text(strings.lowLightContinueEnhance),
+            choice: LowLightChoice.continueWithEnhancement,
+            label: strings.lowLightContinueEnhance,
+            primary: !retakeFirst,
           ),
         ],
       ),
     );
     await cubit.resolveLowLight(choice ?? LowLightChoice.retake);
+  }
+
+  Widget _lightAction(
+    BuildContext dialogContext, {
+    required Key key,
+    required LowLightChoice choice,
+    required String label,
+    required bool primary,
+  }) {
+    void pick() => Navigator.of(dialogContext).pop(choice);
+    return primary
+        ? FilledButton(key: key, onPressed: pick, child: Text(label))
+        : TextButton(key: key, onPressed: pick, child: Text(label));
   }
 
   Widget _scaffold(BuildContext context, ScanState state, bool saving) {
@@ -289,8 +337,7 @@ class _Viewfinder extends StatelessWidget {
           Center(
             key: ScanKeys.preview,
             child: FocusTapLayer(
-              onFocus: (point) =>
-                  unawaited(context.read<CameraService>().focusAt(point)),
+              onFocus: (point) => unawaited(cubit.focusAt(point)),
               child: context.read<CameraService>().buildPreview(context),
             ),
           ),
@@ -766,8 +813,11 @@ class _FlashAndLight extends StatelessWidget {
     final (icon, label) = switch (state.flashMode) {
       FlashMode.off => (Icons.flash_off, strings.flashOffLabel),
       FlashMode.auto => (Icons.flash_auto, strings.flashAutoLabel),
-      FlashMode.on => (Icons.flash_on, strings.flashOnLabel),
+      FlashMode.on => (Icons.flashlight_on, strings.flashOnLabel),
     };
+    // On is the torch (ADR-031): amber and a lit ring only while it really
+    // burns, so the button never says "on" for a light that is out.
+    final lit = state.flashMode == FlashMode.on && state.torchLit;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -775,14 +825,12 @@ class _FlashAndLight extends StatelessWidget {
           button: true,
           label: label,
           child: Material(
-            color: _panelColor,
+            color: lit ? Colors.amber.shade800 : _panelColor,
             shape: const CircleBorder(),
             child: IconButton(
               key: ScanKeys.flashButton,
               tooltip: label,
-              color: state.flashMode == FlashMode.on
-                  ? Colors.amber
-                  : Colors.white,
+              color: lit ? Colors.white : Colors.white,
               onPressed: state.phase == ScanPhase.ready
                   ? cubit.cycleFlash
                   : null,

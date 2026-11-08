@@ -18,6 +18,11 @@ class LowLightDebouncer {
     return _low;
   }
 
+  /// Forgets the last sample but KEEPS the mark: used when the torch changes.
+  /// The mark then changes only after two fresh samples agree, so an old
+  /// sample can neither show nor hide it.
+  void restart() => _previous = null;
+
   void reset() {
     _low = false;
     _previous = null;

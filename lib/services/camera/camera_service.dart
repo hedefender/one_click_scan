@@ -38,11 +38,23 @@ abstract interface class CameraService {
   /// Without one the flash button is not shown.
   bool get hasFlash;
 
-  /// The flash mode applied to the shots (the flash fires on the shot only,
-  /// it is never a continuous torch).
+  /// The flash mode of the camera. Off and Auto: the system fires the flash
+  /// on the shot only (Auto when it is needed). On is the TORCH (ADR-031): the
+  /// shot itself has no flash (no double flash), the light is the continuous
+  /// torch, which is switched with [setTorchLit] and is never lit by this call.
   FlashMode get flashMode;
 
+  /// Sets the mode. Off and Auto switch the torch off.
   Future<void> setFlashMode(FlashMode mode);
+
+  /// The torch is really lit now.
+  bool get torchLit;
+
+  /// Lights or puts out the torch while [flashMode] is [FlashMode.on]. Does
+  /// not change the mode, so the camera screen can put the torch out when it
+  /// is not visible and light it again when it comes back. Ignored in the
+  /// other modes. Never throws.
+  Future<void> setTorchLit(bool lit);
 
   /// Tap-to-focus: focus and exposure are measured at [point], given as
   /// fractions (0..1) of the preview. The camera returns to continuous focus

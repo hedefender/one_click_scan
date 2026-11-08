@@ -37,6 +37,12 @@ class UnsupportedCameraService implements CameraService {
   Future<void> setFlashMode(FlashMode mode) async {}
 
   @override
+  bool get torchLit => false;
+
+  @override
+  Future<void> setTorchLit(bool lit) async {}
+
+  @override
   Future<void> focusAt(Offset point) async {}
 
   @override

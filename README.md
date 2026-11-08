@@ -40,7 +40,8 @@ tracked in the `docs/PHASE_*_VALIDATION.md` files.
   frame when the detection is not sure. Pure Dart, in a background isolate.
 - **OCR in Greek and English** (PaddleOCR PP-OCRv5 on ONNX Runtime), language packs per script.
 - **Searchable PDF** with an invisible text layer. This is a best effort, not a promise of exact text.
-- **Camera aids:** flash (Off / Auto / On), tap-to-focus, and a low-light warning. A dark shot
+- **Camera aids:** flash (Off / Auto / On, where On is a flashlight that switches itself off
+  after two minutes), tap-to-focus, and a low-light warning. A dark shot
   stops One Click with a choice (retake, continue, or continue with a light correction).
   The shadow removal is only ever applied when the user asks, and it is kept only if the OCR
   reads more words afterwards. A hidden diagnostics screen shows the light numbers.
@@ -60,7 +61,7 @@ From [`docs/ROADMAP.md`](docs/ROADMAP.md):
 | 3 | PDF generation with a text layer | Done |
 | 4, 4.1 | E-mail: app password, share route, guide | Done |
 | 5, 5.1 | One Click / preview, cancel everywhere, automatic return | Done |
-| 6.0 to 6.2 | Crop and straighten, flash, focus, low light, optional light correction | Done on the emulator, phone check pending |
+| 6.0 to 6.2.1 | Crop and straighten, flash and flashlight, focus, low light, optional light correction | Done on the emulator, phone check pending |
 | 6.3, 6.4 | Small-page option, reading order on tilted pages | Proposals, only if the phone check asks |
 | 7 | Review of the Budget integration | Later |
 | 8 | Mail OAuth (before any public release) | Planned ([`docs/MAIL_OAUTH_PLAN.md`](docs/MAIL_OAUTH_PLAN.md)) |
@@ -91,7 +92,7 @@ git clone https://github.com/hedefender/one_click_scan.git
 cd one_click_scan
 flutter pub get
 bash tool/fetch_ocr_models.sh                # needs bash (on Windows: Git Bash)
-flutter analyze lib test integration_test tool
+flutter analyze
 flutter test
 flutter build apk --debug
 ```
@@ -102,11 +103,7 @@ pinned SHA-256; it fails loudly on a mismatch. Without them the Android build an
 fail with a message that names the missing file. The models are under the Apache-2.0 license of
 PaddleOCR (see [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md)).
 
-**Analyzer note.** `flutter analyze` with no path also scans `spikes/`, which are separate Flutter
-projects with their own dependencies. In a fresh clone that gives errors unrelated to the app, so
-point it at the app folders as above.
-
-**Tests.** `flutter test` runs 1132 unit, cubit and widget tests (they need the models, nothing else).
+**Tests.** `flutter test` runs 1178 unit, cubit and widget tests (they need the models, nothing else).
 Integration tests (`integration_test/`) run on an Android emulator; `tool/run_integration_test.sh <device-id> <test file>`
 installs the app, grants the camera permission and runs one test. Release smoke test (R8 on): `tool/run_ocr_release_smoke.sh <device-id>`.
 Use an Android emulator or a device you do not mind installing test builds on.
@@ -136,7 +133,7 @@ Each phase starts with an architecture note and, for risky choices, a spike with
 (`docs/*_SPIKE_RESULTS.md`), then a plan, code and tests. The code is written with an AI coding
 assistant (Claude Code) under written rules ([`CLAUDE.md`](CLAUDE.md)); the assistant never commits,
 and every phase ends with a manual check on a real device before the next one starts. There are
-1132 automated tests. The checks are in [`docs/PHASE_6_2_VALIDATION.md`](docs/PHASE_6_2_VALIDATION.md)
+1178 automated tests. The checks are in [`docs/PHASE_6_2_VALIDATION.md`](docs/PHASE_6_2_VALIDATION.md)
 and its siblings; the document index is [`docs/README.md`](docs/README.md).
 
 ## License and contact

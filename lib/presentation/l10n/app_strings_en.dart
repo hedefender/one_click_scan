@@ -785,7 +785,7 @@ class AppStringsEn extends AppStrings {
   String get flashAutoLabel => 'Flash: auto';
 
   @override
-  String get flashOnLabel => 'Flash: always on';
+  String get flashOnLabel => 'Flashlight: on';
 
   @override
   String get lowLightChip => 'Low light';
@@ -829,6 +829,46 @@ class AppStringsEn extends AppStrings {
   @override
   String lowLightBannerBody(int pages) =>
       pages == 1 ? 'One page is dark.' : '$pages pages are dark.';
+
+  @override
+  String get torchIdleOffMessage =>
+      'The flashlight was switched off so the phone does not get warm. The flash went back to auto.';
+
+  @override
+  String get lowLightDialogBodyVeryDark =>
+      'The photo is very dark and the light correction will most likely not fix the result. A retake with more light or with the flashlight is better.';
+
+  @override
+  String lowLightSummaryBodyVeryDark(int pages) => pages == 1
+      ? 'One page is very dark and the light correction will most likely not fix it. A retake with more light or with the flashlight is better.'
+      : '$pages pages are dark and at least one is so dark that the light correction will most likely not fix it. A retake with more light or with the flashlight is better.';
+
+  @override
+  String lowLightBannerBodyVeryDark(int pages) => pages == 1
+      ? 'The page is very dark and the light correction will most likely not fix the result. A retake with more light or with the flashlight is better.'
+      : '$pages pages are dark and at least one is so dark that the correction will most likely not fix it. A retake with more light or with the flashlight is better.';
+
+  @override
+  String get lightDiagTorch => 'Flashlight';
+
+  @override
+  String get lightDiagTorchLit => 'lit';
+
+  @override
+  String get lightDiagTorchOut => 'out';
+
+  @override
+  String get lightDiagTorchSince => 'Time since it was last lit';
+
+  @override
+  String get lightDiagSampleAfterTorch =>
+      'The last live sample was taken after it was lit';
+
+  @override
+  String get lightDiagYes => 'yes';
+
+  @override
+  String get lightDiagNo => 'no';
 
   @override
   String get lowLightImprove => 'Correct the light';

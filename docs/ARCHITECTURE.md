@@ -713,6 +713,21 @@ banner  -> OcrSession.requestEnhance(page) -> OCR on flat picture -> more words?
         -> if kept: delete old PDF by URI, make the PDF again
 ```
 
+**Torch (Phase 6.2.1, ADR-031).** Flash On is the torch. `CameraService` has `torchLit` and
+`setTorchLit`; `ScanCubit._torchWanted` is the one rule (On, flash unit, camera on screen, no
+dialog or error over it, app not `inactive`) and `onChange` applies it through a serial queue
+(`_syncTorch`). `PluginCameraService` maps On to the capture mode Off plus the plugin's
+`FlashMode.torch`, and puts the torch out before it disposes the camera. Idle timeout
+(`LightingConfig.torchIdleTimeout`, 120 s) and settle time (`torchSettleDelay`, 500 ms) are
+injectable into the cubit; the settle time drops preview samples and the debouncer
+`restart()` keeps its mark. The second light threshold
+(`LightingConfig.enhancementHelpsMinPaperLevel`) changes only the words, through
+`LowLightPolicy.retakeFirst` and the state flag `darkNeedsRetake`, which `ScanResultArgs`
+carries to the banner. Tests: `scan_torch_cubit_test.dart`, `torch_domain_test.dart`,
+`light_diagnostics_torch_test.dart`, the torch group of `scan_light_widget_test.dart`, and on
+the emulator `integration_test/torch_camera_test.dart` (no torch call without a flash unit;
+the real LED is only on the phone).
+
 **The camera analyser.** The `camera` plugin streams every frame of its `ImageAnalysis`
 into Dart, with no rate option. The analyser therefore is on only to take one frame,
 then off for 400 ms. The metric is computed in an isolate from a transferred buffer.

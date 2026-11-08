@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -12,8 +14,37 @@ import 'light_diagnostics_cubit.dart';
 /// Hidden screen (5 taps on the app name in Settings): the live light numbers
 /// of the preview, the numbers of a test shot, the threshold, and the
 /// "flash required" signal of the camera (not available through the plugin).
-class LightDiagnosticsPage extends StatelessWidget {
+class LightDiagnosticsPage extends StatefulWidget {
   const LightDiagnosticsPage({super.key});
+
+  @override
+  State<LightDiagnosticsPage> createState() => _LightDiagnosticsPageState();
+}
+
+class _LightDiagnosticsPageState extends State<LightDiagnosticsPage>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// The torch never burns while the screen is not on top (ADR-031).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final cubit = context.read<LightDiagnosticsCubit>();
+    if (state == AppLifecycleState.resumed) {
+      unawaited(cubit.onResumed());
+    } else {
+      unawaited(cubit.onInactive());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +86,20 @@ class LightDiagnosticsPage extends StatelessWidget {
                 '${LightingConfig.minPaperLevel.toStringAsFixed(0)}',
               ),
               Text('${strings.lightDiagFlashSignal}: n/a'),
+              if (state.hasFlash) ...[
+                Text(
+                  '${strings.lightDiagTorch}: '
+                  '${state.torchLit ? strings.lightDiagTorchLit : strings.lightDiagTorchOut}',
+                ),
+                Text(
+                  '${strings.lightDiagTorchSince}: '
+                  '${state.litFor == null ? '—' : '${state.litFor!.inSeconds} s'}',
+                ),
+                Text(
+                  '${strings.lightDiagSampleAfterTorch}: '
+                  '${state.torchLit ? (state.sampleAfterTorch ? strings.lightDiagYes : strings.lightDiagNo) : '—'}',
+                ),
+              ],
               const SizedBox(height: 16),
               Wrap(
                 spacing: 12,
@@ -70,7 +115,7 @@ class LightDiagnosticsPage extends StatelessWidget {
                       icon: Icon(switch (state.flashMode) {
                         FlashMode.off => Icons.flash_off,
                         FlashMode.auto => Icons.flash_auto,
-                        FlashMode.on => Icons.flash_on,
+                        FlashMode.on => Icons.flashlight_on,
                       }),
                       label: Text(switch (state.flashMode) {
                         FlashMode.off => strings.flashOffLabel,

@@ -41,6 +41,7 @@ class ScanFlowViewState extends Equatable {
     this.discardOutcome,
     this.openProblem,
     this.darkPages = const <String>[],
+    this.darkNeedsRetake = false,
     this.lightFix = LightFix.none,
   });
 
@@ -62,6 +63,9 @@ class ScanFlowViewState extends Equatable {
 
   /// Keys of the pages flagged dark (see `ScanResultArgs.darkPages`).
   final List<String> darkPages;
+
+  /// See `ScanResultArgs.darkNeedsRetake`.
+  final bool darkNeedsRetake;
   final LightFix lightFix;
 
   /// The banner with "Correct the light" is shown (preview, PDF stored, the
@@ -122,6 +126,7 @@ class ScanFlowViewState extends Equatable {
     bool clearOpenProblem = false,
     bool clearPdf = false,
     List<String>? darkPages,
+    bool? darkNeedsRetake,
     LightFix? lightFix,
   }) {
     return ScanFlowViewState(
@@ -132,6 +137,7 @@ class ScanFlowViewState extends Equatable {
       discardOutcome: discardOutcome ?? this.discardOutcome,
       openProblem: clearOpenProblem ? null : openProblem ?? this.openProblem,
       darkPages: darkPages ?? this.darkPages,
+      darkNeedsRetake: darkNeedsRetake ?? this.darkNeedsRetake,
       lightFix: lightFix ?? this.lightFix,
     );
   }
@@ -145,6 +151,7 @@ class ScanFlowViewState extends Equatable {
     discardOutcome,
     openProblem,
     darkPages,
+    darkNeedsRetake,
     lightFix,
   ];
 }

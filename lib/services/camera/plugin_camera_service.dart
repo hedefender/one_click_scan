@@ -33,6 +33,7 @@ class PluginCameraService implements CameraService {
   int _shots = 0;
   bool _hasFlash = false;
   FlashMode _flashMode = FlashMode.off;
+  bool _torchLit = false;
 
   final _samples = StreamController<LightMetric>.broadcast();
   bool _analysing = false;
@@ -58,6 +59,7 @@ class PluginCameraService implements CameraService {
       await controller.initialize();
       await controller.setFlashMode(plugin.FlashMode.off);
       _flashMode = FlashMode.off;
+      _torchLit = false;
       _hasFlash = await _askHasFlash();
       _controller = controller;
       return CameraOpenResult.ready;
@@ -116,6 +118,19 @@ class PluginCameraService implements CameraService {
     await _stopAnalysis();
     final controller = _controller;
     _controller = null;
+    final wasLit = _torchLit;
+    _torchLit = false;
+    // Disposing unbinds the camera, which also puts the torch out; when it is
+    // lit it is put out first on purpose, so it does not depend on that side
+    // effect. Not done otherwise: it would only add a rebuild of the preview
+    // between the release and the dispose.
+    if (wasLit && controller != null && controller.value.isInitialized) {
+      try {
+        await controller.setFlashMode(plugin.FlashMode.off);
+      } on CameraException {
+        // dispose below still releases the camera and with it the torch.
+      }
+    }
     await controller?.dispose();
   }
 
@@ -151,14 +166,40 @@ class PluginCameraService implements CameraService {
       return;
     }
     try {
+      // On is the torch: the shot has no flash of its own, so the capture mode
+      // is Off (the plugin does the same when the torch is lit). The torch is
+      // lit only by setTorchLit.
       await controller.setFlashMode(switch (mode) {
-        FlashMode.off => plugin.FlashMode.off,
+        FlashMode.off || FlashMode.on => plugin.FlashMode.off,
         FlashMode.auto => plugin.FlashMode.auto,
-        FlashMode.on => plugin.FlashMode.always,
       });
+      _torchLit = false;
       _flashMode = mode;
     } on CameraException {
       // The mode stays as it was; the button shows the real one.
+    }
+  }
+
+  @override
+  bool get torchLit => _torchLit;
+
+  @override
+  Future<void> setTorchLit(bool lit) async {
+    final controller = _controller;
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        !_hasFlash ||
+        _flashMode != FlashMode.on ||
+        lit == _torchLit) {
+      return;
+    }
+    try {
+      await controller.setFlashMode(
+        lit ? plugin.FlashMode.torch : plugin.FlashMode.off,
+      );
+      _torchLit = lit;
+    } on CameraException {
+      // The torch stays as it was; the button shows the real state.
     }
   }
 

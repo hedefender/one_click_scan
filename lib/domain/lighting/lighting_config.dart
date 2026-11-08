@@ -31,6 +31,29 @@ abstract final class LightingConfig {
   /// light does not give faded ink back.
   static const double faintContrast = 20;
 
-  /// The only place the threshold is applied.
+  /// Below this paper level the light correction (`flat`) does not help in a
+  /// reliable way (phone check of Phase 6.2: a PDF from a shot under about 40
+  /// stays unreadable). It is a second, separate threshold: it only changes the
+  /// WORDS of the warning (retake first), never whether the warning appears.
+  /// Equal to [minPaperLevel] for now, so the second zone is not active until
+  /// the dusk calibration (`PHASE_6_2_1_VALIDATION.md`) decides both values.
+  static const double enhancementHelpsMinPaperLevel = 40;
+
+  /// The torch (flash On) is switched off by itself after this time without a
+  /// shot or a tap-to-focus, and the choice goes back to Auto (ADR-031).
+  static const Duration torchIdleTimeout = Duration(seconds: 120);
+
+  /// After the torch changes, the preview samples are ignored for this long:
+  /// the camera needs time to settle its exposure, and an old (or half
+  /// adjusted) sample would show a false "low light" mark (ADR-031).
+  static const Duration torchSettleDelay = Duration(milliseconds: 500);
+
+  /// A paper level that the light correction cannot be expected to repair.
+  static bool isTooDarkForEnhancement(
+    LightMetric metric, {
+    double helpsMin = enhancementHelpsMinPaperLevel,
+  }) => metric.paper < helpsMin;
+
+  /// The only place the warning threshold is applied.
   static bool isLowLight(LightMetric metric) => metric.paper < minPaperLevel;
 }

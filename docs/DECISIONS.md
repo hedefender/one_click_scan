@@ -762,6 +762,10 @@ between the shots.
 dark shot stops the flow with three choices; the shadow removal (`flat`) is **only a choice
 of the user**, with a safety valve. The rest below is what was decided to build that.
 
+> **Changed by ADR-031 (Phase 6.2.1):** flash **On** is now the continuous **torch** on the
+> preview, not a flash on the shot. Off and Auto are as described here. Everything below
+> about "never the torch" is the Phase 6.2 state.
+
 ### Flash
 
 - `FlashMode { off, auto, on }` in `domain/lighting/`. The camera port
@@ -883,3 +887,111 @@ text.
   gives no warning), so the feature can only add a question, never block a scan.
 - Not built (item E of the request): detection with a mild light flattening only for the
   detection of the page. No measurement was made, so no claim.
+
+## ADR-031 Torch for flash On, the light mark with the torch, a second light threshold (Phase 6.2.1)
+
+**Why.** The phone check of Phase 6.2 found that with flash On in a dark room the live
+measurement gave 11 and the mark warned, while the shot (with the flash) gave 86 and read
+fine. The flash only fired on the shutter, so focus, exposure and the preview were still
+dark. The user asked for a torch while On, a mark that sees the lit scene, and the
+analysis of a second light threshold (below about 40 the correction does not help).
+
+### Feasibility (checked first)
+
+The `camera` plugin used here (`camera` 0.12.1, `camera_android_camerax` 0.7.5+1) supports
+`FlashMode.torch` on the **same camera session**: `setFlashMode(torch)` calls CameraX
+`CameraControl.enableTorch(true)` and, for the shot, sets the `ImageCapture` flash mode to
+**off** (`takePicture` does this when the torch is on), so there is **no double flash**.
+Leaving the torch mode calls `enableTorch(false)`. No native code of our own was needed (the
+`hasFlashUnit` method of `SystemHandler.kt` stays as it was). **Not verified (the emulator
+has no flash unit, `hasFlash` is false there):** that the LED really lights, that it
+survives the analyser's start and stop of the image stream (a rebind of the use cases),
+that the exposure settles in the time below, and that a shot with the torch has no second
+flash. All of it is in `PHASE_6_2_1_VALIDATION.md` for the phone. The plugin does not
+report the real state of the LED: `torchLit` is what the app asked for and the plugin
+accepted.
+
+### Behaviour
+
+- **Off and Auto: unchanged** (the system fires the flash on the shot; Auto only when needed).
+- **On = torch on the preview.** The port `CameraService` got `torchLit` and
+  `setTorchLit(bool)`. `setFlashMode(on)` only sets the mode (the capture mode is Off, the
+  torch does the work) and **never lights the torch by itself**; the cubit lights it with
+  `setTorchLit(true)` when the camera is on screen. So the screen can put the torch out and
+  light it again **without changing the choice**.
+- Still **stored as Auto** on restart (ADR-030), so the app never opens with the torch lit.
+
+### The torch is lit only while the camera is on screen
+
+`ScanCubit._torchWanted` is the single rule: the choice is On, the phone has a flash, the
+phase is `ready` or `capturing`, no dark-shot dialog and no failed-shot message covers the
+camera, and the app is not `inactive`. `onChange` re-evaluates it on every change of phase,
+prompt or error, through a **serial queue** (so quick changes cannot cross), never inside
+the emit. It covers: Back / dispose / `cancel` (and `PluginCameraService.close` puts the
+torch out **before** disposing, so it does not depend on the unbind), background (`paused`),
+lock screen and system dialogs (`inactive` / `hidden`: only the torch goes out, the camera
+stays open), saving after "Done" or after the Single shot, Discard (the camera is already
+closed there), a failed shot, a camera that is opened again (`open()` starts with the torch
+out; the light comes back after the screen shows the camera), and a change of the flash to
+Off or Auto. Returning (foreground, a new page of Multi, a new shot after a dark-shot
+dialog, a retry after a failed shot) lights it again while the choice is still On.
+
+### Idle timeout
+
+`LightingConfig.torchIdleTimeout` = 120 s without a shot or tap-to-focus: the torch goes out,
+the choice becomes **Auto** (and is stored as Auto), and the screen shows once a short
+message that it was switched off so the phone does not get warm. The timer restarts on every
+shot and every tap-to-focus. The value is injectable into `ScanCubit` (tests use a few
+milliseconds; no test waits for 120 s).
+
+### The "low light" mark with the torch
+
+When the real torch state changes, the cubit drops the samples for
+`LightingConfig.torchSettleDelay` (500 ms) and calls `LowLightDebouncer.restart()`, which
+forgets the last sample **but keeps the mark**. The mark therefore neither shows nor hides
+on an old or half-adjusted sample; it changes only after two fresh samples agree (the flicker
+guard of ADR-030). A shot that follows a lighting waits for the same settle time. The
+decision rule (`minPaperLevel`) and the check on the shot (One Click, before the save) are
+**not changed**.
+
+### Two light thresholds (structure only)
+
+`minPaperLevel = 40` stays: it decides **whether** to warn. A second constant,
+`enhancementHelpsMinPaperLevel = 40`, decides the **words**: below it the dialog (Single),
+the summary (Multi) and the banner (preview) say honestly that the page is very dark and the
+light correction will most likely not fix the result, and **"New shot"** is the primary
+choice (in the banner a new first button, which asks the usual discard question, because a
+retake of a stored scan is a discard). The other choices stay. Above it and below
+`minPaperLevel` the Phase 6.2 text stays. The state carries the flag as `darkNeedsRetake`
+(any flagged page below the second threshold), through `ScanResultArgs` to the banner.
+
+**Consequence of today's values.** The two values are both 40, so the zone "dark but
+correctable" is **empty now**: every shot that warns also gets the "very dark, retake first"
+words. This is deliberate and honest for the phone check (a PDF from a shot below about 40
+stayed unreadable), but it is a visible change of the text. The real values wait for the
+dusk calibration (`PHASE_6_2_1_VALIDATION.md`); the proposal of the user is a warning
+threshold of about 70 and a second one of 40. Both are injectable in the tests, which cover
+the zone between them.
+
+### Diagnostics screen
+
+Three new lines: the torch (lit / out), the time since it was last lit (updated every second),
+and whether the latest live sample was taken after the torch was lit **and settled**. The
+screen also puts the torch out when it loses focus and when it is left. Its flash button's On
+is now the torch.
+
+### Clean `flutter analyze`
+
+`spikes/**` is excluded in `analysis_options.yaml`: the spikes are separate Flutter projects
+with their own dependencies, and in a fresh clone they gave 439 errors unrelated to the app.
+The plain `flutter analyze` is the command again.
+
+### Limits
+
+- The real LED, the settling of the real exposure and the heat after two minutes are only on
+  the phone. The emulator test (`integration_test/torch_camera_test.dart`) shows that the
+  switch does not break the camera, the analyser or the shot, and that **without a flash unit
+  no torch call is made**.
+- The torch of a shot taken while the analyser runs: whether the analyser's rebinds switch the
+  torch off is the first thing to check on the phone. If they do, the fix is to light it again
+  after each rebind (not built, so as not to flicker the light on a guess).

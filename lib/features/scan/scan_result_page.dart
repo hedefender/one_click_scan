@@ -481,35 +481,39 @@ class _FlowSection extends StatelessWidget {
   }
 }
 
+/// The question before a discard; also used by the "retake" of the dark-page
+/// banner (a retake of a scan that is already stored is a discard).
+Future<void> _confirmDiscard(BuildContext context) async {
+  final strings = AppStrings.of(context);
+  final cubit = context.read<ScanFlowCubit>();
+  final yes = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(strings.discardConfirmTitle),
+      content: Text(strings.discardConfirmBody),
+      actions: [
+        TextButton(
+          key: ScanKeys.discardKeep,
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(strings.discardConfirmNo),
+        ),
+        TextButton(
+          key: ScanKeys.discardConfirm,
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(strings.discardConfirmYes),
+        ),
+      ],
+    ),
+  );
+  if (yes == true) await cubit.discard();
+}
+
 /// "Discard" of the preview: asks first (the deletion cannot be undone), then
 /// says what happened, and never says "deleted" while part of the scan is left.
 class _DiscardSection extends StatelessWidget {
   const _DiscardSection();
 
-  Future<void> _confirm(BuildContext context) async {
-    final strings = AppStrings.of(context);
-    final cubit = context.read<ScanFlowCubit>();
-    final yes = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(strings.discardConfirmTitle),
-        content: Text(strings.discardConfirmBody),
-        actions: [
-          TextButton(
-            key: ScanKeys.discardKeep,
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(strings.discardConfirmNo),
-          ),
-          TextButton(
-            key: ScanKeys.discardConfirm,
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(strings.discardConfirmYes),
-          ),
-        ],
-      ),
-    );
-    if (yes == true) await cubit.discard();
-  }
+  Future<void> _confirm(BuildContext context) => _confirmDiscard(context);
 
   @override
   Widget build(BuildContext context) {
@@ -837,6 +841,7 @@ class _LightFixBanner extends StatelessWidget {
     return BlocBuilder<ScanFlowCubit, ScanFlowViewState>(
       buildWhen: (a, b) =>
           a.lightFix != b.lightFix ||
+          a.darkNeedsRetake != b.darkNeedsRetake ||
           a.flow != b.flow ||
           a.discard != b.discard,
       builder: (context, state) {
@@ -852,18 +857,37 @@ class _LightFixBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    strings.lowLightBannerBody(state.darkPages.length),
+                    state.darkNeedsRetake
+                        ? strings.lowLightBannerBodyVeryDark(
+                            state.darkPages.length,
+                          )
+                        : strings.lowLightBannerBody(state.darkPages.length),
                     style: TextStyle(color: scheme.onTertiaryContainer),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     children: [
-                      FilledButton(
-                        key: ScanKeys.lowLightImprove,
-                        onPressed: cubit.improveLight,
-                        child: Text(strings.lowLightImprove),
-                      ),
+                      // So dark that the correction is not expected to help:
+                      // the new shot comes first (ADR-031).
+                      if (state.darkNeedsRetake)
+                        FilledButton(
+                          key: ScanKeys.lowLightBannerRetake,
+                          onPressed: () => _confirmDiscard(context),
+                          child: Text(strings.lowLightRetake),
+                        ),
+                      if (state.darkNeedsRetake)
+                        TextButton(
+                          key: ScanKeys.lowLightImprove,
+                          onPressed: cubit.improveLight,
+                          child: Text(strings.lowLightImprove),
+                        )
+                      else
+                        FilledButton(
+                          key: ScanKeys.lowLightImprove,
+                          onPressed: cubit.improveLight,
+                          child: Text(strings.lowLightImprove),
+                        ),
                       TextButton(
                         key: ScanKeys.lowLightKeep,
                         onPressed: cubit.keepDark,

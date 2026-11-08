@@ -806,7 +806,7 @@ class AppStringsEl extends AppStrings {
   String get flashAutoLabel => 'Φλας: αυτόματο';
 
   @override
-  String get flashOnLabel => 'Φλας: πάντα ενεργό';
+  String get flashOnLabel => 'Φακός: αναμμένος';
 
   @override
   String get lowLightChip => 'Χαμηλός φωτισμός';
@@ -851,6 +851,46 @@ class AppStringsEl extends AppStrings {
   String lowLightBannerBody(int pages) => pages == 1
       ? 'Μία σελίδα είναι σκοτεινή.'
       : '$pages σελίδες είναι σκοτεινές.';
+
+  @override
+  String get torchIdleOffMessage =>
+      'Ο φακός σβήστηκε για να μη ζεσταίνεται το κινητό. Το φλας γύρισε σε αυτόματο.';
+
+  @override
+  String get lowLightDialogBodyVeryDark =>
+      'Η φωτογραφία είναι πολύ σκοτεινή και η βελτίωση φωτισμού πιθανότατα δεν θα διορθώσει το αποτέλεσμα. Καλύτερα νέα λήψη με περισσότερο φως ή με τον φακό.';
+
+  @override
+  String lowLightSummaryBodyVeryDark(int pages) => pages == 1
+      ? 'Μία σελίδα είναι πολύ σκοτεινή και η βελτίωση φωτισμού πιθανότατα δεν θα τη διορθώσει. Καλύτερα νέα λήψη με περισσότερο φως ή με τον φακό.'
+      : '$pages σελίδες είναι σκοτεινές και τουλάχιστον μία είναι τόσο σκοτεινή που η βελτίωση φωτισμού πιθανότατα δεν θα τη διορθώσει. Καλύτερα νέα λήψη με περισσότερο φως ή με τον φακό.';
+
+  @override
+  String lowLightBannerBodyVeryDark(int pages) => pages == 1
+      ? 'Η σελίδα είναι πολύ σκοτεινή και η βελτίωση φωτισμού πιθανότατα δεν θα διορθώσει το αποτέλεσμα. Καλύτερα νέα λήψη με περισσότερο φως ή με τον φακό.'
+      : '$pages σελίδες είναι σκοτεινές και τουλάχιστον μία είναι τόσο σκοτεινή που η βελτίωση πιθανότατα δεν θα τη διορθώσει. Καλύτερα νέα λήψη με περισσότερο φως ή με τον φακό.';
+
+  @override
+  String get lightDiagTorch => 'Φακός';
+
+  @override
+  String get lightDiagTorchLit => 'αναμμένος';
+
+  @override
+  String get lightDiagTorchOut => 'σβηστός';
+
+  @override
+  String get lightDiagTorchSince => 'Χρόνος από το τελευταίο άναμμα';
+
+  @override
+  String get lightDiagSampleAfterTorch =>
+      'Το τελευταίο live δείγμα πάρθηκε μετά το άναμμα';
+
+  @override
+  String get lightDiagYes => 'ναι';
+
+  @override
+  String get lightDiagNo => 'όχι';
 
   @override
   String get lowLightImprove => 'Βελτίωση φωτισμού';

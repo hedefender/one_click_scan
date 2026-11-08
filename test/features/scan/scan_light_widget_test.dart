@@ -100,12 +100,14 @@ void main() {
 
       await tester.tap(button);
       await tester.pumpAndSettle();
-      expect(icon().icon, Icons.flash_on);
+      expect(icon().icon, Icons.flashlight_on);
+      expect(camera.torchLit, isTrue);
       expect(camera.flashSet.last, FlashMode.on);
 
       await tester.tap(button);
       await tester.pumpAndSettle();
       expect(icon().icon, Icons.flash_off);
+      expect(camera.torchLit, isFalse);
     });
   });
 
@@ -291,6 +293,99 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(ScanKeys.lowLightBanner), findsNothing);
+    });
+  });
+
+  group('torch (ADR-031)', () {
+    testWidgets('On: the button shows a lit flashlight, Off puts it out', (
+      tester,
+    ) async {
+      await pumpScan(tester);
+      final button = find.byKey(ScanKeys.flashButton);
+      await tester.tap(button); // Auto
+      await tester.pumpAndSettle();
+      expect(camera.torchLit, isFalse, reason: 'Auto never lights the torch');
+      expect(find.bySemanticsLabel('Flashlight: on'), findsNothing);
+
+      await tester.tap(button); // On
+      await tester.pumpAndSettle();
+      expect(camera.torchLit, isTrue);
+      expect(find.bySemanticsLabel('Flashlight: on'), findsOneWidget);
+      final material = tester.widget<Material>(
+        find.ancestor(of: button, matching: find.byType(Material)).first,
+      );
+      expect(material.color, Colors.amber.shade800, reason: 'lit look');
+
+      await tester.tap(button); // Off
+      await tester.pumpAndSettle();
+      expect(camera.torchLit, isFalse);
+    });
+
+    testWidgets('the idle timeout puts it out, says so, and goes to Auto', (
+      tester,
+    ) async {
+      await pumpScan(tester);
+      final button = find.byKey(ScanKeys.flashButton);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(camera.torchLit, isTrue);
+
+      await tester.pump(const Duration(seconds: 121));
+      await tester.pump();
+
+      expect(camera.torchLit, isFalse);
+      expect(find.byKey(ScanKeys.torchIdleOff), findsOneWidget);
+      expect(
+        find.textContaining('does not get warm'),
+        findsOneWidget,
+        reason: 'the short message of the idle timeout',
+      );
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(of: button, matching: find.byType(Icon)),
+            )
+            .icon,
+        Icons.flash_auto,
+      );
+      await tester.pump(const Duration(seconds: 6));
+    });
+
+    testWidgets('a very dark shot: the retake comes first, the rest stays', (
+      tester,
+    ) async {
+      await pumpScan(tester);
+      meter.fallback = FakeLightMeter.dark;
+
+      await tester.tap(find.byKey(ScanKeys.capture));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('very dark'), findsOneWidget);
+      expect(
+        tester.widget(find.byKey(ScanKeys.lowLightRetake)),
+        isA<FilledButton>(),
+        reason: 'the retake is the primary choice',
+      );
+      expect(find.byKey(ScanKeys.lowLightContinue), findsOneWidget);
+      expect(find.byKey(ScanKeys.lowLightEnhance), findsOneWidget);
+    });
+
+    testWidgets('the preview banner advises the retake for a very dark page', (
+      tester,
+    ) async {
+      await pumpScan(tester, flow: ScanFlowMode.preview);
+      meter.fallback = FakeLightMeter.dark;
+
+      await tester.tap(find.byKey(ScanKeys.capture));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(ScanKeys.lowLightBanner), findsOneWidget);
+      expect(find.textContaining('very dark'), findsOneWidget);
+      expect(find.byKey(ScanKeys.lowLightBannerRetake), findsOneWidget);
+      expect(find.byKey(ScanKeys.lowLightImprove), findsOneWidget);
+      expect(find.byKey(ScanKeys.lowLightKeep), findsOneWidget);
     });
   });
 }

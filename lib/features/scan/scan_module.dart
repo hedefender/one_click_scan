@@ -45,6 +45,7 @@ void registerScanModule(GetIt sl) {
     (args, _) => ScanFlowCubit(
       scan: args.result,
       darkPages: args.darkPages,
+      darkNeedsRetake: args.darkNeedsRetake,
       session: args.ocr,
       loadSettings: sl<LoadSettings>(),
       scanAndSend: sl<ScanAndSend>(),

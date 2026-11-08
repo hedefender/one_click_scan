@@ -8,6 +8,7 @@ class ScanResultArgs {
     required this.result,
     this.ocr,
     this.darkPages = const <String>[],
+    this.darkNeedsRetake = false,
   });
 
   final StoredScan result;
@@ -17,4 +18,8 @@ class ScanResultArgs {
   /// decision yet: the preview offers the light correction for them
   /// (ADR-030). Empty in One Click, where the decision is made before.
   final List<String> darkPages;
+
+  /// One of [darkPages] is so dark that the correction is not expected to
+  /// help: the banner advises a retake first (ADR-031).
+  final bool darkNeedsRetake;
 }

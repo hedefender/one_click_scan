@@ -25,6 +25,7 @@ class ScanFlowCubit extends Cubit<ScanFlowViewState> {
   ScanFlowCubit({
     required this.scan,
     this.darkPages = const <String>[],
+    this.darkNeedsRetake = false,
     required this._session,
     required this._loadSettings,
     required this._scanAndSend,
@@ -32,12 +33,20 @@ class ScanFlowCubit extends Cubit<ScanFlowViewState> {
     required this._openPdf,
     required this._fileStore,
     required this._logger,
-  }) : super(ScanFlowViewState(darkPages: darkPages));
+  }) : super(
+         ScanFlowViewState(
+           darkPages: darkPages,
+           darkNeedsRetake: darkNeedsRetake,
+         ),
+       );
 
   final StoredScan scan;
 
   /// Pages flagged dark that have no decision (preview mode).
   final List<String> darkPages;
+
+  /// A flagged page is so dark that a retake is advised first (ADR-031).
+  final bool darkNeedsRetake;
   final OcrSession? _session;
   final LoadSettings _loadSettings;
   final ScanAndSend _scanAndSend;

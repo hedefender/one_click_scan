@@ -52,6 +52,9 @@ class FakeCameraService implements CameraService {
     openCalls++;
     final result = openResults[index];
     isOpen = result == CameraOpenResult.ready;
+    // Like the plugin: a camera that is opened starts with the flash off.
+    _flash = FlashMode.off;
+    _torchLit = false;
     return result;
   }
 
@@ -73,6 +76,8 @@ class FakeCameraService implements CameraService {
   Future<void> close() async {
     closeCalls++;
     isOpen = false;
+    if (_torchLit) torchLog.add(false);
+    _torchLit = false;
   }
 
   @override
@@ -88,6 +93,29 @@ class FakeCameraService implements CameraService {
   Future<void> setFlashMode(FlashMode mode) async {
     _flash = mode;
     flashSet.add(mode);
+    // Off and Auto put the torch out; On never lights it by itself.
+    if (_torchLit) {
+      _torchLit = false;
+      torchLog.add(false);
+    }
+  }
+
+  bool _torchLit = false;
+
+  /// Every change of the torch, in order (true = lit, false = out).
+  final List<bool> torchLog = <bool>[];
+
+  /// How many times the torch was actually lit.
+  int get torchLights => torchLog.where((lit) => lit).length;
+
+  @override
+  bool get torchLit => _torchLit;
+
+  @override
+  Future<void> setTorchLit(bool lit) async {
+    if (!isOpen || _flash != FlashMode.on || lit == _torchLit) return;
+    _torchLit = lit;
+    torchLog.add(lit);
   }
 
   @override

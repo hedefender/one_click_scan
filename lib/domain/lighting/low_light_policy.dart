@@ -39,6 +39,16 @@ abstract final class LowLightPolicy {
         : LowLightAction.markPage;
   }
 
+  /// Whether a dark shot is so dark that the light correction will most likely
+  /// not repair it, so the warning advises a retake first (ADR-031). The metric
+  /// is required: a shot that could not be measured is never called dark.
+  static bool retakeFirst(
+    LightMetric? metric, {
+    double helpsMin = LightingConfig.enhancementHelpsMinPaperLevel,
+  }) =>
+      metric != null &&
+      LightingConfig.isTooDarkForEnhancement(metric, helpsMin: helpsMin);
+
   /// A dark page must never be sent silently in One Click: before the scan
   /// goes on (Multi "Done") the summary is shown when a page is flagged and
   /// has no decision yet.
