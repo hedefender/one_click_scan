@@ -70,7 +70,7 @@ class _PageSwitcher extends StatelessWidget {
       children: [
         IconButton(
           key: OcrKeys.previousPage,
-          icon: const Icon(Icons.chevron_left),
+          icon: const Icon(Icons.chevron_left_rounded),
           onPressed: state.hasPrevious ? cubit.previous : null,
         ),
         Text(
@@ -80,7 +80,7 @@ class _PageSwitcher extends StatelessWidget {
         ),
         IconButton(
           key: OcrKeys.nextPage,
-          icon: const Icon(Icons.chevron_right),
+          icon: const Icon(Icons.chevron_right_rounded),
           onPressed: state.hasNext ? cubit.next : null,
         ),
       ],
@@ -153,7 +153,7 @@ class _PageBodyState extends State<_PageBody> {
               width: double.infinity,
               child: FilledButton.icon(
                 key: OcrKeys.copy,
-                icon: const Icon(Icons.copy),
+                icon: const Icon(Icons.content_copy_rounded),
                 label: Text(strings.ocrCopy),
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);

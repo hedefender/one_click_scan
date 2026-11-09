@@ -305,6 +305,9 @@ abstract class AppStrings {
   String get lightDiagTorchOut;
   String get lightDiagTorchSince;
   String get lightDiagSampleAfterTorch;
+  String get lightDiagColors;
+  String get lightDiagColorsSystem;
+  String get lightDiagColorsFallback;
   String get lightDiagYes;
   String get lightDiagNo;
   String get lowLightImprove;

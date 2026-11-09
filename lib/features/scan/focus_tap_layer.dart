@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../presentation/theme/app_colors.dart';
+
 import 'scan_keys.dart';
 
 /// Tap-to-focus over the preview (ADR-030). A tap reports the point as
@@ -75,7 +77,10 @@ class _FocusTapLayerState extends State<FocusTapLayer> {
                   height: _ringSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(
+                      color: AppCameraColors.content,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),

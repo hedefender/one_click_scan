@@ -1098,3 +1098,64 @@ nothing was changed. Whether the phone is faster is for the phone check.
 - No new package. No change to the order or the safety of the stages of the queue (cancel,
   Discard, the torch).
 - The real values of the margin and of the fallback page size wait for real shots.
+
+## ADR-033 The central theme: light and dark from the system, system colours with fallback palettes, Noto Sans, one set of shapes (Phase 6.4)
+
+**Why.** The back end is mature and the front end was a default Material 3 theme from one seed
+colour. The look of the app (colours, font, shapes, spacing) should come from **one place**, so
+that a design decision changes every screen at once and no screen is half done. The design is in
+`DESIGN_SPEC.md` (binding); this ADR gives the reasons.
+
+### Decisions
+
+- **One central `AppTheme`** (`lib/presentation/theme/`): colours, the type scale, the shapes and
+  the component themes (filled, tonal, outlined, text and icon buttons, segmented buttons, fields,
+  cards, dialogs, sheets, the app bar). Screens read roles of the theme; the hard-coded colours
+  and font sizes that were in the screens are gone (the camera screen is the only one that had
+  many, and it now reads `AppCameraColors`).
+- **System colours first, fallback palettes second.** On Android 12+ the colours of the system
+  (`dynamic_color`, harmonised) make the app look at home on the phone; where they do not exist
+  (older Android, some makers) the app uses two palettes of its own (pastel lime for light, deep
+  purple and black for dark). Widgets use only `ColorScheme` roles, so the three cases need no
+  extra code. The diagnostics screen says which one is in use, to tell what a phone really gives.
+- **Light and dark follow the system, with no setting.** One more setting would be one more thing
+  to explain, to test and to get wrong; the system already has the choice.
+- **Fixed status colours** (`AppStatusColors`, a `ThemeExtension`). The warning ("Low light") must
+  be recognisable at once, so it stays amber in every theme, also with system colours (where the
+  scheme could be any hue). Success and failure use `primary` and `error` of the scheme.
+- **Dark chrome for the camera screens** (`AppCameraColors`). The controls float over a picture
+  that can be white paper or a dark room; near black, semi-transparent controls with light text
+  read over both, whatever the theme. The selected element takes the lime or the purple, or with
+  system colours the container colours of the **dark** scheme (also inside the light theme).
+- **Noto Sans as asset files** (Regular, Medium, SemiBold), no package and no download. The app is
+  offline-first and private, so a font fetched at run time (as a font package does it) is out; and
+  Noto Sans has the Greek letters with tones in all three weights (checked by a test that reads the
+  `cmap` of the files), where the system font may fall back to another face for some of them. The
+  Regular file was already in the app for the PDF text layer and is now shared.
+  Licence: SIL OFL 1.1.
+- **One set of shapes** (stadium for buttons, 16 for fields, 24 for cards, 28 for dialogs, 12 for
+  thumbnails) and elevation 0 with tonal surfaces instead of shadows: it is what plain Material 3
+  widgets can do with no custom painting, so nothing extra to maintain.
+- **Filled buttons are the container colours, and tonal buttons pass their own style**
+  (`AppButtonStyles.tonal`): the theme of `FilledButton` also reaches `FilledButton.tonal`, so the
+  three tonal buttons (folder, test connection) set their colours at the call site.
+
+### Choices that came up on the way
+
+- **`dynamic_color` 1.8.1, not 2.1.0.** `pub add` first took 2.1.0. Its `ColorScheme` comes from the
+  `material_ui` package, and with this Flutter (3.47) that is a different type from the
+  `ColorScheme` of `material.dart`, so the compiler refused it. 1.8.1 uses the Flutter type. One
+  new direct dependency only (`dynamic_color`, Apache-2.0; it adds no other package to the lock file).
+- **The warning chip has dark text on amber**, not white text: the pair #2C2106 on #E8B53A passes
+  4.5:1 (checked in the test; about 8.4:1 by hand).
+- **A seam for the screenshots:** `OneClickScanApp(useSystemColors: ...)` (default true). The
+  emulator gives system colours, which would hide the fallback palettes; the screenshot tool turns
+  them off to show both looks. Nothing else uses it.
+- **The dark fallback selection colour #5C4D82 is 2.61:1 against the chrome** (below the 3:1 of a UI
+  component). Kept as specified, text inside passes 4.5:1; to be seen on the phone.
+
+### Not done
+
+- No theme choice in Settings, no custom icons, no animation work, no layout change.
+- The phone look, the real system colours and the daylight readability are for the phone check
+  (`PHASE_6_4_VALIDATION.md`).

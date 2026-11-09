@@ -31,6 +31,10 @@ import '../test/support/pdf_fakes.dart';
 import '../test/support/scan_fakes.dart';
 import 'support/synthetic_pages.dart';
 
+/// `--dart-define=SYSTEM_COLORS=false` keeps the fallback palettes of the app
+/// (the emulator gives system colours, which would hide them).
+const _systemColors = bool.fromEnvironment('SYSTEM_COLORS', defaultValue: true);
+
 /// Phase 6.3.1: a screenshot of every screen of the app, in the light and the
 /// dark theme, in Greek, for people who design the look of the app.
 ///
@@ -191,7 +195,9 @@ void main() {
     );
     // A fresh app: the router of the scenario before must not be reused.
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(OneClickScanApp(container: await build()));
+    await tester.pumpWidget(
+      OneClickScanApp(container: await build(), useSystemColors: _systemColors),
+    );
     await tester.pumpAndSettle();
     if (atCamera) {
       await tester.tap(find.byKey(HomeKeys.scanAndSend));
@@ -207,7 +213,9 @@ void main() {
       store: kv,
       multiHintSeen: true,
     );
-    await tester.pumpWidget(OneClickScanApp(container: container));
+    await tester.pumpWidget(
+      OneClickScanApp(container: container, useSystemColors: _systemColors),
+    );
     await tester.pumpAndSettle();
     await shot(tester, '01_wizard_welcome');
     await tapKey(tester, FirstRunKeys.next);

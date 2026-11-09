@@ -12,6 +12,7 @@ import '../../domain/mail/mail_provider.dart';
 import '../../domain/ocr/ocr_language_pack_registry.dart';
 import '../../domain/validation/mail_settings_validation.dart';
 import '../../presentation/l10n/app_strings.dart';
+import '../../presentation/theme/app_theme.dart';
 import '../../presentation/l10n/mail_provider_labels.dart';
 import 'settings_editor_cubit.dart';
 import 'settings_editor_state.dart';
@@ -114,7 +115,7 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      child: Text(title, style: Theme.of(context).textTheme.titleMedium),
     );
   }
 }
@@ -220,8 +221,9 @@ class _FolderSection extends StatelessWidget {
           alignment: AlignmentDirectional.centerStart,
           child: FilledButton.tonalIcon(
             key: SettingsKeys.changeFolder,
+            style: AppButtonStyles.tonal(context),
             onPressed: busy ? null : cubit.changeFolder,
-            icon: const Icon(Icons.folder_open),
+            icon: const Icon(Icons.folder_open_rounded),
             label: Text(strings.folderChange),
           ),
         ),
@@ -577,7 +579,7 @@ class _HelpSection extends StatelessWidget {
     return ListTile(
       key: SettingsKeys.helpEntry,
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.help_outline),
+      leading: const Icon(Icons.help_outline_rounded),
       title: Text(strings.helpEntry),
       subtitle: Text(strings.helpEntryNote),
       onTap: () => context.push(RoutePaths.help),
@@ -594,7 +596,7 @@ class _LicensesSection extends StatelessWidget {
     return ListTile(
       key: SettingsKeys.licenses,
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.description_outlined),
+      leading: const Icon(Icons.description_rounded),
       title: Text(strings.licensesOpen),
       onTap: () =>
           showLicensePage(context: context, applicationName: strings.appTitle),
@@ -668,7 +670,9 @@ class _PasswordBlock extends StatelessWidget {
                   ? strings.mailPasswordHide
                   : strings.mailPasswordShow,
               icon: Icon(
-                state.passwordVisible ? Icons.visibility_off : Icons.visibility,
+                state.passwordVisible
+                    ? Icons.visibility_off_rounded
+                    : Icons.visibility_rounded,
               ),
               onPressed: cubit.togglePasswordVisible,
             ),
@@ -700,7 +704,8 @@ class _PasswordBlock extends StatelessWidget {
           children: [
             FilledButton.tonalIcon(
               key: SettingsKeys.mailTest,
-              icon: const Icon(Icons.wifi_tethering),
+              style: AppButtonStyles.tonal(context),
+              icon: const Icon(Icons.wifi_tethering_rounded),
               onPressed:
                   testing ||
                       provider == null ||
@@ -712,7 +717,7 @@ class _PasswordBlock extends StatelessWidget {
             if (state.hasStoredPassword)
               OutlinedButton.icon(
                 key: SettingsKeys.passwordDelete,
-                icon: const Icon(Icons.delete_outline),
+                icon: const Icon(Icons.delete_outline_rounded),
                 onPressed: cubit.deletePassword,
                 label: Text(strings.mailPasswordDelete),
               ),
@@ -745,7 +750,7 @@ class _PasswordBlock extends StatelessWidget {
                 const SizedBox(height: 8),
                 FilledButton.icon(
                   key: SettingsKeys.fallback,
-                  icon: const Icon(Icons.open_in_new),
+                  icon: const Icon(Icons.open_in_new_rounded),
                   onPressed: () =>
                       cubit.selectSendMode(MailSendMode.shareDraft),
                   label: Text(strings.mailFallbackButton),
@@ -827,7 +832,7 @@ class _Guide extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: OutlinedButton.icon(
                       key: SettingsKeys.guideOpen,
-                      icon: const Icon(Icons.open_in_browser),
+                      icon: const Icon(Icons.open_in_browser_rounded),
                       onPressed: cubit.openGuide,
                       label: Text(strings.mailGuideOpenPage),
                     ),

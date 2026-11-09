@@ -11,6 +11,8 @@ import '../../domain/entities/scan_mode.dart';
 import '../../domain/lighting/flash_mode.dart';
 import '../../domain/lighting/low_light_policy.dart';
 import '../../presentation/l10n/app_strings.dart';
+import '../../presentation/theme/app_colors.dart';
+import '../../presentation/theme/app_dimens.dart';
 import '../../presentation/l10n/guide_section.dart';
 import '../../services/camera/camera_service.dart';
 import 'focus_tap_layer.dart';
@@ -277,10 +279,10 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
       // floats above it, so nothing shrinks the picture.
       child: Scaffold(
         extendBodyBehindAppBar: true,
-        backgroundColor: Colors.black,
+        backgroundColor: AppCameraColors.background,
         appBar: AppBar(
-          backgroundColor: Colors.black45,
-          foregroundColor: Colors.white,
+          backgroundColor: AppCameraColors.overlay,
+          foregroundColor: AppCameraColors.content,
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: true,
@@ -321,21 +323,32 @@ class _ModeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final cubit = context.read<ScanCubit>();
     final strings = AppStrings.of(context);
-    final scheme = Theme.of(context).colorScheme;
+    final camera = context.cameraColors;
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(24),
+      decoration: const BoxDecoration(
+        color: AppCameraColors.control,
+        borderRadius: BorderRadius.all(Radius.circular(AppSpacing.s48)),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: SegmentedButton<ScanMode>(
           key: ScanKeys.modeSelector,
           showSelectedIcon: false,
-          style: const ButtonStyle(
+          style: ButtonStyle(
             visualDensity: VisualDensity.compact,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: const WidgetStatePropertyAll<BorderSide>(BorderSide.none),
+            backgroundColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected)
+                  ? camera.selected
+                  : Colors.transparent,
+            ),
+            foregroundColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected)
+                  ? camera.onSelected
+                  : AppCameraColors.content,
+            ),
           ),
           segments: [
             ButtonSegment<ScanMode>(
@@ -379,7 +392,7 @@ class _Viewfinder extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        const ColoredBox(color: Colors.black),
+        const ColoredBox(color: AppCameraColors.background),
         if (_showsPreview)
           Center(
             key: ScanKeys.preview,
@@ -389,27 +402,30 @@ class _Viewfinder extends StatelessWidget {
             ),
           ),
         if (state.phase == ScanPhase.starting)
-          const Center(child: CircularProgressIndicator()),
+          const Center(
+            child: CircularProgressIndicator(color: AppCameraColors.content),
+          ),
         if (state.phase == ScanPhase.saving)
           Container(
             key: ScanKeys.saving,
-            color: Colors.black54,
+            color: AppCameraColors.overlay,
             alignment: Alignment.center,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                const CircularProgressIndicator(color: AppCameraColors.content),
                 const SizedBox(height: 16),
                 Text(
                   strings.scanSaving,
-                  style: const TextStyle(color: Colors.white),
+                  style: Theme.of(context).textTheme.bodyLarge
+                      ?.copyWith(color: AppCameraColors.content),
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton(
                   key: ScanKeys.saveCancel,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white70),
+                    foregroundColor: AppCameraColors.content,
+                    side: const BorderSide(color: AppCameraColors.content),
                   ),
                   onPressed: cubit.cancelSaving,
                   child: Text(strings.flowCancel),
@@ -480,7 +496,7 @@ class _Viewfinder extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.field),
               ),
               child: Text(
                 state.mode == ScanMode.single
@@ -514,7 +530,7 @@ class _Viewfinder extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.field),
               ),
               child: Text(
                 strings.scanCaptureFailed,
@@ -575,14 +591,14 @@ class PageThumbnail extends StatelessWidget {
       cacheWidth: 192,
       errorBuilder: (context, error, stackTrace) => ColoredBox(
         color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        child: const Icon(Icons.image_outlined),
+        child: const Icon(Icons.image_rounded),
       ),
     );
   }
 }
 
-/// Translucent panel behind the floating controls.
-const _panelColor = Colors.black54;
+/// Panel behind the floating controls (near black, in every theme).
+const _panelColor = AppCameraColors.background;
 
 /// Capture, Done, delete-last and the thumbnails, floating over the preview.
 /// Portrait: along the bottom. Landscape (wider than tall): on the right
@@ -669,7 +685,7 @@ class _BottomThumbnails extends StatelessWidget {
                 itemCount: pages.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) => ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: AppRadius.thumbnailBorder,
                   child: SizedBox(
                     width: 48,
                     child: PageThumbnail(path: pages[index].path),
@@ -682,7 +698,8 @@ class _BottomThumbnails extends StatelessWidget {
           Text(
             _pageCountText(strings, state),
             key: ScanKeys.pageCounter,
-            style: const TextStyle(color: Colors.white),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: AppCameraColors.content),
           ),
         ],
       ),
@@ -710,7 +727,8 @@ class _SideThumbnails extends StatelessWidget {
             _pageCountText(strings, state),
             key: ScanKeys.pageCounter,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: AppCameraColors.content),
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -719,7 +737,7 @@ class _SideThumbnails extends StatelessWidget {
               itemCount: pages.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, index) => ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: AppRadius.thumbnailBorder,
                 child: SizedBox(
                   height: 64,
                   child: PageThumbnail(path: pages[index].path),
@@ -733,46 +751,77 @@ class _SideThumbnails extends StatelessWidget {
   }
 }
 
-class _CaptureButton extends StatelessWidget {
+/// Capture button (DESIGN_SPEC 3.9): a 72 dp ring of 4 dp and a 56 dp disc,
+/// scaled to 0.94 while pressed.
+class _CaptureButton extends StatefulWidget {
   const _CaptureButton({required this.state});
 
   final ScanState state;
 
   @override
+  State<_CaptureButton> createState() => _CaptureButtonState();
+}
+
+class _CaptureButtonState extends State<_CaptureButton> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed != value) setState(() => _pressed = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     final strings = AppStrings.of(context);
     final cubit = context.read<ScanCubit>();
-    final scheme = Theme.of(context).colorScheme;
 
     // While a shot is being taken the button says so: dimmed with a small
     // spinner, so a quick second tap is not mistaken for an app that hangs.
     final busy = state.phase == ScanPhase.capturing;
+    final enabled = state.canCapture;
     return Semantics(
       button: true,
       label: busy ? strings.scanCapturing : strings.scanCaptureButton,
       child: GestureDetector(
         key: ScanKeys.capture,
-        onTap: state.canCapture ? cubit.capture : null,
-        child: Container(
-          width: 72,
-          height: 72,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 4),
-            color: state.canCapture ? scheme.primary : Colors.white24,
+        onTap: enabled ? cubit.capture : null,
+        onTapDown: enabled ? (_) => _setPressed(true) : null,
+        onTapUp: (_) => _setPressed(false),
+        onTapCancel: () => _setPressed(false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.94 : 1,
+          duration: const Duration(milliseconds: 80),
+          child: Container(
+            width: 72,
+            height: 72,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppCameraColors.content, width: 4),
+            ),
+            child: Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: enabled
+                    ? AppCameraColors.content
+                    : AppCameraColors.content.withValues(alpha: 0.24),
+              ),
+              child: busy
+                  ? const SizedBox(
+                      key: ScanKeys.captureBusy,
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: AppCameraColors.background,
+                      ),
+                    )
+                  : null,
+            ),
           ),
-          child: busy
-              ? const SizedBox(
-                  key: ScanKeys.captureBusy,
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: Colors.white,
-                  ),
-                )
-              : null,
         ),
       ),
     );
@@ -791,9 +840,9 @@ class _DeleteLastButton extends StatelessWidget {
     return IconButton(
       key: ScanKeys.deleteLast,
       tooltip: strings.scanDeleteLast,
-      color: Colors.white,
+      color: AppCameraColors.content,
       onPressed: state.phase == ScanPhase.ready ? cubit.deleteLast : null,
-      icon: const Icon(Icons.undo),
+      icon: const Icon(Icons.undo_rounded),
     );
   }
 }
@@ -807,8 +856,14 @@ class _DoneButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final cubit = context.read<ScanCubit>();
+    final camera = context.cameraColors;
     return FilledButton(
       key: ScanKeys.done,
+      style: FilledButton.styleFrom(
+        backgroundColor: camera.selected,
+        foregroundColor: camera.onSelected,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+      ),
       onPressed: state.canFinish ? cubit.finish : null,
       child: Text(strings.scanDone),
     );
@@ -888,13 +943,15 @@ class _FlashAndLight extends StatelessWidget {
     final strings = AppStrings.of(context);
     final cubit = context.read<ScanCubit>();
     final (icon, label) = switch (state.flashMode) {
-      FlashMode.off => (Icons.flash_off, strings.flashOffLabel),
-      FlashMode.auto => (Icons.flash_auto, strings.flashAutoLabel),
-      FlashMode.on => (Icons.flashlight_on, strings.flashOnLabel),
+      FlashMode.off => (Icons.flash_off_rounded, strings.flashOffLabel),
+      FlashMode.auto => (Icons.flash_auto_rounded, strings.flashAutoLabel),
+      FlashMode.on => (Icons.flashlight_on_rounded, strings.flashOnLabel),
     };
-    // On is the torch (ADR-031): amber and a lit ring only while it really
+    // On is the torch (ADR-031): shown as selected only while it really
     // burns, so the button never says "on" for a light that is out.
     final lit = state.flashMode == FlashMode.on && state.torchLit;
+    final camera = context.cameraColors;
+    final status = context.statusColors;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -902,12 +959,12 @@ class _FlashAndLight extends StatelessWidget {
           button: true,
           label: label,
           child: Material(
-            color: lit ? Colors.amber.shade800 : _panelColor,
+            color: lit ? camera.selected : AppCameraColors.floating,
             shape: const CircleBorder(),
             child: IconButton(
               key: ScanKeys.flashButton,
               tooltip: label,
-              color: lit ? Colors.white : Colors.white,
+              color: lit ? camera.onSelected : AppCameraColors.content,
               onPressed: state.phase == ScanPhase.ready
                   ? cubit.cycleFlash
                   : null,
@@ -920,13 +977,14 @@ class _FlashAndLight extends StatelessWidget {
           Container(
             key: ScanKeys.lowLightChip,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade800,
-              borderRadius: BorderRadius.circular(16),
+            decoration: ShapeDecoration(
+              color: status.warning,
+              shape: const StadiumBorder(),
             ),
             child: Text(
               strings.lowLightChip,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.copyWith(color: status.onWarning),
             ),
           ),
         ],
@@ -964,7 +1022,7 @@ class _BudgetNote extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: reached ? scheme.errorContainer : scheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.field),
         ),
         child: Text(
           reached
@@ -992,6 +1050,7 @@ class _DarkBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final cubit = context.read<ScanCubit>();
+    final status = context.statusColors;
     return Align(
       alignment: Alignment.topCenter,
       child: Container(
@@ -1004,8 +1063,8 @@ class _DarkBar extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.amber.shade900,
-          borderRadius: BorderRadius.circular(8),
+          color: status.warningContainer,
+          borderRadius: BorderRadius.circular(AppRadius.field),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1013,21 +1072,24 @@ class _DarkBar extends StatelessWidget {
             Flexible(
               child: Text(
                 strings.lowLightBarText,
-                style: const TextStyle(color: Colors.white),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: status.onWarningContainer),
               ),
             ),
             TextButton(
               key: ScanKeys.darkBarRetake,
               onPressed: cubit.retakeDarkPage,
-              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              style: TextButton.styleFrom(
+                foregroundColor: status.onWarningContainer,
+              ),
               child: Text(strings.lowLightBarRetake),
             ),
             IconButton(
               key: ScanKeys.darkBarDismiss,
               tooltip: strings.lowLightBarDismiss,
-              color: Colors.white,
+              color: status.onWarningContainer,
               onPressed: cubit.dismissDarkBar,
-              icon: const Icon(Icons.close),
+              icon: const Icon(Icons.close_rounded),
             ),
           ],
         ),

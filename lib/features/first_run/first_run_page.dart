@@ -9,6 +9,7 @@ import '../../domain/entities/mail_provider_id.dart';
 import '../../domain/entities/scan_flow_mode.dart';
 import '../../presentation/guide/guide_view.dart';
 import '../../presentation/l10n/app_strings.dart';
+import '../../presentation/theme/app_theme.dart';
 import '../../presentation/l10n/mail_provider_labels.dart';
 import 'first_run_cubit.dart';
 import 'first_run_keys.dart';
@@ -189,8 +190,9 @@ class _FolderStep extends StatelessWidget {
         ),
         FilledButton.tonalIcon(
           key: FirstRunKeys.pickFolder,
+          style: AppButtonStyles.tonal(context),
           onPressed: busy ? null : cubit.pickFolder,
-          icon: const Icon(Icons.folder_open),
+          icon: const Icon(Icons.folder_open_rounded),
           label: Text(
             folder == null ? strings.folderPick : strings.folderChange,
           ),

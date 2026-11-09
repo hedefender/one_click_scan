@@ -10,6 +10,7 @@ import 'package:one_click_scan/domain/repositories/settings_repository.dart';
 import 'package:one_click_scan/features/home/home_keys.dart';
 import 'package:one_click_scan/features/scan/focus_tap_layer.dart';
 import 'package:one_click_scan/features/scan/scan_keys.dart';
+import 'package:one_click_scan/presentation/theme/app_colors.dart';
 
 import '../../support/fakes.dart';
 import '../../support/mail_fakes.dart';
@@ -90,23 +91,23 @@ void main() {
       Icon icon() => tester.widget<Icon>(
         find.descendant(of: button, matching: find.byType(Icon)),
       );
-      expect(icon().icon, Icons.flash_off);
+      expect(icon().icon, Icons.flash_off_rounded);
       expect(find.bySemanticsLabel('Flash: off'), findsOneWidget);
 
       await tester.tap(button);
       await tester.pumpAndSettle();
-      expect(icon().icon, Icons.flash_auto);
+      expect(icon().icon, Icons.flash_auto_rounded);
       expect(camera.flashSet.last, FlashMode.auto);
 
       await tester.tap(button);
       await tester.pumpAndSettle();
-      expect(icon().icon, Icons.flashlight_on);
+      expect(icon().icon, Icons.flashlight_on_rounded);
       expect(camera.torchLit, isTrue);
       expect(camera.flashSet.last, FlashMode.on);
 
       await tester.tap(button);
       await tester.pumpAndSettle();
-      expect(icon().icon, Icons.flash_off);
+      expect(icon().icon, Icons.flash_off_rounded);
       expect(camera.torchLit, isFalse);
     });
   });
@@ -314,7 +315,11 @@ void main() {
       final material = tester.widget<Material>(
         find.ancestor(of: button, matching: find.byType(Material)).first,
       );
-      expect(material.color, Colors.amber.shade800, reason: 'lit look');
+      expect(
+        material.color,
+        AppCameraColors.lightFallback.selected,
+        reason: 'lit look (the selected colour of the camera chrome)',
+      );
 
       await tester.tap(button); // Off
       await tester.pumpAndSettle();
@@ -348,7 +353,7 @@ void main() {
               find.descendant(of: button, matching: find.byType(Icon)),
             )
             .icon,
-        Icons.flash_auto,
+        Icons.flash_auto_rounded,
       );
       await tester.pump(const Duration(seconds: 6));
     });

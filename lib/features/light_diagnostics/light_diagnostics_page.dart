@@ -7,6 +7,7 @@ import '../../domain/lighting/flash_mode.dart';
 import '../../domain/lighting/light_metric.dart';
 import '../../domain/lighting/lighting_config.dart';
 import '../../presentation/l10n/app_strings.dart';
+import '../../presentation/theme/app_theme.dart';
 import '../../services/camera/camera_service.dart';
 import '../scan/scan_keys.dart';
 import 'light_diagnostics_cubit.dart';
@@ -86,6 +87,10 @@ class _LightDiagnosticsPageState extends State<LightDiagnosticsPage>
                 '${LightingConfig.minPaperLevel.toStringAsFixed(0)}',
               ),
               Text('${strings.lightDiagFlashSignal}: n/a'),
+              Text(
+                '${strings.lightDiagColors}: '
+                '${_systemColors(context) ? strings.lightDiagColorsSystem : strings.lightDiagColorsFallback}',
+              ),
               if (state.hasFlash) ...[
                 Text(
                   '${strings.lightDiagTorch}: '
@@ -113,9 +118,9 @@ class _LightDiagnosticsPageState extends State<LightDiagnosticsPage>
                     OutlinedButton.icon(
                       onPressed: cubit.cycleFlash,
                       icon: Icon(switch (state.flashMode) {
-                        FlashMode.off => Icons.flash_off,
-                        FlashMode.auto => Icons.flash_auto,
-                        FlashMode.on => Icons.flashlight_on,
+                        FlashMode.off => Icons.flash_off_rounded,
+                        FlashMode.auto => Icons.flash_auto_rounded,
+                        FlashMode.on => Icons.flashlight_on_rounded,
                       }),
                       label: Text(switch (state.flashMode) {
                         FlashMode.off => strings.flashOffLabel,
@@ -177,3 +182,7 @@ class _Block extends StatelessWidget {
     );
   }
 }
+
+/// True when the theme was built from the system colours (Android 12+).
+bool _systemColors(BuildContext context) =>
+    Theme.of(context).extension<AppColorSource>()?.system ?? false;

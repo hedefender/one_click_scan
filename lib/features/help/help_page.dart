@@ -36,7 +36,7 @@ class HelpPage extends StatelessWidget {
             OutlinedButton.icon(
               key: HelpKeys.seeGuideAgain,
               onPressed: () => context.push(RoutePaths.helpGuide),
-              icon: const Icon(Icons.lightbulb_outline),
+              icon: const Icon(Icons.lightbulb_outline_rounded),
               label: Text(strings.helpSeeGuideAgain),
             ),
             const SizedBox(height: 24),
@@ -49,7 +49,7 @@ class HelpPage extends StatelessWidget {
                       child: TextButton.icon(
                         key: HelpKeys.openMailSettings,
                         onPressed: () => _openMailSettings(context),
-                        icon: const Icon(Icons.settings_outlined),
+                        icon: const Icon(Icons.settings_rounded),
                         label: Text(strings.helpOpenMailSettings),
                       ),
                     )

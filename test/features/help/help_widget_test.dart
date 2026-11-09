@@ -285,7 +285,7 @@ void main() {
     test('the last line is the one that was asked for', () {
       expect(
         const AppStringsEl().guideLastLine,
-        'Τα παραπάνω τα βρίσκεις πάντα στις Ρυθμίσεις, στο Βοήθεια.',
+        'Τα παραπάνω τα βρίσκεις πάντα στις Ρυθμίσεις, στη Βοήθεια.',
       );
       expect(
         const AppStringsEn().guideLastLine,

@@ -906,6 +906,15 @@ class AppStringsEl extends AppStrings {
       'Το τελευταίο live δείγμα πάρθηκε μετά το άναμμα';
 
   @override
+  String get lightDiagColors => 'Χρώματα';
+
+  @override
+  String get lightDiagColorsSystem => 'συστήματος';
+
+  @override
+  String get lightDiagColorsFallback => 'εφεδρικά';
+
+  @override
   String get lightDiagYes => 'ναι';
 
   @override
@@ -988,7 +997,7 @@ class AppStringsEl extends AppStrings {
 
   @override
   String get guideLastLine =>
-      'Τα παραπάνω τα βρίσκεις πάντα στις Ρυθμίσεις, στο Βοήθεια.';
+      'Τα παραπάνω τα βρίσκεις πάντα στις Ρυθμίσεις, στη Βοήθεια.';
 
   @override
   String get guideClose => 'Κλείσιμο';

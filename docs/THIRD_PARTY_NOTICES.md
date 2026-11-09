@@ -31,11 +31,13 @@ here to make the OCR part of the picture complete.
   has no third-party link. Until then the mirrors above are the provenance.
   See `OCR_LANGUAGE_PACKS.md` section 5.
 
-## Font of the PDF text layer (bundled in the APK, in git)
+## Font of the app (Phase 6.4) and of the PDF text layer (bundled in the APK, in git)
 
 | Item | What | Licence | Source |
 |---|---|---|---|
 | Noto Sans Regular (`assets/fonts/NotoSans-Regular.ttf`, 621,572 bytes, SHA-256 `478c558e...f3823`) | the font behind the invisible text of the PDF; the `pdf` package copies into each PDF only the few glyphs that are used | SIL Open Font License 1.1 | The Noto Project Authors, `notofonts/notofonts.github.io` (hinted TTF) |
+| Noto Sans Medium (`assets/fonts/NotoSans-Medium.ttf`, 619,976 bytes, SHA-256 `635d93d1131d791f2576de90b3bb0f7cdf61929906e8420a61b5f7f8e76420bb`) | the font of the whole app (weight 500, titles of the app bar and dialogs), Phase 6.4 | SIL Open Font License 1.1 | The Noto Project Authors, release `NotoSans-v2.015` of `notofonts/latin-greek-cyrillic` (hinted TTF) |
+| Noto Sans SemiBold (`assets/fonts/NotoSans-SemiBold.ttf`, 625,052 bytes, SHA-256 `a4e91fd530ac2b4ef5367240144ff37d7d65d66cf76f2e9a2187b93c676f92d0`) | the font of the whole app (weight 600, section titles, buttons), Phase 6.4 | SIL Open Font License 1.1 | the same release |
 
 - The licence text is `assets/licenses/notosans_OFL.txt` (copyright 2022 The
   Noto Project Authors, from `notofonts/latin-greek-cyrillic`). The OFL allows
@@ -54,6 +56,7 @@ here to make the OCR part of the picture complete.
 | `crypto` | 3.0.7 | BSD-3-Clause, Dart project authors | SHA-256 of the model files |
 | `pdf` | 3.13.1 | Apache-2.0, David PHAM-VAN | writes the PDF: page, JPEG picture, hidden text with the subset of Noto Sans (Phase 3), in a background isolate |
 | `vector_math` | 2.4.3 | BSD-3-Clause, The Flutter Authors (Google) | the rotation of the hidden words (listed directly because the PDF code imports it; it was already a Flutter dependency) |
+| `dynamic_color` | 1.8.1 | Apache-2.0, Material Foundation authors (Google) | the colours of the system on Android 12 and newer (Phase 6.4); the theme falls back to its own palettes where there are none. Version 2.x needs the `material_ui` `ColorScheme`, a different type from this Flutter's, so 1.8.1 is used |
 
 | `mailer` | 7.2.0 | MIT, Kai Sellgren | the SMTP client of the Send button (Phase 4), in a background isolate; its dependencies `mime` (BSD-3-Clause, Dart project authors), `punycoder` (MIT), `unorm_dart` (MIT), `path`, `async` and `logging` (BSD-3-Clause, Dart project authors) |
 | `flutter_secure_storage` | 11.2.0 | BSD-3-Clause, German Saprykin and Julian Steenbakker | the password of the mail account in the Android Keystore (Phase 4); its platform packages `flutter_secure_storage_platform_interface`, `_darwin`, `_linux`, `_web`, `_windows` (BSD-3-Clause) and `ffi_leak_tracker` are only part of the package, the app runs on Android; the Android side uses Google Tink (`com.google.crypto.tink:tink-android`, Apache-2.0) |

@@ -884,6 +884,15 @@ class AppStringsEn extends AppStrings {
       'The last live sample was taken after it was lit';
 
   @override
+  String get lightDiagColors => 'Colors';
+
+  @override
+  String get lightDiagColorsSystem => 'system';
+
+  @override
+  String get lightDiagColorsFallback => 'fallback';
+
+  @override
   String get lightDiagYes => 'yes';
 
   @override

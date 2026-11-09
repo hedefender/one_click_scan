@@ -29,6 +29,7 @@ dependencies:
   vector_math: ^2.4.3
   mailer: ^7.2.0
   flutter_secure_storage: ^11.2.0
+  dynamic_color: ^1.8.1
 
 dev_dependencies:
   flutter_test:
@@ -44,3 +45,12 @@ flutter:
     - assets/ocr/models/
     - assets/licenses/
     - assets/fonts/
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSans-SemiBold.ttf
+          weight: 600

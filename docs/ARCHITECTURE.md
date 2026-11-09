@@ -12,6 +12,7 @@ Phase 1.2 adds the app icon, the splash screen and the Gallery copy names
 (ADR-024).
 Phase 6.1 adds the crop and straightening of the page for the PDF and the two-stage queue
 (section 8i, ADR-029, `PHASE_6_1_VALIDATION.md`).
+Phase 6.4 puts the look in one central theme (section 8l, ADR-033, `DESIGN_SPEC.md`, `PHASE_6_4_VALIDATION.md`).
 
 ## 1. Principles
 
@@ -776,6 +777,45 @@ the accuracy `test/services/pdf/page_budget_accuracy_test.dart` (real PDF writer
 emulator `integration_test/capture_timing_test.dart` (the stages of a shot and the rate of the
 analyser).
 
+### 8l. Appearance: the central theme (Phase 6.4, ADR-033)
+
+The look is defined in one place, `lib/presentation/theme/`, and described for people in
+`DESIGN_SPEC.md` (binding). Nothing in `domain/` or in the flows changed.
+
+| File | What |
+|---|---|
+| `app_colors.dart` | `AppPalettes.light` / `dark` (the fallback `ColorScheme`s), `AppStatusColors` (amber warning, a `ThemeExtension`), `AppCameraColors` (the dark chrome of the camera and its selected colour), and the `context.statusColors` / `context.cameraColors` shortcuts |
+| `app_dimens.dart` | `AppSpacing` (4 ... 48, screen margin, button height, touch target) and `AppRadius` (16, 24, 28, 12) |
+| `app_theme.dart` | `AppTheme.light(...)` / `dark(...)`: the colour scheme, `TextTheme` (Noto Sans scale), the component themes, the extensions, and `AppColorSource` (tells whether the colours are the system's, for the diagnostics line); `AppButtonStyles.tonal` |
+
+**Colour source.** `OneClickScanApp` wraps `MaterialApp.router` in a `DynamicColorBuilder`
+(`dynamic_color` 1.8.1). With system colours the schemes are the harmonised
+`lightDynamic` / `darkDynamic`; without, `AppPalettes`. `themeMode` is `system`. The theme is built
+from the two schemes, so a changed wallpaper colour or a light/dark switch while the app is open
+rebuilds it. `OneClickScanApp(useSystemColors: false)` keeps the fallback palettes (used by the
+screenshot tool only).
+
+**Rules for screens.** Colours come from `Theme.of(context).colorScheme` or from the two
+extensions, never from a hex or a `Colors.*`. The only fixed colours are the constants of
+`AppCameraColors` (the chrome is dark in every theme, on purpose) and `AppStatusColors`. Sizes
+come from the text theme and `AppSpacing`. The camera screen (`features/scan/scan_page.dart`) is
+the one screen that draws over a picture; its panels, buttons, thumbnails, capture button (a 72 dp
+ring and a 56 dp disc, scale 0.94 pressed), the low light mark and bar, and the page budget note use
+those roles.
+
+**Font.** `pubspec.yaml` declares the family `NotoSans` with the three files of `assets/fonts/`
+(weights 400, 500, 600); the theme sets it as the font family. Nothing is downloaded. The PDF text
+layer reads the same Regular file (`services/pdf/pdf_services.dart`), which is bundled once.
+
+**Testing.** `test/presentation/theme/`: `app_theme_contrast_test.dart` (WCAG ratios of the
+palettes, the status colours and the camera chrome), `app_theme_widget_test.dart` (the basic
+elements in light, dark and a "dynamic" scheme, the amber warning in all of them, the type scale,
+the font as assets with no network package), `app_overflow_test.dart` (wizard, home, Settings,
+Help, scan and result at 360 x 640 dp, Greek, text scale 1.0 and 1.3, light and dark),
+`noto_greek_coverage_test.dart` (every toned Greek letter is in the three font files). The
+screenshots of both looks come from `integration_test/screenshots_test.dart` through
+`tool/run_screenshots.sh`.
+
 ## 9. Testing strategy
 
 | Level | What | Where |
@@ -835,3 +875,4 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 | 5 | One-click orchestration use case | `domain/usecases/`, feature `scan` |
 | 6, 6.1 | Crop and straighten of the page (done, 8i) | `services/imaging/`, `OcrSession` |
 | 6.2 | Flash, tap-to-focus, low light detection, optional light correction (done, 8j) | `services/camera/`, `services/imaging/`, `domain/lighting/`, `features/scan` |
+| 6.4 | The look: central theme, system colours with fallback palettes, Noto Sans, shapes (done, 8l) | `presentation/theme/`, `features/scan/scan_page.dart` |

@@ -14,6 +14,8 @@ import '../../domain/scan/scan_flow.dart';
 import '../../domain/entities/page_crop_outcome.dart';
 import '../../domain/usecases/recognize_pages.dart';
 import '../../presentation/l10n/app_strings.dart';
+import '../../presentation/theme/app_colors.dart';
+import '../../presentation/theme/app_dimens.dart';
 import '../../presentation/state/settings_cubit.dart';
 import '../../services/scan_files/scan_temp_store.dart';
 import 'auto_return_cubit.dart';
@@ -181,7 +183,7 @@ class _ScanResultPageState extends State<ScanResultPage> {
                                 width: 48,
                                 height: 48,
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: AppRadius.thumbnailBorder,
                                   child: PageThumbnail(
                                     path: picture.sourcePath,
                                   ),
@@ -355,7 +357,7 @@ class _PdfSection extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   key: ScanKeys.pdfOpen,
-                  icon: const Icon(Icons.picture_as_pdf),
+                  icon: const Icon(Icons.picture_as_pdf_rounded),
                   label: Text(strings.pdfOpen),
                   onPressed: cubit.openPdf,
                 ),
@@ -554,7 +556,7 @@ class _DiscardSection extends StatelessWidget {
             const SizedBox(height: 8),
             OutlinedButton.icon(
               key: ScanKeys.discard,
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(Icons.delete_outline_rounded),
               onPressed: () => _confirm(context),
               label: Text(strings.previewDiscard),
             ),
@@ -624,7 +626,9 @@ class _MailSection extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   key: ScanKeys.mailSend,
-                  icon: Icon(sharing ? Icons.open_in_new : Icons.send),
+                  icon: Icon(
+                    sharing ? Icons.open_in_new_rounded : Icons.send_rounded,
+                  ),
                   label: Text(
                     sharing ? strings.mailShareButton : strings.mailSendButton,
                   ),
@@ -676,7 +680,7 @@ class _MailSection extends StatelessWidget {
                 const SizedBox(height: 8),
                 FilledButton.icon(
                   key: ScanKeys.mailFallback,
-                  icon: const Icon(Icons.open_in_new),
+                  icon: const Icon(Icons.open_in_new_rounded),
                   onPressed: cubit.useShareMode,
                   label: Text(strings.mailFallbackButton),
                 ),
@@ -706,7 +710,7 @@ class _MailSection extends StatelessWidget {
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 key: ScanKeys.mailOpenApp,
-                icon: const Icon(Icons.open_in_new),
+                icon: const Icon(Icons.open_in_new_rounded),
                 onPressed: cubit.openMailApp,
                 label: Text(strings.mailOpenApp),
               ),
@@ -809,7 +813,7 @@ class _PdfPagesSection extends StatelessWidget {
                     aspectRatio:
                         pages[index].image!.width / pages[index].image!.height,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: AppRadius.thumbnailBorder,
                       child: PageThumbnail(path: pages[index].image!.path),
                     ),
                   ),
@@ -845,11 +849,10 @@ class _LightFixBanner extends StatelessWidget {
           a.flow != b.flow ||
           a.discard != b.discard,
       builder: (context, state) {
-        final scheme = Theme.of(context).colorScheme;
         if (state.canOfferLightFix) {
           return Card(
             key: ScanKeys.lowLightBanner,
-            color: scheme.tertiaryContainer,
+            color: context.statusColors.warningContainer,
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -862,7 +865,9 @@ class _LightFixBanner extends StatelessWidget {
                             state.darkPages.length,
                           )
                         : strings.lowLightBannerBody(state.darkPages.length),
-                    style: TextStyle(color: scheme.onTertiaryContainer),
+                    style: TextStyle(
+                      color: context.statusColors.onWarningContainer,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(

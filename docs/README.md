@@ -9,8 +9,9 @@ Some are written in Greek because they are checklists for the person who tests o
 | Document | What it is |
 |---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, data flow, one section per feature area (camera, OCR, PDF, mail, flow, crop, light) |
-| [`DECISIONS.md`](DECISIONS.md) | 30 numbered decisions (ADR) with their reasons |
+| [`DECISIONS.md`](DECISIONS.md) | 33 numbered decisions (ADR) with their reasons |
 | [`ROADMAP.md`](ROADMAP.md) | Phases, their state, open decisions, backlog, and the polish list |
+| [`DESIGN_SPEC.md`](DESIGN_SPEC.md) | The look of the app (Phase 6.4): palettes, status colours, camera chrome, font, shapes, components |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | Third-party components and their licenses |
 
 ## Mail
@@ -39,7 +40,7 @@ plus the manual checks for a real phone: [0](PHASE_0_VALIDATION.md), [0.5](PHASE
 [1.5](PHASE_1_5_VALIDATION.md), [1.6](PHASE_1_6_VALIDATION.md), [2](PHASE_2_VALIDATION.md),
 [2.1](PHASE_2_1_VALIDATION.md), [3](PHASE_3_VALIDATION.md), [4](PHASE_4_VALIDATION.md),
 [5](PHASE_5_VALIDATION.md), [6.0](PHASE_6_0_VALIDATION.md), [6.1](PHASE_6_1_VALIDATION.md),
-[6.2](PHASE_6_2_VALIDATION.md), [6.2.1](PHASE_6_2_1_VALIDATION.md), [6.3](PHASE_6_3_VALIDATION.md). The latest is the best example of the format.
+[6.2](PHASE_6_2_VALIDATION.md), [6.2.1](PHASE_6_2_1_VALIDATION.md), [6.3](PHASE_6_3_VALIDATION.md), [6.4](PHASE_6_4_VALIDATION.md). The latest is the best example of the format.
 [`PHASE_0_PLAN.md`](PHASE_0_PLAN.md) is the original plan of the skeleton phase.
 
 ## Historical

@@ -3,8 +3,12 @@
 # Claude Code emulator, and copies them to build/screenshots/light and
 # build/screenshots/dark (build/ is ignored by git).
 #
-#   tool/run_screenshots.sh <device-id> [out-dir]
+#   tool/run_screenshots.sh <device-id> [out-dir] [folder-prefix]
 #   tool/run_screenshots.sh emulator-5554
+#   tool/run_screenshots.sh emulator-5554 build/screenshots after_   (Phase 6.4:
+#   build/screenshots/after_light and build/screenshots/after_dark)
+#   SYSTEM_COLORS=false tool/run_screenshots.sh <device> build/screenshots after_ 
+#   keeps the fallback palettes (without it the emulator's system colours show).
 #
 # Only invented data: integration_test/screenshots_test.dart uses the fakes of
 # the widget tests (a drawn receipt, demo@example.test, nothing is sent). The
@@ -21,12 +25,13 @@ PACKAGE="com.example.one_click_scan"
 EXPECTED_AVD="Claude_Code_Test"
 REMOTE="files/shots"
 
-if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-  echo "usage: $0 <device-id> [out-dir]" >&2
+if [ $# -lt 1 ] || [ $# -gt 3 ]; then
+  echo "usage: $0 <device-id> [out-dir] [folder-prefix]" >&2
   exit 2
 fi
 DEVICE="$1"
 OUT="${2:-build/screenshots}"
+PREFIX="${3:-}"
 
 AVD="$(adb -s "$DEVICE" emu avd name 2>/dev/null | head -n 1 | tr -d '\r')"
 if [ "$AVD" != "$EXPECTED_AVD" ]; then
@@ -34,7 +39,7 @@ if [ "$AVD" != "$EXPECTED_AVD" ]; then
   exit 3
 fi
 
-mkdir -p "$OUT/light" "$OUT/dark"
+mkdir -p "$OUT/${PREFIX}light" "$OUT/${PREFIX}dark"
 (
   for i in $(seq 1 3000); do
     if [ $((i % 10)) -eq 1 ]; then
@@ -43,8 +48,8 @@ mkdir -p "$OUT/light" "$OUT/dark"
     fi
     for name in $(adb -s "$DEVICE" shell run-as "$PACKAGE" ls "$REMOTE" 2>/dev/null | tr -d '\r'); do
       case "$name" in
-        light_*.png) dir=light; target="${name#light_}" ;;
-        dark_*.png) dir=dark; target="${name#dark_}" ;;
+        light_*.png) dir="${PREFIX}light"; target="${name#light_}" ;;
+        dark_*.png) dir="${PREFIX}dark"; target="${name#dark_}" ;;
         *) continue ;;
       esac
       [ -f "$OUT/$dir/$target" ] && continue
@@ -63,10 +68,11 @@ mkdir -p "$OUT/light" "$OUT/dark"
 HELPER=$!
 trap 'kill $HELPER 2>/dev/null' EXIT
 
-flutter test integration_test/screenshots_test.dart -d "$DEVICE"
+flutter test integration_test/screenshots_test.dart -d "$DEVICE" \
+  --dart-define=SYSTEM_COLORS="${SYSTEM_COLORS:-true}"
 STATUS=$?
 sleep 3
 echo "Screenshots pulled to $OUT:"
-ls "$OUT/light" | wc -l
-ls "$OUT/dark" | wc -l
+ls "$OUT/${PREFIX}light" | wc -l
+ls "$OUT/${PREFIX}dark" | wc -l
 exit $STATUS
