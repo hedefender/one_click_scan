@@ -206,7 +206,7 @@ void main() {
     await pumpSettings(tester, provider: MailProviderId.outlook);
 
     expect(find.byKey(SettingsKeys.guideOutlook), findsOneWidget);
-    expect(find.textContaining('after OAuth is built'), findsWidgets);
+    expect(find.textContaining('you send it yourself'), findsWidgets);
     expect(find.textContaining('1. '), findsNothing);
     expect(find.byKey(SettingsKeys.guideOpen), findsNothing);
     expect(find.byKey(SettingsKeys.providerWarning), findsOneWidget);

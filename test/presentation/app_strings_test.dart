@@ -65,8 +65,8 @@ void mailStringsTests() {
     expect(el.mailHelpNote(MailProviderId.gmail), isNotNull);
     expect(en.mailHelpNote(MailProviderId.gmail), contains('administrator'));
     expect(en.mailHelpNote(MailProviderId.outlook), isNull);
-    expect(en.mailGuideOutlook, contains('OAuth'));
-    expect(el.mailGuideOutlook, contains('OAuth'));
+    expect(en.mailGuideOutlook, contains('Outlook app'));
+    expect(el.mailGuideOutlook, contains('εφαρμογή Outlook'));
   });
 
   test('the steps do not invent menu names of Google that could not be read; '
@@ -154,16 +154,23 @@ void mailStringsTests() {
     );
   });
 
-  test('the Outlook text says it waits for OAuth and points to the backup '
-      'way, in both languages', () async {
+  test('the Outlook text says it is not supported inside the app and points '
+      'to the backup way, with no technical term or promise', () async {
     final el = await AppStrings.delegate.load(const Locale('el'));
     final en = await AppStrings.delegate.load(const Locale('en'));
 
-    expect(en.mailOutlookWarning, allOf(contains('OAuth'), contains('backup')));
-    expect(
+    expect(en.mailOutlookWarning, contains('backup'));
+    expect(el.mailOutlookWarning, contains('εφεδρική'));
+    for (final text in [
+      en.mailOutlookWarning,
+      en.mailGuideOutlook,
+      en.mailFallbackReasonOutlook,
       el.mailOutlookWarning,
-      allOf(contains('OAuth'), contains('εφεδρική')),
-    );
+      el.mailGuideOutlook,
+      el.mailFallbackReasonOutlook,
+    ]) {
+      expect(text, isNot(contains('OAuth')));
+    }
   });
 
   test('no text promises delivery', () async {

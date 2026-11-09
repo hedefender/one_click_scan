@@ -108,7 +108,7 @@ void main() {
       expect(find.textContaining('Single page:'), findsOneWidget);
       expect(find.textContaining('Multiple pages:'), findsOneWidget);
       expect(find.text('Flash and light'), findsOneWidget);
-      expect(find.textContaining('Torch (On)'), findsOneWidget);
+      expect(find.textContaining('Torch: the light stays on'), findsOneWidget);
       expect(find.textContaining('goes back to "Auto"'), findsOneWidget);
       expect(find.text('Low light'), findsOneWidget);
       expect(find.text('Tips for a good shot'), findsOneWidget);

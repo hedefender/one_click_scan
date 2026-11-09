@@ -298,7 +298,7 @@ void main() {
   });
 
   group('torch (ADR-031)', () {
-    testWidgets('On: the button shows a lit flashlight, Off puts it out', (
+    testWidgets('On: the button shows a lit torch, Off puts it out', (
       tester,
     ) async {
       await pumpScan(tester);
@@ -306,12 +306,12 @@ void main() {
       await tester.tap(button); // Auto
       await tester.pumpAndSettle();
       expect(camera.torchLit, isFalse, reason: 'Auto never lights the torch');
-      expect(find.bySemanticsLabel('Flashlight: on'), findsNothing);
+      expect(find.bySemanticsLabel('Flash: torch'), findsNothing);
 
       await tester.tap(button); // On
       await tester.pumpAndSettle();
       expect(camera.torchLit, isTrue);
-      expect(find.bySemanticsLabel('Flashlight: on'), findsOneWidget);
+      expect(find.bySemanticsLabel('Flash: torch'), findsOneWidget);
       final material = tester.widget<Material>(
         find.ancestor(of: button, matching: find.byType(Material)).first,
       );

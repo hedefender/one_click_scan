@@ -523,9 +523,9 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get mailOutlookWarning =>
-      'Outlook does not yet accept sending from the app with an app password. '
-      'It will be supported after OAuth is built. For now use the backup way '
-      'to send (open in the e-mail app).';
+      'Outlook does not support sending from inside the app. Use the backup '
+      'way to send: it opens your e-mail app with the message ready, and you '
+      'send it yourself.';
 
   @override
   String get mailYahooSizeNote =>
@@ -555,9 +555,11 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get mailGuideOutlook =>
-      'There are no app password steps for Outlook: it is not supported for '
-      'sending. It will be supported after OAuth is built. For now use the '
-      'backup way to send.';
+      'There are no app password steps for Outlook, because for now sending '
+      'from inside the app is not supported. You need the Outlook app (or '
+      'another e-mail app on the phone) to prepare the message with the PDF, '
+      'and you send it yourself. So it is not fully "one tap" as with Gmail '
+      'and Yahoo.';
 
   @override
   String get mailFallbackButton => 'Use the backup way to send';
@@ -569,8 +571,9 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get mailFallbackReasonOutlook =>
-      'Outlook does not yet support sending with an app password. The backup '
-      'way opens your e-mail app with the message ready.';
+      'Outlook does not support sending from inside the app. The backup way '
+      'opens your e-mail app with the message ready, and you send it '
+      'yourself.';
 
   @override
   String mailDiagnostic(MailStage stage, int? code) {
@@ -804,7 +807,7 @@ class AppStringsEn extends AppStrings {
   String get flashAutoLabel => 'Flash: auto';
 
   @override
-  String get flashOnLabel => 'Flashlight: on';
+  String get flashOnLabel => 'Flash: torch';
 
   @override
   String get lowLightChip => 'Low light';
@@ -851,24 +854,24 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get torchIdleOffMessage =>
-      'The flashlight was switched off so the phone does not get warm. The flash went back to auto.';
+      'The torch was switched off so the phone does not get warm. The flash went back to auto.';
 
   @override
   String get lowLightDialogBodyVeryDark =>
-      'The photo is very dark and the light correction will most likely not fix the result. A retake with more light or with the flashlight is better.';
+      'The photo is very dark and the light correction will most likely not fix the result. A retake with more light or with the torch is better.';
 
   @override
   String lowLightSummaryBodyVeryDark(int pages) => pages == 1
-      ? 'One page is very dark and the light correction will most likely not fix it. A retake with more light or with the flashlight is better.'
-      : '$pages pages are dark and at least one is so dark that the light correction will most likely not fix it. A retake with more light or with the flashlight is better.';
+      ? 'One page is very dark and the light correction will most likely not fix it. A retake with more light or with the torch is better.'
+      : '$pages pages are dark and at least one is so dark that the light correction will most likely not fix it. A retake with more light or with the torch is better.';
 
   @override
   String lowLightBannerBodyVeryDark(int pages) => pages == 1
-      ? 'The page is very dark and the light correction will most likely not fix the result. A retake with more light or with the flashlight is better.'
-      : '$pages pages are dark and at least one is so dark that the correction will most likely not fix it. A retake with more light or with the flashlight is better.';
+      ? 'The page is very dark and the light correction will most likely not fix the result. A retake with more light or with the torch is better.'
+      : '$pages pages are dark and at least one is so dark that the correction will most likely not fix it. A retake with more light or with the torch is better.';
 
   @override
-  String get lightDiagTorch => 'Flashlight';
+  String get lightDiagTorch => 'Torch';
 
   @override
   String get lightDiagTorchLit => 'lit';
@@ -1008,14 +1011,14 @@ class AppStringsEn extends AppStrings {
         lines: [
           'Off: no light.',
           'Auto: the flash fires on the shot, when needed.',
-          'Torch (On): the light stays on while you are on the camera screen.',
+          'Torch: the light stays on while you are on the camera screen.',
           'The torch switches itself off after $torchMinutes minutes without '
-              'a shot. When you reopen the app, "On" goes back to "Auto".',
+              'a shot. When you reopen the app, "Torch" goes back to "Auto".',
         ],
         details: const [
           'The flash button only shows if the phone has a flash.',
           'When you leave the camera screen, the torch goes out. If you come '
-              'back to the same scan with "On", it lights again.',
+              'back to the same scan with "Torch", it lights again.',
         ],
       ),
       const GuideSection(
@@ -1023,8 +1026,8 @@ class AppStringsEn extends AppStrings {
         title: 'Low light',
         inWizard: true,
         lines: [
-          'The "Low light" mark or the "Dark shot" message means the page is '
-              'dark and the text may not be read well.',
+          'The "Low light" mark means the page is dark and the text may not '
+              'be read well.',
           'Add light, turn on the torch, or tap "New shot".',
         ],
         details: [
@@ -1089,9 +1092,9 @@ class AppStringsEn extends AppStrings {
         lines: [
           'If you leave the camera before the scan is saved, the pages you '
               'took are deleted (the app asks first).',
-          'If you tap "Cancel" while the photos are being saved, nothing '
-              'stays. If you cancel later, the photos (and the PDF, if it was '
-              'made) stay saved and the email is not sent.',
+          'If you tap "Cancel" before the photos are saved, nothing stays. If '
+              'you cancel after they are saved, they stay saved (and the PDF, '
+              'if it was made) and the email is not sent.',
           '"Discard" on a finished scan deletes the images, the PDF and the '
               'copy in the Gallery. It cannot be undone.',
         ],
@@ -1103,7 +1106,7 @@ class AppStringsEn extends AppStrings {
         lines: [
           'The text is read on your phone. Nothing is sent anywhere, except '
               'the email that you send.',
-          'If you turn on saving to the Gallery, the photos app of the phone '
+          'If you enable saving to the Gallery, the photos app of the phone '
               '(for example Google Photos) may sync the copies. The app does '
               'not control that.',
         ],

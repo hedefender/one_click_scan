@@ -94,7 +94,7 @@
 | Βήματα φάκελος, email, Gallery | Κάθε βήμα λέει σύντομα τι σημαίνει η επιλογή και ότι αλλάζει στις Ρυθμίσεις | |
 | Βήμα email | Υπάρχει η γραμμή για πάροχο και παραλήπτη | |
 | Μετά τη σάρωση τρόπου λειτουργίας (One Click ή προεπισκόπηση) | Εμφανίζεται έκτη σελίδα «Πριν ξεκινήσεις» | |
-| Η τελική σελίδα | Έχει: Μία/Πολλές σελίδες και αλλαγή τρόπου, φλας (Off, Auto, On/φακός και ότι το On γίνεται Auto), χαμηλός φωτισμός, συμβουλές λήψης, ακύρωση και απόρριψη, όριο σελίδων και email, ιδιωτικότητα | |
+| Η τελική σελίδα | Έχει: Μία/Πολλές σελίδες και αλλαγή τρόπου, φλας (Κλειστό, Αυτόματο, Φακός και ότι ο Φακός γίνεται Αυτόματο), χαμηλός φωτισμός, συμβουλές λήψης, ακύρωση και απόρριψη, όριο σελίδων και email, ιδιωτικότητα | |
 | Τελευταία γραμμή | «Τα παραπάνω τα βρίσκεις πάντα στις Ρυθμίσεις, στη Βοήθεια.» | |
 | «Τέλος» στην τελική σελίδα | Πηγαίνει στην αρχική οθόνη | |
 | Κλείσιμο της εφαρμογής στην τελική σελίδα | Την επόμενη φορά ανοίγει η αρχική (οι ρυθμίσεις είχαν αποθηκευτεί) | |
@@ -124,7 +124,7 @@
 | Γρήγορες λήψεις σε Multi: πόσο ώρα μένει ανενεργό (πριν: περίπου 0,5 s) | Σαφώς μικρότερο από πριν (στον emulator: 1,08 s σε 0,59 s). Καταγραφή | |
 | Όσο διαρκεί η λήψη | Το κουμπί φαίνεται θαμπό με μικρό κύκλο φόρτωσης, δεν δίνει την αίσθηση ότι κόλλησε | |
 | Αναλυτής (ένδειξη «Χαμηλός φωτισμός») μετά τις αλλαγές | Συνεχίζει να δουλεύει και μετά από λήψη | |
-| Φακός (On) με γρήγορες λήψεις | Ανάβει και σβήνει όπως στο 6.2.1 | |
+| Φακός με γρήγορες λήψεις | Μένει αναμμένος χωρίς τρεμόπαιγμα | |
 
 ## 5. Όλα τα νέα κείμενα (EL / EN) για έλεγχο από σένα
 
@@ -158,12 +158,12 @@
 | flash (wizard + Help): title | Φλας και φωτισμός | Flash and light |
 | flash (wizard + Help): line 1 | Κλειστό: χωρίς φως. | Off: no light. |
 | flash (wizard + Help): line 2 | Αυτόματο: το φλας ανάβει στη λήψη, όταν χρειάζεται. | Auto: the flash fires on the shot, when needed. |
-| flash (wizard + Help): line 3 | Φακός (On): το φως μένει αναμμένο όσο είσαι στην κάμερα. | Torch (On): the light stays on while you are on the camera screen. |
-| flash (wizard + Help): line 4 | Ο φακός σβήνει μόνος του μετά από 2 λεπτά χωρίς λήψη. Όταν ξανανοίξεις την εφαρμογή, το «On» γυρίζει σε «Αυτόματο». | The torch switches itself off after 2 minutes without a shot. When you reopen the app, "On" goes back to "Auto". |
+| flash (wizard + Help): line 3 | Φακός: το φως μένει αναμμένο όσο είσαι στην κάμερα. | Torch: the light stays on while you are on the camera screen. |
+| flash (wizard + Help): line 4 | Ο φακός σβήνει μόνος του μετά από 2 λεπτά χωρίς λήψη. Όταν ξανανοίξεις την εφαρμογή, ο «Φακός» γυρίζει σε «Αυτόματο». | The torch switches itself off after 2 minutes without a shot. When you reopen the app, "Torch" goes back to "Auto". |
 | flash (wizard + Help): detail 1 (Help only) | Το κουμπί του φλας φαίνεται μόνο αν το κινητό έχει φλας. | The flash button only shows if the phone has a flash. |
-| flash (wizard + Help): detail 2 (Help only) | Όταν βγεις από την κάμερα, ο φακός σβήνει. Αν γυρίσεις στην ίδια σάρωση με επιλογή «On», ανάβει ξανά. | When you leave the camera screen, the torch goes out. If you come back to the same scan with "On", it lights again. |
+| flash (wizard + Help): detail 2 (Help only) | Όταν βγεις από την κάμερα, ο φακός σβήνει. Αν γυρίσεις στην ίδια σάρωση με επιλογή «Φακός», ανάβει ξανά. | When you leave the camera screen, the torch goes out. If you come back to the same scan with "Torch", it lights again. |
 | lowLight (wizard + Help): title | Χαμηλός φωτισμός | Low light |
-| lowLight (wizard + Help): line 1 | Η ένδειξη «Χαμηλός φωτισμός» ή το μήνυμα «Σκοτεινή λήψη» σημαίνει ότι η σελίδα είναι σκοτεινή και το κείμενο ίσως δεν διαβαστεί καλά. | The "Low light" mark or the "Dark shot" message means the page is dark and the text may not be read well. |
+| lowLight (wizard + Help): line 1 | Η ένδειξη «Χαμηλός φωτισμός» σημαίνει ότι η σελίδα είναι σκοτεινή και το κείμενο ίσως δεν διαβαστεί καλά. | The "Low light" mark means the page is dark and the text may not be read well. |
 | lowLight (wizard + Help): line 2 | Πρόσθεσε φως, άναψε τον φακό ή πάτα «Νέα λήψη». | Add light, turn on the torch, or tap "New shot". |
 | lowLight (wizard + Help): detail 1 (Help only) | Μετά από μια σκοτεινή λήψη μπορείς να συνεχίσεις ούτως ή άλλως ή να ζητήσεις διόρθωση φωτός. Η διόρθωση είναι απλή και δεν σώζει πολύ σκοτεινές σελίδες· τότε η νέα λήψη είναι η καλύτερη επιλογή. | After a dark shot you can continue anyway or ask for a light correction. The correction is simple and does not rescue very dark pages; then a new shot is the best choice. |
 | tips (wizard + Help): title | Συμβουλές για καλή λήψη | Tips for a good shot |
@@ -185,14 +185,14 @@
 | email (Help only): line 2 | Τον κωδικό τον φτιάχνεις στον λογαριασμό σου στον πάροχο. Τα βήματα ανά πάροχο υπάρχουν στις Ρυθμίσεις, στην ενότητα Email. | You make the password in your account at the provider. The steps for each provider are in Settings, under Email. |
 | email (Help only): detail 1 (Help only) | Ο κωδικός εφαρμογής είναι ξεχωριστός κωδικός που φτιάχνει ο πάροχος για μία μόνο εφαρμογή. Δεν είναι ο κανονικός κωδικός του λογαριασμού σου, και με ενεργή επαλήθευση σε 2 βήματα ο κανονικός κωδικός δεν γίνεται δεκτός. | An app password is a separate password that the provider makes for one app only. It is not the normal password of your account, and with 2-step verification on, the normal password is not accepted. |
 | email (Help only): detail 2 (Help only) | Ο κωδικός φαίνεται μία μόνο φορά: αντίγραψέ τον αμέσως και επικόλλησέ τον χωρίς κενά. Η σελίδα του παρόχου μπορεί να διαφέρει από την περιγραφή. | The password is shown only once: copy it at once and paste it without spaces. The page of the provider may differ from this description. |
-| email (Help only): detail 3 (Help only) | Για τον Outlook δεν υπάρχουν βήματα κωδικού εφαρμογής: δεν υποστηρίζεται για αποστολή. Θα υποστηριχθεί μετά την υλοποίηση OAuth. Προς το παρόν χρησιμοποίησε την εφεδρική αποστολή. | There are no app password steps for Outlook: it is not supported for sending. It will be supported after OAuth is built. For now use the backup way to send. |
+| email (Help only): detail 3 (Help only) | Για τον Outlook δεν υπάρχουν βήματα κωδικού εφαρμογής, γιατί προς το παρόν δεν υποστηρίζεται η αποστολή μέσα από την εφαρμογή. Χρειάζεσαι την εφαρμογή Outlook (ή άλλη εφαρμογή email στο κινητό) για να ετοιμαστεί το μήνυμα με το PDF, και το στέλνεις εσύ. Άρα δεν είναι πλήρως «ένα πάτημα» όπως με Gmail και Yahoo. | There are no app password steps for Outlook, because for now sending from inside the app is not supported. You need the Outlook app (or another e-mail app on the phone) to prepare the message with the PDF, and you send it yourself. So it is not fully "one tap" as with Gmail and Yahoo. |
 | cancel (wizard + Help): title | Ακύρωση και Απόρριψη | Cancel and Discard |
 | cancel (wizard + Help): line 1 | Αν φύγεις από την κάμερα πριν αποθηκευτεί η σάρωση, οι σελίδες που τράβηξες διαγράφονται (η εφαρμογή ρωτά πρώτα). | If you leave the camera before the scan is saved, the pages you took are deleted (the app asks first). |
-| cancel (wizard + Help): line 2 | Αν πατήσεις «Ακύρωση» την ώρα που αποθηκεύονται οι φωτογραφίες, δεν μένει τίποτα. Αν ακυρώσεις αργότερα, οι φωτογραφίες (και το PDF, αν έγινε) μένουν αποθηκευμένες και το email δεν στέλνεται. | If you tap "Cancel" while the photos are being saved, nothing stays. If you cancel later, the photos (and the PDF, if it was made) stay saved and the email is not sent. |
+| cancel (wizard + Help): line 2 | Αν πατήσεις «Ακύρωση» πριν αποθηκευτούν οι φωτογραφίες, δεν μένει τίποτα. Αν ακυρώσεις αφού αποθηκευτούν, μένουν αποθηκευμένες (και το PDF, αν έγινε) και το email δεν στέλνεται. | If you tap "Cancel" before the photos are saved, nothing stays. If you cancel after they are saved, they stay saved (and the PDF, if it was made) and the email is not sent. |
 | cancel (wizard + Help): line 3 | Η «Απόρριψη» μιας ολοκληρωμένης σάρωσης σβήνει τις εικόνες, το PDF και το αντίγραφο στη Gallery. Δεν αναιρείται. | "Discard" on a finished scan deletes the images, the PDF and the copy in the Gallery. It cannot be undone. |
 | privacy (wizard + Help): title | Ιδιωτικότητα | Privacy |
 | privacy (wizard + Help): line 1 | Η ανάγνωση του κειμένου γίνεται στο κινητό σου. Δεν στέλνεται τίποτα πουθενά, εκτός από το email που στέλνεις εσύ. | The text is read on your phone. Nothing is sent anywhere, except the email that you send. |
-| privacy (wizard + Help): line 2 | Αν ανοίξεις την αποθήκευση στη Gallery, η εφαρμογή φωτογραφιών του κινητού (π.χ. Google Photos) μπορεί να συγχρονίσει τα αντίγραφα. Αυτό δεν το ελέγχει η εφαρμογή. | If you turn on saving to the Gallery, the photos app of the phone (for example Google Photos) may sync the copies. The app does not control that. |
+| privacy (wizard + Help): line 2 | Αν ενεργοποιήσεις την αποθήκευση στη Gallery, η εφαρμογή φωτογραφιών του κινητού (π.χ. Google Photos) μπορεί να συγχρονίσει τα αντίγραφα. Αυτό δεν το ελέγχει η εφαρμογή. | If you enable saving to the Gallery, the photos app of the phone (for example Google Photos) may sync the copies. The app does not control that. |
 | notCovered (Help only): title | Τι δεν καλύπτει η εφαρμογή | What the app does not cover |
 | notCovered (Help only): line 1 | Η εφαρμογή δεν διορθώνει κακές λήψεις και δεν κάνει προχωρημένη βελτίωση εικόνας. Υπάρχει μόνο μια απλή διόρθωση φωτός, όταν τη ζητήσεις. | The app does not fix bad shots and does not do advanced image improvement. There is only a simple light correction, when you ask for it. |
 | notCovered (Help only): line 2 | Η ποιότητα του PDF και του κειμένου εξαρτάται από τη λήψη: φως, σκιά, εστίαση, αντανάκλαση. | The quality of the PDF and of the text depends on the shot: light, shadow, focus, reflection. |
@@ -235,3 +235,5 @@
 |---|---|---|
 | Accessibility label while a shot is taken | Λήψη... | Taking photo... |
 | Accessibility label otherwise (unchanged) | Λήψη | Take photo |
+
+> Note (6.4.1): the flash/torch naming (Off / Auto / Torch), the Outlook, privacy, low-light and cancel texts above were reworded in Phase 6.4.1. The current wording is in `app_strings_el.dart` and `app_strings_en.dart`; this table shows what 6.3 checked.

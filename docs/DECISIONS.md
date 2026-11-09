@@ -890,6 +890,8 @@ text.
 
 ## ADR-031 Torch for flash On, the light mark with the torch, a second light threshold (Phase 6.2.1)
 
+> Note (6.4.1): in the app texts the three flash states are now called Off / Auto / Torch (Greek: Κλειστό / Αυτόματο / Φακός). "On" below is the internal `FlashMode.on`; the user never sees that name.
+
 **Why.** The phone check of Phase 6.2 found that with flash On in a dark room the live
 measurement gave 11 and the mark warned, while the shot (with the flash) gave 86 and read
 fine. The flash only fired on the shutter, so focus, exposure and the preview were still

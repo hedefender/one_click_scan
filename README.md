@@ -40,7 +40,7 @@ tracked in the `docs/PHASE_*_VALIDATION.md` files.
   frame when the detection is not sure. Pure Dart, in a background isolate.
 - **OCR in Greek and English** (PaddleOCR PP-OCRv5 on ONNX Runtime), language packs per script.
 - **Searchable PDF** with an invisible text layer. This is a best effort, not a promise of exact text.
-- **Camera aids:** flash (Off / Auto / On, where On is a flashlight that switches itself off
+- **Camera aids:** flash (Off / Auto / Torch, where Torch is a continuous light that switches itself off
   after two minutes), tap-to-focus, and a low-light warning. A dark shot
   stops One Click with a choice (retake, continue, or continue with a light correction).
   The shadow removal is only ever applied when the user asks, and it is kept only if the OCR

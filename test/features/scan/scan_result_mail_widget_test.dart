@@ -241,7 +241,14 @@ void main() {
     await tapKey(tester, ScanKeys.mailSend);
 
     expect(
-      find.textContaining('does not yet accept sending from the app'),
+      find.byWidgetPredicate(
+        (w) =>
+            w is Text &&
+            w.key == ScanKeys.mailFailure &&
+            (w.data ?? '').contains(
+              'does not support sending from inside the app',
+            ),
+      ),
       findsOneWidget,
     );
     expect(find.byKey(ScanKeys.mailOpenApp), findsOneWidget);
@@ -369,9 +376,7 @@ void main() {
 
       expect(find.byKey(ScanKeys.mailFallback), findsOneWidget);
       expect(
-        find.textContaining(
-          'does not yet support sending with an app password',
-        ),
+        find.textContaining('does not support sending from inside the app'),
         findsOneWidget,
       );
     });
