@@ -69,13 +69,13 @@ void main() {
 
   group('the Kotlin handler', () {
     final kotlin = read(
-      'android/app/src/main/kotlin/com/example/one_click_scan/ScanFilesHandler.kt',
+      'android/app/src/main/kotlin/io/github/hedefender/simpledocscan/ScanFilesHandler.kt',
     );
 
     test('the overlay copy is the same file', () {
       expect(
         read(
-          'android_overlay/app/src/main/kotlin/com/example/one_click_scan/ScanFilesHandler.kt',
+          'android_overlay/app/src/main/kotlin/io/github/hedefender/simpledocscan/ScanFilesHandler.kt',
         ),
         kotlin,
       );

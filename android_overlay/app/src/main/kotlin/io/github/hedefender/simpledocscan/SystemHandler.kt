@@ -1,4 +1,4 @@
-package com.example.one_click_scan
+package io.github.hedefender.simpledocscan
 
 import android.content.Context
 import android.content.Intent
@@ -36,6 +36,6 @@ class SystemHandler(private val context: Context, messenger: BinaryMessenger) {
     }
 
     companion object {
-        private const val CHANNEL = "com.example.one_click_scan/system"
+        private const val CHANNEL = "io.github.hedefender.simpledocscan/system"
     }
 }

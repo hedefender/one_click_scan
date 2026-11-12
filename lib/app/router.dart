@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/about/about_module.dart';
 import '../features/first_run/first_run_module.dart';
 import '../features/help/help_module.dart';
 import '../features/home/home_module.dart';
@@ -21,6 +22,7 @@ GoRouter createRouter({
       ...homeRoutes(container),
       ...settingsRoutes(container),
       ...helpRoutes(container),
+      ...aboutRoutes(container),
       ...scanRoutes(container),
       ...ocrRoutes(container),
       ...lightDiagnosticsRoutes(container),

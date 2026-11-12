@@ -92,6 +92,7 @@ class SettingsPage extends StatelessWidget {
                         _OcrSection(state: state),
                         const SizedBox(height: 32),
                         const _HelpSection(),
+                        const _AboutSection(),
                         const _LicensesSection(),
                         const SizedBox(height: 16),
                         const _HiddenEntry(),
@@ -583,6 +584,24 @@ class _HelpSection extends StatelessWidget {
       title: Text(strings.helpEntry),
       subtitle: Text(strings.helpEntryNote),
       onTap: () => context.push(RoutePaths.help),
+    );
+  }
+}
+
+/// Opens About (Phase 6.5): version, privacy note, the link, the feedback.
+class _AboutSection extends StatelessWidget {
+  const _AboutSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return ListTile(
+      key: SettingsKeys.aboutEntry,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.info_outline_rounded),
+      title: Text(strings.aboutEntry),
+      subtitle: Text(strings.aboutEntryNote),
+      onTap: () => context.push(RoutePaths.about),
     );
   }
 }

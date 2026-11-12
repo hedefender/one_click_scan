@@ -1026,8 +1026,8 @@ class AppStringsEn extends AppStrings {
         title: 'Low light',
         inWizard: true,
         lines: [
-          'The "Low light" mark means the page is dark and the text may not '
-              'be read well.',
+          'The "Low light" mark or the "Dark shot" message means the page is '
+              'dark and the text may not be read well.',
           'Add light, turn on the torch, or tap "New shot".',
         ],
         details: [
@@ -1136,6 +1136,71 @@ class AppStringsEn extends AppStrings {
   @override
   String get helpEntryNote =>
       'How scanning works, tips for good shots, limits and privacy.';
+
+  @override
+  String get aboutEntry => 'About';
+
+  @override
+  String get aboutEntryNote => 'Version, privacy and feedback.';
+
+  @override
+  String get aboutTitle => 'About';
+
+  @override
+  String get aboutDescription =>
+      'Scan a document with the phone, read the text on the device and send '
+      'the PDF by e-mail.';
+
+  @override
+  String aboutVersion(String version, String build) =>
+      'Version $version (build $build)';
+
+  @override
+  String get aboutRepoTitle => 'Source code';
+
+  @override
+  String get aboutOpenRepo => 'Open in the browser';
+
+  @override
+  String get aboutOpenFailed =>
+      'No browser opened. Copy the address from the text.';
+
+  @override
+  String get aboutPrivacyTitle => 'Privacy';
+
+  @override
+  List<String> get aboutPrivacyLines => const [
+    'The text is read on your phone.',
+    'The photos and PDFs stay on your phone, in the folder you chose. They '
+        'leave it only if you send an e-mail. If you enable the copy in the '
+        'Gallery, the photos app of the phone handles it.',
+    'The e-mail is sent from your own account (or you send it yourself from '
+        'your e-mail app).',
+    'The app password is stored encrypted on the phone.',
+    'There are no accounts, ads or usage statistics.',
+  ];
+
+  @override
+  String get feedbackButton => 'Send feedback';
+
+  @override
+  String get feedbackFailed => 'No e-mail app was found on this phone.';
+
+  @override
+  String feedbackSubject(String appName, String version) =>
+      version.isEmpty ? appName : '$appName $version';
+
+  @override
+  String feedbackBody({
+    required String version,
+    required String androidRelease,
+    required String language,
+  }) =>
+      'What did you do?\n\n\nWhat did you expect?\n\n\nWhat happened?\n\n\n'
+      '---\n'
+      'App version: $version\n'
+      'Android version: $androidRelease\n'
+      'Language: $language\n';
 
   @override
   String get helpSeeGuideAgain => 'See the guide again';

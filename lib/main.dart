@@ -10,6 +10,7 @@ import 'data/datasources/shared_preferences_key_value_store.dart';
 import 'core/logging/app_logger.dart';
 import 'domain/ocr/ocr_language_pack_registry.dart';
 import 'presentation/licenses/ocr_licenses.dart';
+import 'services/about/about_services.dart';
 import 'services/mail/mail_services.dart';
 import 'services/ocr/ocr_services.dart';
 import 'services/pdf/pdf_services.dart';
@@ -49,6 +50,7 @@ Future<void> main() async {
     ocr: ocr,
     pdf: pdf,
     mail: mail,
+    about: createPlatformAboutServices(),
   );
 
   runApp(OneClickScanApp(container: container));

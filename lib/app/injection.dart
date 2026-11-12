@@ -17,7 +17,10 @@ import '../domain/ports/open_pdf.dart';
 import '../domain/ports/pdf_builder.dart';
 import '../domain/usecases/load_settings.dart';
 import '../domain/usecases/store_scan_pdf.dart';
+import '../services/about/about_services.dart';
 import '../services/pdf/pdf_services.dart';
+import '../domain/ports/app_info_source.dart';
+import '../domain/ports/feedback_composer.dart';
 import '../services/mail/mail_services.dart';
 import '../domain/mail/mail_provider.dart';
 import '../domain/ports/attachment_source.dart';
@@ -69,6 +72,7 @@ Future<GetIt> buildContainer({
   OcrServices ocr = const OcrServices.unsupported(),
   PdfServices pdf = const PdfServices.unsupported(),
   MailServices mail = const MailServices.unsupported(),
+  AboutServices about = const AboutServices.unsupported(),
   OcrLanguagePackRegistry? ocrPackRegistry,
   DateTime Function() clock = DateTime.now,
 }) async {
@@ -95,6 +99,8 @@ Future<GetIt> buildContainer({
   sl.registerSingleton<MailAppFinder>(mail.appFinder);
   sl.registerSingleton<LinkOpener>(mail.links);
   sl.registerSingleton<MailProviderRegistry>(mail.providers);
+  sl.registerSingleton<AppInfoSource>(about.info);
+  sl.registerSingleton<FeedbackComposer>(about.feedback);
 
   // Data.
   sl.registerLazySingleton<FlashPreferenceStore>(

@@ -16,7 +16,7 @@
 set -u
 export MSYS_NO_PATHCONV=1
 
-PACKAGE="com.example.one_click_scan"
+PACKAGE="io.github.hedefender.simpledocscan"
 EXPECTED_AVD="Claude_Code_Test"
 SMTP_PORT=25251
 CONTROL_PORT=25252

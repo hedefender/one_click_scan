@@ -23,7 +23,7 @@ class PluginCameraService implements CameraService {
   }) : _systemChannel = systemChannel ?? const MethodChannel(systemChannelName);
 
   /// Must match `CHANNEL` in SystemHandler.kt.
-  static const systemChannelName = 'com.example.one_click_scan/system';
+  static const systemChannelName = 'io.github.hedefender.simpledocscan/system';
 
   /// Where captured pages are moved right after the shot.
   final Directory cacheDirectory;

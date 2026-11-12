@@ -173,7 +173,7 @@ Feature `features/scan/`, routes `/scan` and `/scan/result`.
   camera is released when the app is paused and reopened on resume.
 - `ScanFileStore` (port in `domain/ports/`, implementation in
   `services/scan_files/`): Android implementation over the
-  MethodChannel `com.example.one_click_scan/scan_files`
+  MethodChannel `io.github.hedefender.simpledocscan/scan_files`
   (`ScanFilesHandler.kt`). Bytes never cross the channel: the copy runs
   natively, from the cache file to the SAF folder, on a background thread.
   `StoreScanPages` is all or nothing: if a file fails, the ones already
@@ -815,6 +815,27 @@ Help, scan and result at 360 x 640 dp, Greek, text scale 1.0 and 1.3, light and 
 `noto_greek_coverage_test.dart` (every toned Greek letter is in the three font files). The
 screenshots of both looks come from `integration_test/screenshots_test.dart` through
 `tool/run_screenshots.sh`.
+
+### 8m. Release, package id and About (Phase 6.5, ADR-034)
+
+- **Id.** `io.github.hedefender.simpledocscan` in `android/app/build.gradle.kts` (`namespace` and
+  `applicationId`), in the Kotlin package folders (`android/app/...` and `android_overlay/...`),
+  and in the channel names (`io.github.hedefender.simpledocscan/{storage,scan_files,system,image_decode}`,
+  which the Dart services and the tests repeat). A different id means a different app for Android:
+  nothing is migrated. The same id is intended as the iOS bundle id later (no iOS files yet).
+- **Signing.** `android/key.properties` (git-ignored, format in `key.properties.example`) feeds
+  `signingConfigs.release`; absent, the debug key is used with a warning. The procedure, the backup
+  rules and the install instructions are in `docs/RELEASE.md`.
+- **About** (`features/about/`, route `/settings/about`, entry in Settings): name, version and build
+  (`AppInfoSource`, native `appInfo`), description, copyright and repository link (`AboutConfig`,
+  the link opened by `LinkOpener`), the privacy note (`AppStrings.aboutPrivacyLines`), and the
+  feedback button. The feedback button shows only when `FeedbackConfig.recipient` is not empty and
+  opens the e-mail app through `FeedbackComposer` (native `composeMail`). Ports are in
+  `domain/ports/`, the Android adapters in `services/about/`.
+- **Display name.** "One Click Scan" is in several places: `AndroidManifest.xml` (`android:label`),
+  `AppConfig.appName`, `MaterialApp.title`, `AppStrings.appTitle`, `MailText.subjectPrefix` and the
+  mail text, the e-mail help texts, and the README. It is not decided; changing it is a small
+  search, not a one-line change.
 
 ## 9. Testing strategy
 

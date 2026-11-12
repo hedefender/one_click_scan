@@ -28,7 +28,10 @@ void main() {
 
   test('both adapters use the channel of ScanFilesHandler.kt', () {
     expect(AndroidOpenPdf.channelName, AndroidScanFileStore.channelName);
-    expect(AndroidOpenPdf.channelName, 'com.example.one_click_scan/scan_files');
+    expect(
+      AndroidOpenPdf.channelName,
+      'io.github.hedefender.simpledocscan/scan_files',
+    );
   });
 
   group('AndroidOpenPdf', () {

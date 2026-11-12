@@ -1,0 +1,6 @@
+# Copy to android/key.properties (which git ignores) and fill in. Never commit
+# the real file, the keystore or the passwords. See docs/RELEASE.md.
+storeFile=C:\dev\keys\example-release.jks
+storePassword=<store password>
+keyAlias=<key alias>
+keyPassword=<key password>

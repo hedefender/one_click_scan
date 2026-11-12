@@ -163,7 +163,7 @@
 | flash (wizard + Help): detail 1 (Help only) | Το κουμπί του φλας φαίνεται μόνο αν το κινητό έχει φλας. | The flash button only shows if the phone has a flash. |
 | flash (wizard + Help): detail 2 (Help only) | Όταν βγεις από την κάμερα, ο φακός σβήνει. Αν γυρίσεις στην ίδια σάρωση με επιλογή «Φακός», ανάβει ξανά. | When you leave the camera screen, the torch goes out. If you come back to the same scan with "Torch", it lights again. |
 | lowLight (wizard + Help): title | Χαμηλός φωτισμός | Low light |
-| lowLight (wizard + Help): line 1 | Η ένδειξη «Χαμηλός φωτισμός» σημαίνει ότι η σελίδα είναι σκοτεινή και το κείμενο ίσως δεν διαβαστεί καλά. | The "Low light" mark means the page is dark and the text may not be read well. |
+| lowLight (wizard + Help): line 1 | Η ένδειξη «Χαμηλός φωτισμός» ή το μήνυμα «Σκοτεινή λήψη» σημαίνει ότι η σελίδα είναι σκοτεινή και το κείμενο ίσως δεν διαβαστεί καλά. | The "Low light" mark or the "Dark shot" message means the page is dark and the text may not be read well. |
 | lowLight (wizard + Help): line 2 | Πρόσθεσε φως, άναψε τον φακό ή πάτα «Νέα λήψη». | Add light, turn on the torch, or tap "New shot". |
 | lowLight (wizard + Help): detail 1 (Help only) | Μετά από μια σκοτεινή λήψη μπορείς να συνεχίσεις ούτως ή άλλως ή να ζητήσεις διόρθωση φωτός. Η διόρθωση είναι απλή και δεν σώζει πολύ σκοτεινές σελίδες· τότε η νέα λήψη είναι η καλύτερη επιλογή. | After a dark shot you can continue anyway or ask for a light correction. The correction is simple and does not rescue very dark pages; then a new shot is the best choice. |
 | tips (wizard + Help): title | Συμβουλές για καλή λήψη | Tips for a good shot |
@@ -236,4 +236,4 @@
 | Accessibility label while a shot is taken | Λήψη... | Taking photo... |
 | Accessibility label otherwise (unchanged) | Λήψη | Take photo |
 
-> Note (6.4.1): the flash/torch naming (Off / Auto / Torch), the Outlook, privacy, low-light and cancel texts above were reworded in Phase 6.4.1. The current wording is in `app_strings_el.dart` and `app_strings_en.dart`; this table shows what 6.3 checked.
+> Note (6.4.1): the flash/torch naming (Off / Auto / Torch), the Outlook, privacy, low-light and cancel texts above were reworded in Phase 6.4.1 (the low-light line was put back in Phase 6.5: the "Dark shot" message does exist). The current wording is in `app_strings_el.dart` and `app_strings_en.dart`; this table shows what 6.3 checked.

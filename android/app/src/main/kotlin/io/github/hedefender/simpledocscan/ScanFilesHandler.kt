@@ -1,4 +1,4 @@
-package com.example.one_click_scan
+package io.github.hedefender.simpledocscan
 
 import android.content.ActivityNotFoundException
 import android.content.ContentValues
@@ -603,6 +603,6 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
 
     companion object {
         private const val NO_MEDIA = ".nomedia"
-        private const val CHANNEL = "com.example.one_click_scan/scan_files"
+        private const val CHANNEL = "io.github.hedefender.simpledocscan/scan_files"
     }
 }

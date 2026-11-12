@@ -43,7 +43,7 @@ void main() {
   test('uses the channel of ScanFilesHandler.kt', () {
     expect(
       MediaStoreGalleryService.channelName,
-      'com.example.one_click_scan/scan_files',
+      'io.github.hedefender.simpledocscan/scan_files',
     );
   });
 

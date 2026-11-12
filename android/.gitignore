@@ -12,3 +12,8 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Release signing: the key never enters the repo (docs/RELEASE.md)
+key.properties
+*.jks
+*.keystore

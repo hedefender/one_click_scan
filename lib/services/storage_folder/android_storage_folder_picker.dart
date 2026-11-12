@@ -10,7 +10,7 @@ class AndroidStorageFolderPicker implements StorageFolderPicker {
     : _channel = channel ?? const MethodChannel(channelName);
 
   /// Must match `CHANNEL` in MainActivity.kt.
-  static const channelName = 'com.example.one_click_scan/storage';
+  static const channelName = 'io.github.hedefender.simpledocscan/storage';
 
   final MethodChannel _channel;
 

@@ -10,7 +10,7 @@ class AndroidScanFileStore implements ScanFileStore {
     : _channel = channel ?? const MethodChannel(channelName);
 
   /// Must match `CHANNEL` in ScanFilesHandler.kt.
-  static const channelName = 'com.example.one_click_scan/scan_files';
+  static const channelName = 'io.github.hedefender.simpledocscan/scan_files';
 
   final MethodChannel _channel;
 

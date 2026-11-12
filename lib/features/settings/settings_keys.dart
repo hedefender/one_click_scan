@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 /// Widget keys used by widget and integration tests.
 abstract final class SettingsKeys {
   static const language = Key('settings.language');
+  static const aboutEntry = Key('settings.aboutEntry');
   static const changeFolder = Key('settings.changeFolder');
   static const folderAccessWarning = Key('settings.folderAccessWarning');
   static const sender = Key('settings.sender');

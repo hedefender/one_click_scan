@@ -21,7 +21,7 @@ import '../test/support/scan_fakes.dart';
 /// The permission dialog cannot be driven by integration_test, so grant it
 /// first, on the Claude Code emulator only, and again after EVERY install or
 /// uninstall (the grant is lost with them):
-///   adb -s `<claude-code-emulator>` shell pm grant com.example.one_click_scan android.permission.CAMERA
+///   adb -s `<claude-code-emulator>` shell pm grant io.github.hedefender.simpledocscan android.permission.CAMERA
 ///   flutter test integration_test/camera_smoke_test.dart -d `<claude-code-emulator>`
 ///
 /// If the grant is missing the dialog appears and nobody presses it: the
@@ -33,7 +33,7 @@ const _grantHint =
     'The CAMERA permission dialog is probably waiting on the emulator screen. '
     'Grant the permission with adb (never by hand) and run the test again: '
     'adb -s <claude-code-emulator> shell pm grant '
-    'com.example.one_click_scan android.permission.CAMERA';
+    'io.github.hedefender.simpledocscan android.permission.CAMERA';
 
 /// Opens and closes the real camera once, with a time limit, so a missing
 /// permission fails fast and clearly.

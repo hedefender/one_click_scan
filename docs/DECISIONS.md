@@ -1161,3 +1161,33 @@ that a design decision changes every screen at once and no screen is half done. 
 - No theme choice in Settings, no custom icons, no animation work, no layout change.
 - The phone look, the real system colours and the daylight readability are for the phone check
   (`PHASE_6_4_VALIDATION.md`).
+
+## ADR-034 The final package id and the signing of the release (Phase 6.5)
+
+**Why.** A pilot APK for friends needs an id that will not change (the OAuth clients of Phase 8
+and the iOS bundle id are bound to it) and a key that proves that an update comes from the same
+author. The seed id `com.example.one_click_scan` was a placeholder.
+
+### Decisions
+
+- **The id is `io.github.hedefender.simpledocscan`** (`applicationId`, `namespace`, the package
+  of the Kotlin classes, the names of the method channels, the scripts of `tool/`). For Android
+  it is **another app**: no data, settings or stored password move from the old id, and both
+  can be installed side by side. The Dart package name (`one_click_scan`) and the display name
+  ("One Click Scan") did not change; the display name is not decided yet.
+- **The release key lives outside the repository.** `android/key.properties` (git-ignored)
+  points to a keystore the owner makes (`docs/RELEASE.md`). `signingConfigs.release` reads it
+  when it exists; without it the release build is signed with the debug key and Gradle warns,
+  so a clone still builds. No key, password or keystore is ever written by Claude Code.
+- **No new package.** The version of the app and of Android come from a small native method
+  (`appInfo`, `SystemHandler.kt`) instead of `package_info_plus`; the e-mail of the feedback
+  button is one more native method (`composeMail`, `ACTION_SENDTO` `mailto:`, no attachment);
+  the repository link uses the existing `LinkOpener` (`https` only).
+- **The feedback button hides without an address.** `FeedbackConfig.recipient` is empty in the
+  repository; the owner fills it in. The message carries only the version of the app, the
+  Android version and the language.
+- **R8 stays on in release** (ADR from Phase 2); the release smoke test
+  (`tool/run_ocr_release_smoke.sh`) passes with the new id.
+
+> The text of the older ADRs and phase documents keeps the old id where it was true at the time.
+

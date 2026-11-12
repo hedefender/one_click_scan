@@ -54,3 +54,8 @@ app.*.map.json
 /assets/ocr/models/*
 !/assets/ocr/models/.gitkeep
 /android/build/
+
+# Release signing: the key never enters the repo (docs/RELEASE.md)
+key.properties
+*.jks
+*.keystore

@@ -12,7 +12,7 @@ import '../../domain/ports/mail_app_finder.dart';
 
 /// The same channel as the file store, the PDF opener and the handler in
 /// `ScanFilesHandler.kt`: it is one Kotlin class.
-const mailChannelName = 'com.example.one_click_scan/scan_files';
+const mailChannelName = 'io.github.hedefender.simpledocscan/scan_files';
 
 /// Copies the stored PDF (behind a document URI) into the app cache, natively:
 /// the bytes never cross the channel. The copy is deleted after the send.

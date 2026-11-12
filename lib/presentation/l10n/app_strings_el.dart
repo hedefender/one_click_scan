@@ -1049,8 +1049,9 @@ class AppStringsEl extends AppStrings {
         title: 'Χαμηλός φωτισμός',
         inWizard: true,
         lines: [
-          'Η ένδειξη «Χαμηλός φωτισμός» σημαίνει ότι η σελίδα είναι σκοτεινή '
-              'και το κείμενο ίσως δεν διαβαστεί καλά.',
+          'Η ένδειξη «Χαμηλός φωτισμός» ή το μήνυμα «Σκοτεινή λήψη» σημαίνει '
+              'ότι η σελίδα είναι σκοτεινή και το κείμενο ίσως δεν διαβαστεί '
+              'καλά.',
           'Πρόσθεσε φως, άναψε τον φακό ή πάτα «Νέα λήψη».',
         ],
         details: [
@@ -1161,6 +1162,72 @@ class AppStringsEl extends AppStrings {
   @override
   String get helpEntryNote =>
       'Πώς δουλεύει η σάρωση, συμβουλές λήψης, όρια και ιδιωτικότητα.';
+
+  @override
+  String get aboutEntry => 'Σχετικά';
+
+  @override
+  String get aboutEntryNote => 'Έκδοση, ιδιωτικότητα και σχόλια.';
+
+  @override
+  String get aboutTitle => 'Σχετικά';
+
+  @override
+  String get aboutDescription =>
+      'Σάρωση εγγράφου με το κινητό, αναγνώριση κειμένου στη συσκευή και '
+      'αποστολή του PDF με email.';
+
+  @override
+  String aboutVersion(String version, String build) =>
+      'Έκδοση $version (build $build)';
+
+  @override
+  String get aboutRepoTitle => 'Πηγαίος κώδικας';
+
+  @override
+  String get aboutOpenRepo => 'Άνοιγμα στον browser';
+
+  @override
+  String get aboutOpenFailed =>
+      'Δεν άνοιξε browser. Αντίγραψε τη διεύθυνση από το κείμενο.';
+
+  @override
+  String get aboutPrivacyTitle => 'Ιδιωτικότητα';
+
+  @override
+  List<String> get aboutPrivacyLines => const [
+    'Η αναγνώριση κειμένου γίνεται στο κινητό σου.',
+    'Οι φωτογραφίες και τα PDF μένουν στο κινητό σου, στον φάκελο που '
+        'διάλεξες. Φεύγουν μόνο αν στείλεις email. Αν ενεργοποιήσεις το '
+        'αντίγραφο στη Gallery, το χειρίζεται η εφαρμογή φωτογραφιών του '
+        'κινητού.',
+    'Το email στέλνεται από τον δικό σου λογαριασμό (ή το στέλνεις εσύ από '
+        'την εφαρμογή email σου).',
+    'Ο κωδικός εφαρμογής αποθηκεύεται κρυπτογραφημένα στο κινητό.',
+    'Δεν υπάρχουν λογαριασμοί, διαφημίσεις ή στατιστικά χρήσης.',
+  ];
+
+  @override
+  String get feedbackButton => 'Στείλε σχόλια';
+
+  @override
+  String get feedbackFailed => 'Δεν βρέθηκε εφαρμογή email σε αυτό το κινητό.';
+
+  @override
+  String feedbackSubject(String appName, String version) =>
+      version.isEmpty ? appName : '$appName $version';
+
+  @override
+  String feedbackBody({
+    required String version,
+    required String androidRelease,
+    required String language,
+  }) =>
+      'Τι έκανες;\n\n\nΤι περίμενες;\n\n\nΤι έγινε;\n\n\n'
+      '---\n'
+      'Έκδοση εφαρμογής: $version\n'
+      'Έκδοση Android: $androidRelease\n'
+      'Γλώσσα: $language\n';
 
   @override
   String get helpSeeGuideAgain => 'Δες ξανά τον οδηγό';

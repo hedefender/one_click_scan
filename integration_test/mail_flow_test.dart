@@ -589,10 +589,13 @@ void main() {
       final finder = AndroidMailAppFinder();
 
       final own = await finder.find(
-        providerPackage: 'com.example.one_click_scan',
+        providerPackage: 'io.github.hedefender.simpledocscan',
       );
       expect(own.providerAppInstalled, isTrue);
-      expect(own.mailtoPackages, isNot(contains('com.example.one_click_scan')));
+      expect(
+        own.mailtoPackages,
+        isNot(contains('io.github.hedefender.simpledocscan')),
+      );
 
       final none = await finder.find(providerPackage: 'no.such.app.example');
       expect(none.providerAppInstalled, isFalse);

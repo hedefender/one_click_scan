@@ -1,4 +1,4 @@
-package com.example.one_click_scan
+package io.github.hedefender.simpledocscan
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -133,6 +133,6 @@ class ImageDecodeHandler(messenger: BinaryMessenger) {
     }
 
     companion object {
-        private const val CHANNEL = "com.example.one_click_scan/image_decode"
+        private const val CHANNEL = "io.github.hedefender.simpledocscan/image_decode"
     }
 }

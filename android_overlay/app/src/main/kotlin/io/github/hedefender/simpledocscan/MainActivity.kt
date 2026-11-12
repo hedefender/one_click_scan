@@ -1,4 +1,4 @@
-package com.example.one_click_scan
+package io.github.hedefender.simpledocscan
 
 import android.app.Activity
 import android.content.Intent
@@ -115,7 +115,7 @@ class MainActivity : FlutterActivity() {
     }
 
     companion object {
-        private const val CHANNEL = "com.example.one_click_scan/storage"
+        private const val CHANNEL = "io.github.hedefender.simpledocscan/storage"
         private const val REQUEST_PICK_FOLDER = 4201
     }
 }

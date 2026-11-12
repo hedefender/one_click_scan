@@ -10,6 +10,9 @@ abstract final class RoutePaths {
   static const help = '/settings/help';
   static const helpGuide = '/settings/help/guide';
 
+  /// About and the feedback button (Phase 6.5).
+  static const about = '/settings/about';
+
   /// Hidden: five taps on the app name in Settings (Phase 6.2).
   static const lightDiagnostics = '/settings/light-diagnostics';
 

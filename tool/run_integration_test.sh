@@ -11,7 +11,7 @@
 # that is not the Claude Code emulator (the user's emulator is never touched).
 set -u
 
-PACKAGE="com.example.one_click_scan"
+PACKAGE="io.github.hedefender.simpledocscan"
 EXPECTED_AVD="Claude_Code_Test"
 
 if [ $# -ne 2 ]; then

@@ -1,5 +1,6 @@
 import groovy.json.JsonSlurper
 import java.security.MessageDigest
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -8,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.one_click_scan"
+    namespace = "io.github.hedefender.simpledocscan"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -18,8 +19,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.one_click_scan"
+        // Phase 6.5: the final id (it was com.example.one_click_scan). Android sees a
+        // different app: nothing is migrated from the old one. See ADR-034.
+        applicationId = "io.github.hedefender.simpledocscan"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
@@ -32,11 +34,38 @@ android {
         versionName = flutter.versionName
     }
 
+    // Release signing (ADR-034, docs/RELEASE.md). The key lives outside the repo;
+    // android/key.properties (git-ignored) only points to it. Without that file
+    // the release build is signed with the debug key, so a clone still builds.
+    val keyProperties = Properties()
+    val keyPropertiesFile = rootProject.file("key.properties")
+    val hasReleaseKey = keyPropertiesFile.exists()
+    if (hasReleaseKey) {
+        keyPropertiesFile.inputStream().use { keyProperties.load(it) }
+    }
+
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = file(keyProperties.getProperty("storeFile"))
+                storePassword = keyProperties.getProperty("storePassword")
+                keyAlias = keyProperties.getProperty("keyAlias")
+                keyPassword = keyProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (hasReleaseKey) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+                logger.warn(
+                    "WARNING: release signed with debug key, not for distribution " +
+                        "(android/key.properties not found, see docs/RELEASE.md)."
+                )
+            }
             // R8 on: the ONNX Runtime classes are reached from native code, so
             // proguard-rules.pro keeps them (see docs/PHASE_2_VALIDATION.md).
             isMinifyEnabled = true

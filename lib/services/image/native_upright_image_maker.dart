@@ -11,7 +11,7 @@ class NativeUprightImageMaker implements UprightImageMaker {
     : _channel = channel ?? const MethodChannel(channelName);
 
   /// Must match `CHANNEL` in ImageDecodeHandler.kt.
-  static const channelName = 'com.example.one_click_scan/image_decode';
+  static const channelName = 'io.github.hedefender.simpledocscan/image_decode';
 
   final MethodChannel _channel;
 

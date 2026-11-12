@@ -9,7 +9,7 @@ class AndroidOpenPdf implements OpenPdf {
     : _channel = channel ?? const MethodChannel(channelName);
 
   /// The same channel as `AndroidScanFileStore`: the handler is one class.
-  static const channelName = 'com.example.one_click_scan/scan_files';
+  static const channelName = 'io.github.hedefender.simpledocscan/scan_files';
 
   final MethodChannel _channel;
 

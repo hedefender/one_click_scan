@@ -203,7 +203,7 @@ in logs, ever (the canary test of Phase 4 extends to them).
 
 ## 5. Check list for the user (what the project needs before the code)
 
-1. **The final package id.** Today it is the temporary `com.example.one_click_scan`.
+1. **The final package id.** Fixed in Phase 6.5: `io.github.hedefender.simpledocscan` (it was the temporary `com.example.one_click_scan`; ADR-034).
    Google's Android client and Microsoft's redirect URI are bound to the
    package name and to the signing key, so the id must be fixed **before** the
    registration (changing it later means new clients and, for Google, a new
@@ -303,7 +303,7 @@ for and not found on an official page.
 
 ## 9. What the process needs (not code), in the order that unblocks the rest
 1. **Final package id and the signing keys** (debug, upload, Play signing). Every
-   client below is bound to them. The id is still `com.example.one_click_scan`.
+   client below is bound to them. (At the time of writing the id was `com.example.one_click_scan`; since Phase 6.5 it is `io.github.hedefender.simpledocscan`.)
 2. **A public domain** with a homepage and a **privacy policy** (the app runs no
    server; the scan goes from the phone to the user's provider only).
 3. **Google Cloud project:** consent screen (External), scope `gmail.send`, Android

@@ -5,6 +5,7 @@ import 'package:one_click_scan/app/app.dart';
 import 'package:one_click_scan/core/config/app_config.dart';
 import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
 import 'package:one_click_scan/domain/repositories/settings_repository.dart';
+import 'package:one_click_scan/features/about/about_keys.dart';
 import 'package:one_click_scan/features/first_run/first_run_keys.dart';
 import 'package:one_click_scan/features/help/help_keys.dart';
 import 'package:one_click_scan/features/home/home_keys.dart';
@@ -118,7 +119,7 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('home, settings and Help ($label)', (tester) async {
+      testWidgets('home, settings, Help and About ($label)', (tester) async {
         await useSmallPhone(tester, scale);
         await setBrightness(tester, brightness);
         await pumpApp(tester);
@@ -138,6 +139,19 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byKey(HelpKeys.page), findsOneWidget);
         await scrollThrough(tester, 'help');
+
+        // Phase 6.5: About, reached from the same list.
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.byKey(SettingsKeys.aboutEntry),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.tap(find.byKey(SettingsKeys.aboutEntry));
+        await tester.pumpAndSettle();
+        expect(find.byKey(AboutKeys.page), findsOneWidget);
+        await scrollThrough(tester, 'about');
       });
 
       testWidgets('scan and the result screen ($label)', (tester) async {

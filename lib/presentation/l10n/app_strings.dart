@@ -35,6 +35,24 @@ abstract class AppStrings {
   String get helpTitle;
   String get helpEntry;
   String get helpEntryNote;
+  String get aboutEntry;
+  String get aboutEntryNote;
+  String get aboutTitle;
+  String get aboutDescription;
+  String aboutVersion(String version, String build);
+  String get aboutRepoTitle;
+  String get aboutOpenRepo;
+  String get aboutOpenFailed;
+  String get aboutPrivacyTitle;
+  List<String> get aboutPrivacyLines;
+  String get feedbackButton;
+  String get feedbackFailed;
+  String feedbackSubject(String appName, String version);
+  String feedbackBody({
+    required String version,
+    required String androidRelease,
+    required String language,
+  });
   String get helpSeeGuideAgain;
   String get helpOpenMailSettings;
   String get multiHintTitle;

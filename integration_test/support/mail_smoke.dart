@@ -176,7 +176,9 @@ Future<String> _checkIntents() async {
     throw StateError('the routes are not as expected');
   }
   final finder = AndroidMailAppFinder();
-  final own = await finder.find(providerPackage: 'com.example.one_click_scan');
+  final own = await finder.find(
+    providerPackage: 'io.github.hedefender.simpledocscan',
+  );
   final missing = await finder.find(providerPackage: 'no.such.app.example');
   if (!own.providerAppInstalled || missing.providerAppInstalled) {
     throw StateError('the install check is not as expected');

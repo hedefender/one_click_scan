@@ -63,7 +63,8 @@ From [`docs/ROADMAP.md`](docs/ROADMAP.md):
 | 5, 5.1 | One Click / preview, cancel everywhere, automatic return | Done |
 | 6.0 to 6.2.1 | Crop and straighten, flash and flashlight, focus, low light, optional light correction | Done on the emulator, phone check pending |
 | 6.3 | Polish: page limit for Multi Page, guide and Help, busy capture button | Done on the emulator, phone check pending |
-| 6.4, 6.5 | Reading order on tilted pages, small-page option | Proposals, only if the phone check asks |
+| 6.4.1, 6.5 | Text fixes; pilot readiness (final package id, release signing, About, feedback) | Done on the emulator, phone check pending |
+| 6.6, 6.7 | Small-page option and camera checks; reading order on tilted pages | Proposals, only if the phone check asks |
 | 7 | Review of the Budget integration | Later |
 | 8 | Mail OAuth (before any public release) | Planned ([`docs/MAIL_OAUTH_PLAN.md`](docs/MAIL_OAUTH_PLAN.md)) |
 
@@ -104,10 +105,23 @@ pinned SHA-256; it fails loudly on a mismatch. Without them the Android build an
 fail with a message that names the missing file. The models are under the Apache-2.0 license of
 PaddleOCR (see [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md)).
 
-**Tests.** `flutter test` runs 1249 unit, cubit and widget tests (they need the models, nothing else).
+**Tests.** `flutter test` runs 1343 unit, cubit and widget tests (they need the models, nothing else).
 Integration tests (`integration_test/`) run on an Android emulator; `tool/run_integration_test.sh <device-id> <test file>`
 installs the app, grants the camera permission and runs one test. Release smoke test (R8 on): `tool/run_ocr_release_smoke.sh <device-id>`.
 Use an Android emulator or a device you do not mind installing test builds on.
+
+## Installing the APK (pilot)
+
+This is a **pilot** version for a few testers, not a finished product: it may have faults.
+Only an APK from the owner is meant to be installed.
+
+1. Download the APK on the phone (for almost every modern phone: the `arm64-v8a` one).
+2. Open it and allow the install from this source when Android asks.
+3. Open the app and follow the wizard.
+4. Updates arrive as a new APK that you install over the old one; there is no automatic update.
+5. Settings, About shows the version, the privacy note and, if set up, "Send feedback".
+
+How the APK is made and signed: [`docs/RELEASE.md`](docs/RELEASE.md).
 
 ## E-mail setup
 
@@ -128,7 +142,7 @@ Use an Android emulator or a device you do not mind installing test builds on.
 
 - The PDF text layer is best effort. It does not promise exact characters, so do not rely on it
   for payment codes.
-- The package id is a placeholder (`com.example.one_click_scan`).
+- The package id is `io.github.hedefender.simpledocscan` (it was `com.example.one_click_scan` until Phase 6.5). It is a different app for Android: nothing moves from a build with the old id.
 - Tested mainly on one Android phone and on an emulator; `minSdk` is 24. iOS is not implemented.
 - The real flash, real room light and real lens behaviour cannot be tested on the emulator.
   The low-light threshold is a starting value to be calibrated on a phone.
@@ -141,7 +155,7 @@ Each phase starts with an architecture note and, for risky choices, a spike with
 (`docs/*_SPIKE_RESULTS.md`), then a plan, code and tests. The code is written with an AI coding
 assistant (Claude Code) under written rules ([`CLAUDE.md`](CLAUDE.md)); the assistant never commits,
 and every phase ends with a manual check on a real device before the next one starts. There are
-1249 automated tests. The checks are in [`docs/PHASE_6_2_VALIDATION.md`](docs/PHASE_6_2_VALIDATION.md)
+1249 automated tests (1343 since Phase 6.5). The checks are in [`docs/PHASE_6_2_VALIDATION.md`](docs/PHASE_6_2_VALIDATION.md)
 and its siblings; the document index is [`docs/README.md`](docs/README.md).
 
 ## License and contact

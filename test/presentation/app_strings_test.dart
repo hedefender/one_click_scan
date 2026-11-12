@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:one_click_scan/domain/entities/mail_provider_id.dart';
 import 'package:one_click_scan/domain/mail/mail_outcome.dart';
 import 'package:one_click_scan/presentation/l10n/app_strings.dart';
+import 'package:one_click_scan/presentation/l10n/guide_section.dart';
 
 void main() {
   mailStringsTests();
@@ -170,6 +171,21 @@ void mailStringsTests() {
       el.mailFallbackReasonOutlook,
     ]) {
       expect(text, isNot(contains('OAuth')));
+    }
+  });
+
+  test('the low light Help line names the marks exactly as the app shows '
+      'them', () async {
+    final el = await AppStrings.delegate.load(const Locale('el'));
+    final en = await AppStrings.delegate.load(const Locale('en'));
+
+    for (final (strings, open, close) in [(el, '«', '»'), (en, '"', '"')]) {
+      final section = strings.guideSections.firstWhere(
+        (s) => s.id == GuideSectionId.lowLight,
+      );
+      final line = section.lines.first;
+      expect(line, contains('$open${strings.lowLightChip}$close'));
+      expect(line, contains('$open${strings.lowLightDialogTitle}$close'));
     }
   });
 

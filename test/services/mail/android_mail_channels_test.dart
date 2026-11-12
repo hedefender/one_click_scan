@@ -39,7 +39,7 @@ void main() {
 
   test('the mail adapters use the channel of ScanFilesHandler.kt', () {
     expect(mailChannelName, AndroidScanFileStore.channelName);
-    expect(mailChannelName, 'com.example.one_click_scan/scan_files');
+    expect(mailChannelName, 'io.github.hedefender.simpledocscan/scan_files');
   });
 
   group('AndroidAttachmentSource', () {
