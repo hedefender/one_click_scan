@@ -72,13 +72,10 @@ void main() {
       'android/app/src/main/kotlin/io/github/hedefender/simpledocscan/ScanFilesHandler.kt',
     );
 
-    test('the overlay copy is the same file', () {
-      expect(
-        read(
-          'android_overlay/app/src/main/kotlin/io/github/hedefender/simpledocscan/ScanFilesHandler.kt',
-        ),
-        kotlin,
-      );
+    test('there is no second copy of the Kotlin code (A1-012)', () {
+      // The seed was delivered as `android_overlay/`; the real code is in
+      // `android/`, and an old copy only misleads.
+      expect(Directory('android_overlay').existsSync(), isFalse);
     });
 
     test('the share intent: ACTION_SEND, e-mail, subject, text, the stream '

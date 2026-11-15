@@ -4,7 +4,7 @@ import '../../core/errors/app_exceptions.dart';
 import '../../domain/entities/storage_folder.dart';
 import '../../domain/ports/scan_file_store.dart';
 
-/// Talks to `ScanFilesHandler.kt` (see `android_overlay/`).
+/// Talks to `ScanFilesHandler.kt` (in `android/app/src/main/kotlin/`).
 class AndroidScanFileStore implements ScanFileStore {
   AndroidScanFileStore({MethodChannel? channel})
     : _channel = channel ?? const MethodChannel(channelName);

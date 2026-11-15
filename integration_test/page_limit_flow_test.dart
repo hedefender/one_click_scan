@@ -212,13 +212,29 @@ void main() {
     return tester.element(find.byKey(ScanKeys.capture)).read<ScanCubit>();
   }
 
-  Future<void> shoot(WidgetTester tester) async {
+  /// Takes a shot and waits until EVERY page of the scan has a known size
+  /// (A1-002). The size of a page is known only after its preparation, and the
+  /// preparation pauses while two prepared pages wait for the OCR, so a fixed
+  /// wait read the estimate while some pages still counted as the average.
+  Future<void> shoot(WidgetTester tester, ScanCubit cubit) async {
     await tester.tap(find.byKey(ScanKeys.capture));
     await tester.pump(const Duration(milliseconds: 300));
     // The shot ends (the button is idle again) while the pages are prepared
     // in the background; the sizes arrive after the crop of each page.
     await pumpUntil(tester, find.byKey(ScanKeys.capture));
-    await tester.pump(const Duration(seconds: 3));
+    final end = DateTime.now().add(const Duration(minutes: 3));
+    while (cubit.state.pages.any(
+      (p) => cubit.state.pageBytes[p.path] == null,
+    )) {
+      if (DateTime.now().isAfter(end)) {
+        fail(
+          'Timed out: ${cubit.state.pageBytes.length} of '
+          '${cubit.state.pages.length} pages have a known size',
+        );
+      }
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump(const Duration(milliseconds: 200));
   }
 
   File pdfFile() =>
@@ -235,7 +251,7 @@ void main() {
 
     var shots = 0;
     while (!cubit.state.pageLimitReached && shots < 25) {
-      await shoot(tester);
+      await shoot(tester, cubit);
       shots++;
       final b = cubit.state.budget!;
       report(
@@ -278,7 +294,7 @@ void main() {
       ),
     );
     for (var i = 0; i < 6; i++) {
-      await shoot(tester);
+      await shoot(tester, cubit);
     }
     final budget = cubit.state.budget!;
     expect(budget.pageCount, 6);

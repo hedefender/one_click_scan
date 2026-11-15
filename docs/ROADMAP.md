@@ -35,14 +35,53 @@ and the order of the first roadmap.)
 | 6.4 | **Look: one central theme (light/dark follows the system, system colours with fallback palettes), Noto Sans, one set of shapes** (ADR-033, `DESIGN_SPEC.md`): `AppTheme` with the component themes, `dynamic_color` (Android 12+) or the fallback palettes (pastel lime / deep purple), `AppStatusColors` (the amber warning in every theme), the dark chrome of the camera screens, the capture button ring, Noto Sans Regular/Medium/SemiBold from assets (no download), rounded icons, one line "Colours: system / fallback" on the diagnostics screen | **Done on the emulator; the phone look, the system colours on the phone and the daylight readability pending** (`PHASE_6_4_VALIDATION.md`). Only the look changed: no layout, flow or logic. |
 | 6.4.1 | **Text fixes only:** flash names (Off / Auto / Torch), privacy, Outlook, cancel texts | **Done**; no layout or logic change. |
 | 6.5 | **Pilot readiness: final package id `io.github.hedefender.simpledocscan`, release signing with a key outside the repo, About with the privacy note, a feedback button (hidden until an address is set), Help and doc fixes** (ADR-034, `RELEASE.md`) | **Done on the PC and the emulator (debug and release); the phone check and the release signed with the real key pending** (`PHASE_6_5_VALIDATION.md`). A different app for Android: nothing is migrated from the old id. |
-| 6.6 | (proposal, only if the phone check asks for it) small pages option (lowered area bound), the check on the crop alone, A1 instead of A3, the measured camera check (wait for focus before the shutter) | Each one on its own evidence from real documents. **Check first whether Phase 6.3 and 6.4 already covered part of it** (the busy capture button and the page limit of 6.3, the capture chrome of 6.4) |
-| 6.7 | (proposal) Reading order on tilted pages (the Phase 2 finding): only if it shows on real receipts after 6.1; not reproduced on synthetic pages | |
+| 6.6 | **Safety net and clean-up after Audit A1, no change of behaviour** (`AUDIT_A1.md`): `mail_flow_test` fixed (tall screen, `pump` after `ensureVisible`, A1-001); `page_limit_flow_test` waits until every page has a known size (A1-002, the test only, the estimator is not changed); `tool/run_all_integration.sh` runs every integration test with its own runner, reboots the emulator when needed and prints a summary, and runs whole before every validation (A1-007, `CLAUDE.md`); `android_overlay/` deleted (A1-012); the logger interface has no Flutter import and a test guards `lib/domain/` (A1-016); `*.stackdump` ignored (A1-018) | **Done on the PC and the emulator** (`PHASE_6_6_VALIDATION.md`). Nothing to check on the phone. |
+| 6.7 | **Audit A1 fixes** (each with its own check on the phone): A1-003 permissions removed from the merged manifest (`RECORD_AUDIO`, `ACCESS_NETWORK_STATE`, `READ_EXTERNAL_STORAGE`) and a test on the merged manifest, with **minSdk 29** (Android 10 and up, decided 2026-11-15, `AUDIT_A1.md` section 8); A1-004 keep the screen on while the flow or a send runs (preventive, the fault was not seen); A1-005 no EXIF in the working copy; A1-013 gaps of the camera lifecycle; **Send in the fixed button frame** of the preview (it is not visible without scrolling on the phone); A1-014 documents (ADR-017, ADR-021, ADR-032, README, ARCHITECTURE, the sizes of the APK measured) | Planned. |
+| 6.8 | (proposal, only if the phone check asks for it) small pages option (lowered area bound), the check on the crop alone, A1 instead of A3, the measured camera check (wait for focus before the shutter) | Each one on its own evidence from real documents. **Check first whether Phase 6.3 and 6.4 already covered part of it** (the busy capture button and the page limit of 6.3, the capture chrome of 6.4) |
+| 6.9 | (proposal) Reading order on tilted pages (the Phase 2 finding): only if it shows on real receipts after 6.1; not reproduced on synthetic pages | |
 | 7 | Revisit the Budget integration (only if Scan needs to change something) | No dependency between the apps |
 | 8 | **Mail OAuth and public release readiness** (milestone: done **before any public release**; the final package id and the release key procedure are done in 6.5) | Replaces the app password with the official sign-in of Google (`gmail.send`) and Microsoft (Graph `Mail.Send` or SMTP XOAUTH2); Yahoo stays on app password or share. Needs the final package id, a release signing key, a public privacy policy, a homepage, a demo video, a Google verification that can take months (`MAIL_OAUTH_PLAN.md` sections 5 and 6). The non-code items should start early and in parallel **Also: the first-run wizard gets the app password step, a guide per provider, and an explanation for Outlook/Hotmail** (why the app password may not work there). |
 | V1.5 | Batch processing, auto retry, better OCR | Budget limit: 50 files per import |
 
 Handwritten, multi-page bills are expected: Single/Multi Page is an independent
 choice.
+
+## After Phase 6.7
+
+**Pilot** (friends as first testers):
+
+- Keystore and `android/key.properties` (the owner), build number up, signed `flutter build apk --release --split-per-abi`.
+- Fill `FeedbackConfig.recipient` (the owner).
+- First testers.
+- Decide the final name, and make the display name come from two places only (`strings.xml` and `AppConfig.appName`) with a test that checks that they agree.
+
+**Measurements in the pilot (on the phone):**
+
+- A1-002: 15 quick shots of mixed pages, "n/XX" at "Done" against the real PDF; change the estimator if they differ.
+- A1-008: time per stage and per page.
+- A1-010: 2000 files in `pictures/`.
+- Υ1: scan of 10 pages and a 2-minute interruption in the background.
+- Υ3: send a big PDF over mobile data.
+- Υ5: phones with a 50 to 200 MP sensor.
+- Υ6: `timedOut` of the crop.
+- Battery base of the light analyser: `dumpsys batterystats`, 5 minutes with and without the analyser.
+
+**Before the store:**
+
+- Android 10+ in the store listing, AAB and Play App Signing.
+- A1-009 (compress the `.so` files, if needed).
+- Privacy policy (URL).
+- iOS.
+
+**Dependencies to watch:**
+
+- A1-011: the KGP warning for `dynamic_color` and `flutter_onnxruntime`; check before every Flutter upgrade, and try `dynamic_color` 1.9.0 in a small phase of its own.
+
+**Later:**
+
+- A1-017: split the native channel per port when iOS starts.
+
+Phase 8 (Mail OAuth) above stays as it is.
 
 ## Open decisions
 

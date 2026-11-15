@@ -64,7 +64,9 @@ From [`docs/ROADMAP.md`](docs/ROADMAP.md):
 | 6.0 to 6.2.1 | Crop and straighten, flash and flashlight, focus, low light, optional light correction | Done on the emulator, phone check pending |
 | 6.3 | Polish: page limit for Multi Page, guide and Help, busy capture button | Done on the emulator, phone check pending |
 | 6.4.1, 6.5 | Text fixes; pilot readiness (final package id, release signing, About, feedback) | Done on the emulator, phone check pending |
-| 6.6, 6.7 | Small-page option and camera checks; reading order on tilted pages | Proposals, only if the phone check asks |
+| 6.6 | Safety net and clean-up after Audit A1 (tests, one script for all integration tests, no behaviour change) | Done on the PC and the emulator |
+| 6.7 | Audit A1 fixes (permissions, minSdk 29, screen on while sending, EXIF, Send button position) | Planned |
+| 6.8, 6.9 | Small-page option and camera checks; reading order on tilted pages | Proposals, only if the phone check asks |
 | 7 | Review of the Budget integration | Later |
 | 8 | Mail OAuth (before any public release) | Planned ([`docs/MAIL_OAUTH_PLAN.md`](docs/MAIL_OAUTH_PLAN.md)) |
 
@@ -107,7 +109,8 @@ PaddleOCR (see [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md)).
 
 **Tests.** `flutter test` runs 1343 unit, cubit and widget tests (they need the models, nothing else).
 Integration tests (`integration_test/`) run on an Android emulator; `tool/run_integration_test.sh <device-id> <test file>`
-installs the app, grants the camera permission and runs one test. Release smoke test (R8 on): `tool/run_ocr_release_smoke.sh <device-id>`.
+installs the app, grants the camera permission and runs one test; `tool/run_all_integration.sh <device-id>` runs all of them
+with the right runner for each and prints a summary. Release smoke test (R8 on): `tool/run_ocr_release_smoke.sh <device-id>`.
 Use an Android emulator or a device you do not mind installing test builds on.
 
 ## Installing the APK (pilot)

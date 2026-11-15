@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import '../../domain/ports/open_pdf.dart';
 
-/// Talks to `ScanFilesHandler.kt` (see `android_overlay/`): ACTION_VIEW with
+/// Talks to `ScanFilesHandler.kt` (in `android/app/src/main/kotlin/`): ACTION_VIEW with
 /// the document URI and a temporary read grant for the viewer.
 class AndroidOpenPdf implements OpenPdf {
   AndroidOpenPdf({MethodChannel? channel})

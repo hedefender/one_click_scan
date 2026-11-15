@@ -1,4 +1,4 @@
-import '../../core/logging/app_logger.dart';
+import '../../core/logging/app_logger_interface.dart';
 import '../../shared/validators/email_validator.dart';
 import '../entities/app_settings.dart';
 import '../entities/mail_provider_id.dart';

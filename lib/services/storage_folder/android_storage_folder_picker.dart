@@ -4,7 +4,7 @@ import '../../core/errors/app_exceptions.dart';
 import '../../domain/entities/storage_folder.dart';
 import 'storage_folder_picker.dart';
 
-/// Talks to `MainActivity.kt` (see `android_overlay/`).
+/// Talks to `MainActivity.kt` (in `android/app/src/main/kotlin/`).
 class AndroidStorageFolderPicker implements StorageFolderPicker {
   AndroidStorageFolderPicker({MethodChannel? channel})
     : _channel = channel ?? const MethodChannel(channelName);

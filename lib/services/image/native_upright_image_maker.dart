@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import '../../domain/ports/upright_image_maker.dart';
 
-/// Talks to `ImageDecodeHandler.kt` (see `android_overlay/`): the photo is
+/// Talks to `ImageDecodeHandler.kt` (in `android/app/src/main/kotlin/`): the photo is
 /// decoded natively with `inSampleSize` (never at full size), rotated by its
 /// EXIF orientation, scaled and written as a JPEG. Only paths and numbers
 /// cross the channel, never pixels.

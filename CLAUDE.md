@@ -18,6 +18,8 @@
 - Το Webcam0 ΔΕΝ χρησιμοποιείται στον δικό σου emulator. Μόνο virtual scene για την κάμερα.
 - Τα integration tests τρέχουν χωρίς ανθρώπινη παρέμβαση. Το `flutter test` εγκαθιστά την εφαρμογή από την αρχή σε κάθε εκτέλεση (και την αφαιρεί μετά), οπότε η άδεια CAMERA χάνεται κάθε φορά και ο διάλογος του συστήματος μένει στην οθόνη. Τρέχε τα ΠΑΝΤΑ μέσω `tool/run_integration_test.sh <δικός-σου-device> <test>`: ελέγχει ότι το device είναι το `Claude_Code_Test` και δίνει την άδεια με `adb shell pm grant io.github.hedefender.simpledocscan android.permission.CAMERA` αμέσως μετά το install. Μετά από χειροκίνητο `adb install` ή uninstall δώσε πάλι την ίδια εντολή `pm grant`. Ποτέ δεν πατάς διαλόγους στον emulator με το χέρι. Αν ο διάλογος εμφανιστεί παρ' όλα αυτά, το `camera_smoke_test` αποτυγχάνει σε 20 δευτερόλεπτα με σαφές μήνυμα.
 
+- Πριν από κάθε validation φάσης τρέχει ΟΛΟΚΛΗΡΟ το `tool/run_all_integration.sh <δικός-σου-device>`: τρέχει όλα τα αρχεία του `integration_test/` με τον σωστό runner για το καθένα, κάνει uninstall και επανεκκίνηση του δικού σου emulator για να μη γεμίσει ο δίσκος, και τυπώνει σύνοψη ανά αρχείο (exit code ≠ 0 αν κάτι αποτύχει). Το validation document αναφέρει το αποτέλεσμα ανά αρχείο. Δεν τρέχεις μόνο «τα τεστ που αφορούν τη φάση».
+
 ## Αρχιτεκτονική (περίληψη, λεπτομέρειες στο docs/ARCHITECTURE.md)
 
 - Dependency rule: `domain/` χωρίς Flutter και plugins. Features δεν εισάγουν άλλα features. Plugins πίσω από interfaces σε `services/` ή `data/`.

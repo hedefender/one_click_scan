@@ -12,6 +12,7 @@ Some are written in Greek because they are checklists for the person who tests o
 | [`DECISIONS.md`](DECISIONS.md) | 33 numbered decisions (ADR) with their reasons |
 | [`ROADMAP.md`](ROADMAP.md) | Phases, their state, open decisions, backlog, and the polish list |
 | [`DESIGN_SPEC.md`](DESIGN_SPEC.md) | The look of the app (Phase 6.4): palettes, status colours, camera chrome, font, shapes, components |
+| [`AUDIT_A1.md`](AUDIT_A1.md) | Independent review of the whole app (Audit A1): findings, status and the decisions taken (Greek) |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | Third-party components and their licenses |
 
 ## Mail

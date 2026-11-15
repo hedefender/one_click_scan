@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import '../../core/logging/app_logger.dart';
+import '../../core/logging/app_logger_interface.dart';
 import '../entities/pdf_page_input.dart';
 import '../entities/stored_scan.dart';
 import '../ports/gallery_service.dart';

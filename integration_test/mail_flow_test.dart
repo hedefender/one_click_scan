@@ -639,6 +639,11 @@ void main() {
     late DirectoryScanFileStore folder;
 
     Future<void> startApp(WidgetTester tester, {MailProvider? provider}) async {
+      // A tall screen like the other flow tests (A1-001): on the real size of
+      // the emulator the Send button is below the visible part of the list.
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       final shots = Directory('${work.path}/shots')
         ..createSync(recursive: true);
       folder = DirectoryScanFileStore(
@@ -695,6 +700,7 @@ void main() {
       await pumpUntil(tester, find.byKey(ScanKeys.mailSend));
 
       await tester.ensureVisible(find.byKey(ScanKeys.mailSend));
+      await tester.pump(); // the layout settles before the tap is placed
       await tester.tap(find.byKey(ScanKeys.mailSend));
       await pumpUntil(
         tester,
@@ -726,6 +732,7 @@ void main() {
       await serverMode('hang');
 
       await tester.ensureVisible(find.byKey(ScanKeys.mailSend));
+      await tester.pump(); // the layout settles before the tap is placed
       await tester.tap(find.byKey(ScanKeys.mailSend));
       await pumpUntil(
         tester,
@@ -780,6 +787,7 @@ void main() {
 
       Future<void> test() async {
         await tester.ensureVisible(find.byKey(SettingsKeys.mailTest));
+        await tester.pump();
         await tester.tap(find.byKey(SettingsKeys.mailTest));
         final end = DateTime.now().add(const Duration(seconds: 40));
         while (find.byKey(SettingsKeys.mailTestResult).evaluate().isEmpty ||

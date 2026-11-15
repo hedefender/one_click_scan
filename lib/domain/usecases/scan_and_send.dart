@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import '../../core/errors/app_exceptions.dart';
-import '../../core/logging/app_logger.dart';
+import '../../core/logging/app_logger_interface.dart';
 import '../entities/app_settings.dart';
 import '../entities/mail_send_mode.dart';
 import '../entities/pdf_page_input.dart';

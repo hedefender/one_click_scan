@@ -143,7 +143,7 @@ banner that leads to settings. The domain rule "imports only Dart and
 ## 8. Storage folder (SAF)
 
 `StorageFolderPicker` is the interface. On Android, `MainActivity.kt`
-(`android_overlay/`) launches `ACTION_OPEN_DOCUMENT_TREE`, takes persistable
+(`android/app/src/main/kotlin/`) launches `ACTION_OPEN_DOCUMENT_TREE`, takes persistable
 read/write permission and returns `{uri, name}`. `hasAccess` checks that the
 permission is still granted (it can be revoked by the user or the system);
 later phases use it before every write and re-prompt when missing.
@@ -819,7 +819,7 @@ screenshots of both looks come from `integration_test/screenshots_test.dart` thr
 ### 8m. Release, package id and About (Phase 6.5, ADR-034)
 
 - **Id.** `io.github.hedefender.simpledocscan` in `android/app/build.gradle.kts` (`namespace` and
-  `applicationId`), in the Kotlin package folders (`android/app/...` and `android_overlay/...`),
+  `applicationId`), in the Kotlin package folders (`android/app/...`),
   and in the channel names (`io.github.hedefender.simpledocscan/{storage,scan_files,system,image_decode}`,
   which the Dart services and the tests repeat). A different id means a different app for Android:
   nothing is migrated. The same id is intended as the iOS bundle id later (no iOS files yet).
@@ -846,6 +846,13 @@ screenshots of both looks come from `integration_test/screenshots_test.dart` thr
 | Integration | wizard, settings and scan flows with real rendering on an emulator (fake folder picker, fake camera and folder store); `camera_smoke_test.dart` uses the real camera on the `virtualscene` | `integration_test/` |
 | Integration (mail) | the real mail layer against a test SMTP server on the PC (10.0.2.2): message, attachment hash, errors, Keystore, share intent, screen flow | `integration_test/mail_flow_test.dart`, `tool/run_mail_integration_test.sh` |
 | Manual | real SAF picker, real device, visual check | `PHASE_0_VALIDATION.md` |
+
+`tool/run_all_integration.sh <device>` (Phase 6.6) runs every file of `integration_test/` one after
+the other, each with its own runner (mail and one-click: SMTP server; pdf and crop: PDF pull;
+screenshots; all others: plain), plus the release smoke test (R8). It uninstalls the app before each
+file, reboots the `Claude_Code_Test` emulator every second file (the debug APK leaves about 200 MB
+that only a reboot frees), goes on after a failed file, prints a summary per file and exits non-zero
+when anything failed. It runs whole before every validation (`CLAUDE.md`).
 
 `integration_test/ocr_engine_test.dart` runs the real models on the emulator
 (invented pages: key tokens, coordinates, EXIF, 12 MP, 200 MP header, cancel,

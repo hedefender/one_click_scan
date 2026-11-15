@@ -132,6 +132,10 @@ void main() {
 
     camera.stopLightAnalysis();
     await sub.cancel();
+    // Take the preview out of the tree first: closing disposes the controller,
+    // and a frame that rebuilds a CameraPreview of a disposed controller throws
+    // (it did in one run of the full set, A1 phase 6.6).
+    await tester.pumpWidget(const SizedBox.shrink());
     await camera.close();
     await File(page.path).delete();
     if (pages.existsSync()) await pages.delete(recursive: true);

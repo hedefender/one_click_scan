@@ -1,5 +1,5 @@
 import '../../core/errors/app_exceptions.dart';
-import '../../core/logging/app_logger.dart';
+import '../../core/logging/app_logger_interface.dart';
 import '../entities/pdf_page_input.dart';
 import '../entities/storage_folder.dart';
 import '../ports/pdf_builder.dart';

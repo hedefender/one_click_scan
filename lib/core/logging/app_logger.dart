@@ -1,16 +1,12 @@
 import 'package:flutter/foundation.dart';
 
-/// Minimal logging abstraction.
-///
-/// PRIVACY RULE: never log OCR text, e-mail addresses, file names that may
-/// contain personal data, or any other user content. Log events and error
-/// types only.
-abstract interface class AppLogger {
-  void debug(String message);
+import 'app_logger_interface.dart';
 
-  void error(String message, [Object? error, StackTrace? stackTrace]);
-}
+// The interface lives in its own file without Flutter (A1-016); this export
+// keeps every `import '.../app_logger.dart'` outside `domain/` working.
+export 'app_logger_interface.dart';
 
+/// Prints through `debugPrint`. See the privacy rule of [AppLogger].
 class DebugAppLogger implements AppLogger {
   const DebugAppLogger();
 

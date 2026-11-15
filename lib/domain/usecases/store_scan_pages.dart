@@ -1,5 +1,5 @@
 import '../../core/errors/app_exceptions.dart';
-import '../../core/logging/app_logger.dart';
+import '../../core/logging/app_logger_interface.dart';
 import '../ports/gallery_counter_store.dart';
 import '../ports/gallery_service.dart';
 import '../ports/scan_file_store.dart';
