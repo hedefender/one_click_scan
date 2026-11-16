@@ -16,6 +16,7 @@ import 'services/ocr/ocr_services.dart';
 import 'services/pdf/pdf_services.dart';
 import 'services/scan_services_factory.dart';
 import 'services/storage_folder/storage_folder_picker_factory.dart';
+import 'services/system/screen_awake.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +52,7 @@ Future<void> main() async {
     pdf: pdf,
     mail: mail,
     about: createPlatformAboutServices(),
+    screenAwake: createPlatformScreenAwake(),
   );
 
   runApp(OneClickScanApp(container: container));

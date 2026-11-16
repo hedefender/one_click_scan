@@ -1,0 +1,9 @@
+# The permissions the release APK may ask for (ADR-035). One per line:
+#   <permission name>  # why the app needs it
+# `${applicationId}` stands for the package id. tool/check_permissions.sh compares
+# this list with `aapt2 dump permissions` of the release APK and fails on any
+# permission that is not here, or that is here and missing in the APK. To add one,
+# write the reason first: a permission is a promise to the user.
+android.permission.CAMERA                                    # taking the photos of the pages
+android.permission.INTERNET                                  # the SMTP send of the e-mail (lib/services/mail/ only, test/services/ocr/no_network_test.dart)
+${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION    # signature permission that androidx.core adds for receivers registered at run time; only this app can hold it

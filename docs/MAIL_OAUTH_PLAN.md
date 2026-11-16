@@ -289,7 +289,7 @@ for and not found on an official page.
    `network_security_config` is not needed (HTTPS only).
 8. **Dependencies.** `play-services-auth` and `com.microsoft.identity.client:msal`
    (Gradle, not Dart packages). Each needs a licence review for
-   `THIRD_PARTY_NOTICES.md` and a size check (the APK is 122 MB now).
+   `THIRD_PARTY_NOTICES.md` and a size check (the arm64 release APK is about 70 MB, the universal one about 120 MB, Phase 6.7; measured).
 9. **`no_network_test`.** It allows the network only in `services/mail/`. The OAuth
    token classes are a second place that talks to the network (Google and
    Microsoft); the test needs a named exception, written down in an ADR.

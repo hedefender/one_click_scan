@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-import 'package:gal/gal.dart';
 
 import '../../core/errors/app_exceptions.dart';
 import '../../domain/ports/gallery_service.dart';
@@ -8,9 +7,10 @@ import '../../domain/ports/gallery_service.dart';
 /// (`Pictures/`), which gives back the URI of the entry. A discard deletes the
 /// copy by that URI (ADR-027); the `gal` plugin could not give one.
 ///
-/// `gal` is still used for one thing: the storage permission that Android 9 and
-/// older need before a write (from Android 10 on `hasAccess` is true at once and
-/// nothing is asked). It asks only here, when a copy is really requested.
+/// The app needs Android 10 or newer (minSdk 29, ADR-035), where an app writes
+/// and deletes its own MediaStore entries with no storage permission, so nothing
+/// is asked here. (The `gal` plugin only asked for that permission on Android 9
+/// and older and was removed.)
 class MediaStoreGalleryService implements GalleryService {
   MediaStoreGalleryService({MethodChannel? channel})
     : _channel = channel ?? const MethodChannel(channelName);
@@ -22,13 +22,6 @@ class MediaStoreGalleryService implements GalleryService {
 
   @override
   Future<String> saveImage(String path, {required String fileName}) async {
-    try {
-      if (!await Gal.hasAccess() && !await Gal.requestAccess()) {
-        throw const GalleryException('Gallery access was not granted');
-      }
-    } on GalException catch (error) {
-      throw GalleryException(error.type.name);
-    }
     final uri = await _invoke<String>('saveToGallery', <String, String>{
       'sourcePath': path,
       'fileName': fileName,

@@ -1,4 +1,4 @@
-# Architecture (Phase 4)
+# Architecture
 
 Status: Phase 0 skeleton and Phase 0.5 settings screen are committed; Phase 1
 adds the camera and saving the originals (see `PHASE_1_VALIDATION.md`);
@@ -183,18 +183,19 @@ Feature `features/scan/`, routes `/scan` and `/scan/result`.
   system media index (Gallery, Google Photos) away from the originals, so the
   Gallery switch alone decides whether a copy appears there. The marker stays
   whatever the switch says.
-- `GalleryService` (port in `domain/ports/`): `gal` package, which saves the
-  copy under `Pictures/` (no album) and names it after the file it is given.
-  The permission is asked only when a copy is requested; a failing copy is
-  reported per picture and never fails the scan.
+- `GalleryService` (port in `domain/ports/`): `MediaStoreGalleryService`, whose
+  copy is written by `ScanFilesHandler.kt` into MediaStore (`Pictures/`, no
+  album, named by the app) and returns its URI. The app needs Android 10 or
+  newer (ADR-035), so no storage permission is asked; a failing copy is
+  reported per picture and never fails the scan. (The `gal` plugin was removed
+  in Phase 6.7.)
 - Gallery names (Phase 1.2, ADR-009): `GalleryNaming` (pure, injected clock)
   builds `scan_YYYY-MM-DD_NN.jpg`; `GalleryCounterStore` (port) keeps the daily
   number, `KeyValueGalleryCounterStore` (in `data/`) implements it over the
   key/value store. `StoreScanPages` asks for the next number per picture and
-  records it only after the copy succeeded. `GalGalleryService` copies the
-  picture under the wanted name into the cache folder `gallery_copies/`, gives
-  that file to `gal` and deletes it; `IoScanTempStore.purgeAll` also empties
-  that folder at start-up.
+  records it only after the copy succeeded. The native copy takes the name from
+  the counter, so no work copy is needed; `IoScanTempStore.purgeAll` still
+  empties the old cache folder `gallery_copies/` at start-up.
 - Naming (`ScanNaming`, pure, injected clock): see ADR-005.
 - `MainActivity.kt` only registers the two new handlers
   (`ScanFilesHandler`, `SystemHandler` for "open app settings").
@@ -868,7 +869,7 @@ the PDF. `tool/run_pdf_integration_test.sh` pulls the PDFs to the PC and
 `tool/check_pdf_text.py` reads their text with PyMuPDF and `pdftotext`.
 
 `integration_test/gallery_copy_test.dart` saves a synthetic picture through the
-real `gal` plugin (Gallery file name).
+real MediaStore code (Gallery file name).
 
 Rules: no personal data in samples or tests (use `example.com` addresses and
 synthetic names); fakes live in `test/support/`; platform adapters are always
@@ -885,7 +886,7 @@ depend on native APIs and stay outside Rust. Costs to weigh then:
 
 ## 11. Platform notes
 
-- Android first. `minSdk 24`. Debug builds for the emulator use the host ABI;
+- Android first. `minSdk 29` (Android 10, ADR-035). Debug builds for the emulator use the host ABI;
   a real phone needs arm64 (Phase 1 builds and tests on a real device).
 - iOS later: implement `StorageFolderPicker` with security-scoped bookmarks and
   keep the rest unchanged.

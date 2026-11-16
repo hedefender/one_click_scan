@@ -83,12 +83,12 @@ Clean Architecture in short:
 - `lib/features/`: screens with `flutter_bloc` Cubits. Features do not import each other.
 - Dependency injection with `get_it`, registered by hand and built fresh per build. Routing with `go_router`.
 
-Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Decisions with their reasons (30 ADRs):
+Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Decisions with their reasons (35 ADRs):
 [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Build and run
 
-Needs Flutter (Dart SDK `>=3.13.0 <4.0.0` per `pubspec.yaml`; developed with Flutter 3.47) and the
+Runs on **Android 10 or newer** (API 29). Needs Flutter (Dart SDK `>=3.13.0 <4.0.0` per `pubspec.yaml`; developed with Flutter 3.47) and the
 Android SDK.
 
 ```
@@ -118,9 +118,10 @@ Use an Android emulator or a device you do not mind installing test builds on.
 This is a **pilot** version for a few testers, not a finished product: it may have faults.
 Only an APK from the owner is meant to be installed.
 
+0. The phone must run **Android 10 or newer**.
 1. Download the APK on the phone (for almost every modern phone: the `arm64-v8a` one).
 2. Open it and allow the install from this source when Android asks.
-3. Open the app and follow the wizard.
+3. Open the app and follow the wizard. (The `arm64-v8a` APK is about 70 MB, `armeabi-v7a` about 60 MB, `x86_64` about 77 MB, the universal one about 120 MB.)
 4. Updates arrive as a new APK that you install over the old one; there is no automatic update.
 5. Settings, About shows the version, the privacy note and, if set up, "Send feedback".
 
@@ -146,7 +147,7 @@ How the APK is made and signed: [`docs/RELEASE.md`](docs/RELEASE.md).
 - The PDF text layer is best effort. It does not promise exact characters, so do not rely on it
   for payment codes.
 - The package id is `io.github.hedefender.simpledocscan` (it was `com.example.one_click_scan` until Phase 6.5). It is a different app for Android: nothing moves from a build with the old id.
-- Tested mainly on one Android phone and on an emulator; `minSdk` is 24. iOS is not implemented.
+- Tested mainly on one Android phone and on an emulator; `minSdk` is 29 (Android 10 or newer, ADR-035). iOS is not implemented.
 - The real flash, real room light and real lens behaviour cannot be tested on the emulator.
   The low-light threshold is a starting value to be calibrated on a phone.
 - The OCR models are downloaded from third-party mirrors until the project hosts its own release.
@@ -158,7 +159,7 @@ Each phase starts with an architecture note and, for risky choices, a spike with
 (`docs/*_SPIKE_RESULTS.md`), then a plan, code and tests. The code is written with an AI coding
 assistant (Claude Code) under written rules ([`CLAUDE.md`](CLAUDE.md)); the assistant never commits,
 and every phase ends with a manual check on a real device before the next one starts. There are
-1249 automated tests (1343 since Phase 6.5). The checks are in [`docs/PHASE_6_2_VALIDATION.md`](docs/PHASE_6_2_VALIDATION.md)
+more than 1300 automated tests. The checks are in [`docs/PHASE_6_2_VALIDATION.md`](docs/PHASE_6_2_VALIDATION.md)
 and its siblings; the document index is [`docs/README.md`](docs/README.md).
 
 ## License and contact

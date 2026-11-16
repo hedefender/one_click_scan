@@ -389,4 +389,65 @@ void main() {
       await sending;
     });
   });
+
+  group('A1-013: two quick taps', () {
+    test('Send: two taps at once send one message', () async {
+      await cubit.attach(pdf);
+
+      await Future.wait([cubit.send(), cubit.send()]);
+
+      expect(mail.sender.sent, hasLength(1));
+      expect(cubit.state.phase, MailPhase.sent);
+    });
+
+    test('Send in the share mode: two taps open the e-mail app once', () async {
+      await repository.save(
+        (await repository.load()).copyWith(
+          mailSendMode: MailSendMode.shareDraft,
+        ),
+      );
+      await cubit.attach(pdf);
+
+      await Future.wait([cubit.send(), cubit.send()]);
+
+      expect(mail.sharer.shared, hasLength(1));
+    });
+
+    test('"Open in the e-mail app": two taps open it once', () async {
+      await cubit.attach(pdf);
+
+      await Future.wait([cubit.openMailApp(), cubit.openMailApp()]);
+
+      expect(mail.sharer.shared, hasLength(1));
+    });
+
+    test('a tap while the e-mail app is still being opened is ignored; after '
+        'it, the button works again', () async {
+      await cubit.attach(pdf);
+      mail.sharer.hold = Completer<void>();
+
+      final first = cubit.openMailApp();
+      await Future<void>.delayed(Duration.zero);
+      await cubit.openMailApp();
+      expect(mail.sharer.shared, hasLength(1));
+
+      mail.sharer.hold!.complete();
+      await first;
+      await cubit.openMailApp();
+      expect(mail.sharer.shared, hasLength(2));
+    });
+
+    test('a failed send does not lock the button', () async {
+      await cubit.attach(pdf);
+      mail.sender.outcome = const MailNetworkError();
+      await cubit.send();
+      expect(cubit.state.phase, MailPhase.failed);
+
+      mail.sender.outcome = const MailSent();
+      await cubit.send();
+
+      expect(mail.sender.sent, hasLength(2));
+      expect(cubit.state.phase, MailPhase.sent);
+    });
+  });
 }

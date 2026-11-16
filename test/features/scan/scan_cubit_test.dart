@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:one_click_scan/core/errors/app_exceptions.dart';
 import 'package:one_click_scan/domain/entities/scan_mode.dart';
@@ -454,6 +456,146 @@ void main() {
 
       expect(cubit.state.phase, ScanPhase.ready);
       expect(cubit.state.saveCancelled, isFalse);
+    });
+  });
+
+  group('A1-013: the gaps of the lifecycle', () {
+    test('an exception of another type does not leave the phase on '
+        '`capturing`', () async {
+      await setUpWith();
+      await cubit.start();
+      cubit.setMode(ScanMode.multi);
+      camera.failCaptureWith = StateError('something else');
+
+      await cubit.capture();
+
+      expect(cubit.state.phase, ScanPhase.ready);
+      expect(cubit.state.captureFailed, isTrue);
+      expect(cubit.state.pages, isEmpty);
+      // And the next shot works.
+      camera.failCaptureWith = null;
+      await cubit.capture();
+      expect(cubit.state.captureFailed, isFalse);
+      expect(cubit.state.pages, hasLength(1));
+    });
+
+    test(
+      'Single Page: the same exception frees the camera screen too',
+      () async {
+        await setUpWith();
+        await cubit.start();
+        camera.failCaptureWith = const FormatException('x');
+
+        await cubit.capture();
+
+        expect(cubit.state.phase, ScanPhase.ready);
+        expect(cubit.state.captureFailed, isTrue);
+      },
+    );
+
+    test('the background while a shot runs: the camera and the analyser are '
+        'released, and the shot is not a failure', () async {
+      await setUpWith();
+      await cubit.start();
+      cubit.setMode(ScanMode.multi);
+      final gate = Completer<void>();
+      camera.captureGate = gate.future;
+      final shot = cubit.capture();
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.state.phase, ScanPhase.capturing);
+      final stops = camera.analysisStops;
+
+      await cubit.onBackground();
+
+      expect(cubit.state.phase, ScanPhase.paused);
+      expect(camera.isOpen, isFalse);
+      expect(camera.analysisStops, greaterThan(stops));
+
+      gate.completeError(const CameraCaptureException('camera closed'));
+      await shot;
+      expect(cubit.state.phase, ScanPhase.paused);
+      expect(cubit.state.captureFailed, isFalse);
+
+      await cubit.onForeground();
+      expect(cubit.state.phase, ScanPhase.ready);
+      expect(camera.isOpen, isTrue);
+    });
+
+    test('a shot that ended after the background keeps the phase `paused`; '
+        'the camera comes back with the page', () async {
+      await setUpWith();
+      await cubit.start();
+      cubit.setMode(ScanMode.multi);
+      final gate = Completer<void>();
+      camera.captureGate = gate.future;
+      final shot = cubit.capture();
+      await Future<void>.delayed(Duration.zero);
+
+      await cubit.onBackground();
+      gate.complete();
+      await shot;
+
+      expect(cubit.state.phase, ScanPhase.paused);
+      expect(cubit.state.pages, hasLength(1));
+      await cubit.onForeground();
+      expect(cubit.state.phase, ScanPhase.ready);
+      expect(cubit.state.pages, hasLength(1));
+    });
+
+    test('Single Page: the shot taken in the background is saved when the app '
+        'is back', () async {
+      await setUpWith();
+      await cubit.start();
+      final gate = Completer<void>();
+      camera.captureGate = gate.future;
+      final shot = cubit.capture();
+      await Future<void>.delayed(Duration.zero);
+
+      await cubit.onBackground();
+      gate.complete();
+      await shot;
+      expect(cubit.state.phase, ScanPhase.paused);
+      expect(store.files('pictures'), isEmpty);
+
+      await cubit.onForeground();
+
+      expect(cubit.state.phase, ScanPhase.saved);
+      expect(store.files('pictures'), hasLength(1));
+    });
+
+    test('the background after a failed save: the camera and the analyser are '
+        'released, the retry is still there', () async {
+      await setUpWith();
+      await cubit.start();
+      store.failOnCopyNumber = 1;
+      await cubit.capture();
+      expect(cubit.state.phase, ScanPhase.saveFailed);
+      final stops = camera.analysisStops;
+      final closes = camera.closeCalls;
+
+      await cubit.onBackground();
+
+      expect(camera.isOpen, isFalse);
+      expect(camera.closeCalls, greaterThan(closes));
+      expect(camera.analysisStops, greaterThan(stops));
+      expect(cubit.state.phase, ScanPhase.saveFailed, reason: 'retry is kept');
+
+      store.failOnCopyNumber = null;
+      await cubit.save();
+      expect(cubit.state.phase, ScanPhase.saved);
+    });
+
+    test('the background in the other phases that have no camera does '
+        'nothing', () async {
+      await setUpWith(withFolder: false);
+      await cubit.start();
+      expect(cubit.state.phase, ScanPhase.folderUnavailable);
+      final closes = camera.closeCalls;
+
+      await cubit.onBackground();
+
+      expect(cubit.state.phase, ScanPhase.folderUnavailable);
+      expect(camera.closeCalls, closes);
     });
   });
 }

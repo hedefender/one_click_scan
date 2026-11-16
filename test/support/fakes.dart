@@ -13,6 +13,7 @@ import 'package:one_click_scan/services/pdf/pdf_services.dart';
 import 'package:one_click_scan/services/camera/camera_service.dart';
 import 'package:one_click_scan/domain/ports/light_meter.dart';
 import 'package:one_click_scan/domain/ports/gallery_service.dart';
+import 'package:one_click_scan/domain/ports/screen_awake.dart';
 import 'package:one_click_scan/domain/ports/scan_file_store.dart';
 import 'package:one_click_scan/services/scan_files/scan_temp_store.dart';
 import 'package:one_click_scan/services/storage_folder/storage_folder_picker.dart';
@@ -105,6 +106,7 @@ Future<GetIt> buildTestContainer({
   LightMeter? lightMeter,
   PdfServices? pdf,
   MailServices? mail,
+  ScreenAwake? screenAwake,
   AppConfig? config,
   DateTime Function()? clock,
 
@@ -141,6 +143,17 @@ Future<GetIt> buildTestContainer({
     ocr: ocrServices,
     pdf: pdf ?? const PdfServices.unsupported(),
     mail: mail ?? const MailServices.unsupported(),
+    screenAwake: screenAwake ?? FakeScreenAwake(),
     clock: clock ?? () => DateTime(2026, 10, 21, 19, 5, 12),
   );
+}
+
+/// Records every `keepOn` call; [isOn] is what the real window would have.
+class FakeScreenAwake implements ScreenAwake {
+  final calls = <bool>[];
+
+  bool get isOn => calls.isNotEmpty && calls.last;
+
+  @override
+  Future<void> keepOn(bool on) async => calls.add(on);
 }

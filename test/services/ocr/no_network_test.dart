@@ -85,12 +85,20 @@ void main() {
     // Phase 4: the SMTP send of lib/services/mail needs the network. The OCR
     // checks above still guarantee that the OCR code does not use it.
     expect(manifest, contains('android.permission.INTERNET'));
+    // The other network permissions are not asked for. A plugin adds
+    // ACCESS_NETWORK_STATE at merge time; the manifest removes it (ADR-035,
+    // checked in the APK by tool/check_permissions.sh).
+    final asked = RegExp(r'<uses-permission[^>]*/>')
+        .allMatches(manifest)
+        .map((m) => m.group(0)!)
+        .where((tag) => !tag.contains('tools:node="remove"'))
+        .join(' ');
     for (final other in [
       'ACCESS_NETWORK_STATE',
       'ACCESS_WIFI_STATE',
       'CHANGE_NETWORK_STATE',
     ]) {
-      expect(manifest, isNot(contains('android.permission.$other')));
+      expect(asked, isNot(contains('android.permission.$other')));
     }
   });
 

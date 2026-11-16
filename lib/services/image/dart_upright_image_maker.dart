@@ -59,6 +59,10 @@ class DartUprightImageMaker implements UprightImageMaker {
       interpolation: img.Interpolation.average,
     );
   }
+  // The working copy goes into the PDF as it is when the crop keeps the whole
+  // frame, so it must carry no metadata of the camera: model, time, GPS
+  // (A1-005, ADR-017). The orientation is already baked into the pixels above.
+  image.exif = img.ExifData();
   File(target).writeAsBytesSync(img.encodeJpg(image, quality: jpegQuality));
   return (image.width, image.height);
 }

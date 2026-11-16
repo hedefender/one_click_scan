@@ -6,9 +6,8 @@ version: 0.1.0+1
 environment:
   sdk: ">=3.13.0 <4.0.0"
 
-# NOTE: constraints are `any` on purpose in the seed, because the seed was not
-# compiled against a real toolchain. After `flutter pub get` run
-# `dart pub upgrade --tighten` so they become pinned ^constraints.
+# Constraints are `^` ranges; `flutter pub outdated` is only a report
+# (docs/AUDIT_A1.md, A1-011).
 dependencies:
   flutter:
     sdk: flutter
@@ -20,7 +19,6 @@ dependencies:
   go_router: ^18.1.1
   shared_preferences: ^2.5.6
   camera: ^0.12.1
-  gal: ^2.3.3
   path_provider: ^2.1.6
   flutter_onnxruntime: ^1.9.0
   image: ^4.12.0

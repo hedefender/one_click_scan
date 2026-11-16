@@ -154,7 +154,11 @@ class ScanCubit extends Cubit<ScanState> {
       }
       emit(
         state.copyWith(
-          phase: state.mode == ScanMode.single
+          // A shot that ended after the app went to the background keeps the
+          // phase `paused`: the camera was released and onForeground reopens it.
+          phase: state.phase == ScanPhase.paused
+              ? ScanPhase.paused
+              : state.mode == ScanMode.single
               ? ScanPhase.capturing
               : ScanPhase.ready,
           pages: [...state.pages, page],
@@ -169,15 +173,42 @@ class ScanCubit extends Cubit<ScanState> {
         unawaited(_assessMulti(page.path));
         return;
       }
+      if (state.phase == ScanPhase.paused) {
+        _pendingSingleShot = page.path;
+        return;
+      }
       if (await _assessSingle(page.path)) return;
+      if (state.phase == ScanPhase.paused) {
+        _pendingSingleShot = page.path;
+        return;
+      }
     } on CameraCaptureException catch (error, stackTrace) {
       _logger.error('Capture failed', error, stackTrace);
       if (isClosed) return;
+      // The camera was released by onBackground while the shot was running:
+      // that is not a failure, onForeground reopens it.
+      if (state.phase == ScanPhase.paused) return;
+      emit(state.copyWith(phase: ScanPhase.ready, captureFailed: true));
+      return;
+    } catch (error, stackTrace) {
+      // Whatever else goes wrong (A1-013): the phase must not stay `capturing`
+      // for ever, with a busy button and the Back arrow as the only way out.
+      _logger.error(
+        'Capture failed unexpectedly',
+        error.runtimeType,
+        stackTrace,
+      );
+      if (isClosed) return;
+      if (state.phase == ScanPhase.paused) return;
       emit(state.copyWith(phase: ScanPhase.ready, captureFailed: true));
       return;
     }
     if (state.mode == ScanMode.single) await save();
   }
+
+  /// Single Page: the shot that was taken while the app went to the background.
+  /// Its check of the light and its save are done when the app is back.
+  String? _pendingSingleShot;
 
   /// Measures a shot. Never throws; null when it could not be measured (then
   /// the shot is never called dark).
@@ -209,7 +240,7 @@ class ScanCubit extends Cubit<ScanState> {
       case LowLightAction.askNow:
         emit(
           state.copyWith(
-            phase: ScanPhase.ready,
+            phase: _phaseAfterAssess,
             lightPrompt: LightPrompt.singleShot,
             darkPages: [path],
             veryDarkPages: veryDark,
@@ -219,7 +250,7 @@ class ScanCubit extends Cubit<ScanState> {
       case LowLightAction.bannerLater:
         emit(
           state.copyWith(
-            phase: ScanPhase.ready,
+            phase: _phaseAfterAssess,
             darkPages: [path],
             veryDarkPages: veryDark,
           ),
@@ -227,10 +258,15 @@ class ScanCubit extends Cubit<ScanState> {
         return false;
       case LowLightAction.markPage:
       case LowLightAction.none:
-        emit(state.copyWith(phase: ScanPhase.ready));
+        emit(state.copyWith(phase: _phaseAfterAssess));
         return false;
     }
   }
+
+  /// `ready` again after the check of a shot, unless the app went to the
+  /// background meanwhile (the camera is released then, A1-013).
+  ScanPhase get _phaseAfterAssess =>
+      state.phase == ScanPhase.paused ? ScanPhase.paused : ScanPhase.ready;
 
   /// Multi Page: a mark, never a stop. The bar offers a new shot of the last
   /// page; the summary before the send is in [finish].
@@ -623,10 +659,20 @@ class ScanCubit extends Cubit<ScanState> {
     await _tempStore.delete(paths);
   }
 
-  /// App went to the background: release the camera.
+  /// App went to the background: release the camera, the analyser and the
+  /// torch (ADR-031). While a shot is running (`capturing`) the phase becomes
+  /// `paused` too: the shot ends as a stop, not as a failure, and onForeground
+  /// reopens the camera. After a failed save the phase stays (the retry needs no
+  /// camera), but nothing keeps running in the background (A1-013).
   Future<void> onBackground() async {
-    if (state.phase != ScanPhase.ready) return;
-    emit(state.copyWith(phase: ScanPhase.paused));
+    switch (state.phase) {
+      case ScanPhase.ready || ScanPhase.capturing:
+        emit(state.copyWith(phase: ScanPhase.paused));
+      case ScanPhase.saveFailed:
+        break;
+      case _:
+        return;
+    }
     await _torchOff();
     await _stopLightAnalysis();
     await _camera.close();
@@ -642,11 +688,26 @@ class ScanCubit extends Cubit<ScanState> {
     switch (state.phase) {
       case ScanPhase.paused:
         await _openCamera();
+        await _finishPendingSingleShot();
       case ScanPhase.permissionDenied:
         await retryCamera();
       case _:
         break;
     }
+  }
+
+  /// Single Page: the shot that was taken while the app went to the background
+  /// goes on as it would have: the check of the light, then the save.
+  Future<void> _finishPendingSingleShot() async {
+    final path = _pendingSingleShot;
+    _pendingSingleShot = null;
+    if (path == null ||
+        state.phase != ScanPhase.ready ||
+        !state.pages.any((p) => p.path == path)) {
+      return;
+    }
+    if (await _assessSingle(path)) return;
+    await save();
   }
 
   /// Starts reading a shot at once, while the camera goes on. Never delays

@@ -35,6 +35,12 @@ class MailSendCubit extends Cubit<MailSendState> {
   MailCancellation? _cancellation;
   StoredPdf? _pdf;
 
+  /// A tap is being handled (A1-013): two quick taps start one send, and open
+  /// the e-mail app once. The state `sending` comes only after the settings are
+  /// read, so `state.busy` alone cannot tell the second tap.
+  var _sendStarting = false;
+  var _openingMailApp = false;
+
   /// The PDF this cubit sends. The cubit exists from the start of the result
   /// screen (so the screen can lock leaving while a send runs); the PDF is known
   /// when it is stored.
@@ -77,7 +83,16 @@ class MailSendCubit extends Cubit<MailSendState> {
   /// The main button: sends over SMTP, or opens the e-mail app, as Settings say.
   Future<void> send() async {
     final pdf = _pdf;
-    if (pdf == null || state.busy) return;
+    if (pdf == null || state.busy || _sendStarting) return;
+    _sendStarting = true;
+    try {
+      await _runSend(pdf);
+    } finally {
+      _sendStarting = false;
+    }
+  }
+
+  Future<void> _runSend(StoredPdf pdf) async {
     final settings = await _loadSettings();
     if (isClosed) return;
     if (settings.mailSendMode == MailSendMode.shareDraft) {
@@ -140,11 +155,16 @@ class MailSendCubit extends Cubit<MailSendState> {
   /// button in the `shareDraft` mode. The user presses send there.
   Future<void> openMailApp() async {
     final pdf = _pdf;
-    if (pdf == null || state.busy) return;
-    final settings = await _loadSettings();
-    final result = await _share(settings: settings, pdf: pdf);
-    if (isClosed) return;
-    emit(state.copyWith(draft: result));
+    if (pdf == null || state.busy || _openingMailApp) return;
+    _openingMailApp = true;
+    try {
+      final settings = await _loadSettings();
+      final result = await _share(settings: settings, pdf: pdf);
+      if (isClosed) return;
+      emit(state.copyWith(draft: result));
+    } finally {
+      _openingMailApp = false;
+    }
   }
 
   void _finish(MailOutcome outcome) {

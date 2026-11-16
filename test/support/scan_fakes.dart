@@ -37,6 +37,10 @@ class FakeCameraService implements CameraService {
   /// When true, [capture] throws.
   bool failCapture = false;
 
+  /// When set, [capture] throws this (an exception that is not a
+  /// `CameraCaptureException`, A1-013).
+  Object? failCaptureWith;
+
   /// When set, [capture] waits for it first (a slow camera: the button is busy
   /// meanwhile).
   Future<void>? captureGate;
@@ -70,6 +74,8 @@ class FakeCameraService implements CameraService {
   @override
   Future<CapturedPage> capture({required int order}) async {
     if (failCapture) throw const CameraCaptureException('fake failure');
+    final other = failCaptureWith;
+    if (other != null) throw other;
     final gate = captureGate;
     if (gate != null) await gate;
     _shots++;

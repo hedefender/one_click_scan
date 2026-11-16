@@ -699,8 +699,7 @@ void main() {
       await tester.pump();
       await pumpUntil(tester, find.byKey(ScanKeys.mailSend));
 
-      await tester.ensureVisible(find.byKey(ScanKeys.mailSend));
-      await tester.pump(); // the layout settles before the tap is placed
+      // Send is in the fixed frame of the screen (6.7): no scrolling needed.
       await tester.tap(find.byKey(ScanKeys.mailSend));
       await pumpUntil(
         tester,
@@ -731,8 +730,7 @@ void main() {
       await pumpUntil(tester, find.byKey(ScanKeys.mailSend));
       await serverMode('hang');
 
-      await tester.ensureVisible(find.byKey(ScanKeys.mailSend));
-      await tester.pump(); // the layout settles before the tap is placed
+      // Send is in the fixed frame of the screen (6.7): no scrolling needed.
       await tester.tap(find.byKey(ScanKeys.mailSend));
       await pumpUntil(
         tester,

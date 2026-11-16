@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
@@ -518,9 +517,9 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
     /**
      * Copies a picture into the Gallery (MediaStore, `Pictures/`) under the
      * given name and returns the URI of the entry, which is what a discard
-     * deletes it by. From Android 10 on the entry belongs to this app, so it
-     * needs no permission to delete it again; before that the storage
-     * permission that the `gal` plugin asks for is needed.
+     * deletes it by. The app needs Android 10 or newer (minSdk 29, ADR-035), where
+     * the entry belongs to this app, so neither writing nor deleting it needs a
+     * storage permission.
      */
     private fun saveToGallery(sourcePath: String, fileName: String): String {
         val source = File(sourcePath)
@@ -529,16 +528,8 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            } else {
-                @Suppress("DEPRECATION")
-                val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                directory.mkdirs()
-                @Suppress("DEPRECATION")
-                put(MediaStore.Images.Media.DATA, File(directory, fileName).absolutePath)
-            }
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            put(MediaStore.Images.Media.IS_PENDING, 1)
         }
         val uri = try {
             resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
@@ -549,10 +540,8 @@ class ScanFilesHandler(private val context: Context, messenger: BinaryMessenger)
             val output = resolver.openOutputStream(uri, "w")
                 ?: throw ScanFilesException("write_failed", "Could not open the Gallery entry")
             output.use { out -> FileInputStream(source).use { input -> input.copyTo(out) } }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
-                resolver.update(uri, done, null, null)
-            }
+            val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+            resolver.update(uri, done, null, null)
         } catch (e: Exception) {
             // Never leave a half entry in the Gallery.
             try {

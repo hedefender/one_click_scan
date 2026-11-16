@@ -16,6 +16,7 @@ import '../../domain/usecases/recognize_pages.dart';
 import '../../presentation/l10n/app_strings.dart';
 import '../../presentation/theme/app_colors.dart';
 import '../../presentation/theme/app_dimens.dart';
+import '../../presentation/theme/app_theme.dart';
 import '../../presentation/state/settings_cubit.dart';
 import '../../services/scan_files/scan_temp_store.dart';
 import 'auto_return_cubit.dart';
@@ -24,6 +25,7 @@ import 'mail_send_state.dart';
 import 'scan_keys.dart';
 import 'scan_page.dart' show PageThumbnail;
 import 'scan_result_args.dart';
+import 'screen_awake_guard.dart';
 import 'stop_dialog.dart';
 import 'scan_flow_cubit.dart';
 import 'scan_flow_state.dart';
@@ -101,142 +103,207 @@ class _ScanResultPageState extends State<ScanResultPage> {
       (cubit) => cubit.state.busy,
     );
     final busy = pdfBusy || mailBusy;
+    // Send is the primary button of the fixed frame (Phase 6.7): it must be
+    // seen without scrolling the list. The rest of the mail section stays in
+    // the list.
+    final sendInFrame =
+        context.select<ScanFlowCubit, bool>(_mailSectionVisible) &&
+        context.select<MailSendCubit, bool>(
+          (cubit) => cubit.state.phase == MailPhase.idle,
+        );
+    final sharing = context.select<MailSendCubit, bool>(
+      (cubit) => cubit.state.mode == MailSendMode.shareDraft,
+    );
 
     // While the PDF is being made, leaving would lose it: the reading and the
     // working copies end with this screen. While a mail is being sent, leaving
     // would cancel it: the Cancel button of the mail section is the way out.
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<ScanFlowCubit, ScanFlowViewState>(
-          listenWhen: (previous, current) => previous.flow != current.flow,
-          listener: (context, state) {
-            final mail = context.read<MailSendCubit>();
-            switch (state.flow) {
-              case FlowAwaitingDecision(:final pdf):
-                mail.attach(pdf);
-              case FlowFinished(:final pdf, :final delivery):
-                mail.adopt(pdf, delivery);
-              case FlowCancelled(:final pdf) when pdf != null:
-                mail.attach(pdf);
-              case _:
-                break;
-            }
-          },
-        ),
-        // A message that really left (One Click, or the Send of the preview):
-        // the screen goes home by itself unless the user touches it.
-        BlocListener<MailSendCubit, MailSendState>(
-          listenWhen: (previous, current) =>
-              previous.phase != MailPhase.sent &&
-              current.phase == MailPhase.sent,
-          listener: (context, _) => context.read<AutoReturnCubit>().start(),
-        ),
-        BlocListener<AutoReturnCubit, AutoReturnState>(
-          listenWhen: (previous, current) =>
-              previous.phase != AutoReturnPhase.due &&
-              current.phase == AutoReturnPhase.due,
-          listener: (context, _) => context.go(RoutePaths.home),
-        ),
-      ],
-      child: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (_) => context.read<AutoReturnCubit>().stop(),
-        child: PopScope(
-          canPop: !busy,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) _onBack();
-          },
-          child: Scaffold(
-            appBar: AppBar(title: Text(strings.scanResultTitle)),
-            body: SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      discarded
-                          ? strings.discardDone
-                          : strings.scanResultSummary(
-                              pictures.length,
-                              folderName,
-                            ),
-                      key: ScanKeys.resultSummary,
-                      style: Theme.of(context).textTheme.titleMedium,
+    return ScreenAwakeGuard(
+      busy: busy,
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<ScanFlowCubit, ScanFlowViewState>(
+            listenWhen: (previous, current) => previous.flow != current.flow,
+            listener: (context, state) {
+              final mail = context.read<MailSendCubit>();
+              switch (state.flow) {
+                case FlowAwaitingDecision(:final pdf):
+                  mail.attach(pdf);
+                case FlowFinished(:final pdf, :final delivery):
+                  mail.adopt(pdf, delivery);
+                case FlowCancelled(:final pdf) when pdf != null:
+                  mail.attach(pdf);
+                case _:
+                  break;
+              }
+            },
+          ),
+          // A message that really left (One Click, or the Send of the preview):
+          // the screen goes home by itself unless the user touches it.
+          BlocListener<MailSendCubit, MailSendState>(
+            listenWhen: (previous, current) =>
+                previous.phase != MailPhase.sent &&
+                current.phase == MailPhase.sent,
+            listener: (context, _) => context.read<AutoReturnCubit>().start(),
+          ),
+          BlocListener<AutoReturnCubit, AutoReturnState>(
+            listenWhen: (previous, current) =>
+                previous.phase != AutoReturnPhase.due &&
+                current.phase == AutoReturnPhase.due,
+            listener: (context, _) => context.go(RoutePaths.home),
+          ),
+        ],
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => context.read<AutoReturnCubit>().stop(),
+          child: PopScope(
+            canPop: !busy,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _onBack();
+            },
+            child: Scaffold(
+              appBar: AppBar(title: Text(strings.scanResultTitle)),
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        discarded
+                            ? strings.discardDone
+                            : strings.scanResultSummary(
+                                pictures.length,
+                                folderName,
+                              ),
+                        key: ScanKeys.resultSummary,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: ListView(
-                      key: ScanKeys.resultList,
-                      children: [
-                        const _LightFixBanner(),
-                        const _PdfSection(),
-                        if (widget.ocr != null && !discarded)
-                          _PdfPagesSection(session: widget.ocr!),
-                        const _FlowSection(),
-                        const _MailSection(),
-                        const _DiscardSection(),
-                        if (!discarded)
-                          for (final picture in pictures)
-                            ListTile(
-                              key: ScanKeys.resultFile(picture.fileName),
-                              leading: SizedBox(
-                                width: 48,
-                                height: 48,
-                                child: ClipRRect(
-                                  borderRadius: AppRadius.thumbnailBorder,
-                                  child: PageThumbnail(
-                                    path: picture.sourcePath,
+                    Expanded(
+                      child: ListView(
+                        key: ScanKeys.resultList,
+                        children: [
+                          const _LightFixBanner(),
+                          const _PdfSection(),
+                          if (widget.ocr != null && !discarded)
+                            _PdfPagesSection(session: widget.ocr!),
+                          const _FlowSection(),
+                          const _MailSection(),
+                          const _DiscardSection(),
+                          if (!discarded)
+                            for (final picture in pictures)
+                              ListTile(
+                                key: ScanKeys.resultFile(picture.fileName),
+                                leading: SizedBox(
+                                  width: 48,
+                                  height: 48,
+                                  child: ClipRRect(
+                                    borderRadius: AppRadius.thumbnailBorder,
+                                    child: PageThumbnail(
+                                      path: picture.sourcePath,
+                                    ),
                                   ),
                                 ),
+                                title: Text(picture.fileName),
+                                subtitle: _gallerySubtitle(context, picture),
                               ),
-                              title: Text(picture.fileName),
-                              subtitle: _gallerySubtitle(context, picture),
-                            ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (widget.ocr != null && !discarded)
+                    const _AutoReturnNotice(),
+                    // The fixed frame of the buttons: Send (primary, only while
+                    // there is something to send), then the two others.
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          key: ScanKeys.resultOcr,
-                          onPressed: () => context.push(
-                            RoutePaths.ocrResult,
-                            extra: widget.ocr,
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.screen,
+                        AppSpacing.s8,
+                        AppSpacing.screen,
+                        AppSpacing.s16,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (sendInFrame) ...[
+                            FilledButton.icon(
+                              key: ScanKeys.mailSend,
+                              icon: Icon(
+                                sharing
+                                    ? Icons.open_in_new_rounded
+                                    : Icons.send_rounded,
+                              ),
+                              label: Text(
+                                sharing
+                                    ? strings.mailShareButton
+                                    : strings.mailSendButton,
+                              ),
+                              onPressed: context.read<MailSendCubit>().send,
+                            ),
+                            const SizedBox(height: AppSpacing.s8),
+                          ],
+                          if (widget.ocr != null && !discarded) ...[
+                            OutlinedButton(
+                              key: ScanKeys.resultOcr,
+                              onPressed: () => context.push(
+                                RoutePaths.ocrResult,
+                                extra: widget.ocr,
+                              ),
+                              child: Text(strings.ocrOpenResult),
+                            ),
+                            const SizedBox(height: AppSpacing.s8),
+                          ],
+                          _backButton(
+                            context,
+                            strings,
+                            busy: busy,
+                            pdfBusy: pdfBusy,
+                            mailBusy: mailBusy,
+                            // Send is the primary one while it is there.
+                            secondary: sendInFrame,
                           ),
-                          child: Text(strings.ocrOpenResult),
-                        ),
+                        ],
                       ),
                     ),
-                  const _AutoReturnNotice(),
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        key: ScanKeys.resultBack,
-                        onPressed: busy
-                            ? null
-                            : () => context.go(RoutePaths.home),
-                        child: Text(
-                          pdfBusy
-                              ? strings.pdfWait
-                              : mailBusy
-                              ? strings.mailSending
-                              : strings.scanBackHome,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// "Back to home": the primary button of the frame, or a tonal one while Send
+  /// is the primary (same size and shape, no new colour: DESIGN_SPEC).
+  Widget _backButton(
+    BuildContext context,
+    AppStrings strings, {
+    required bool busy,
+    required bool pdfBusy,
+    required bool mailBusy,
+    required bool secondary,
+  }) {
+    final onPressed = busy ? null : () => context.go(RoutePaths.home);
+    final label = Text(
+      pdfBusy
+          ? strings.pdfWait
+          : mailBusy
+          ? strings.mailSending
+          : strings.scanBackHome,
+    );
+    return secondary
+        ? FilledButton.tonal(
+            key: ScanKeys.resultBack,
+            style: AppButtonStyles.tonal(context),
+            onPressed: onPressed,
+            child: label,
+          )
+        : FilledButton(
+            key: ScanKeys.resultBack,
+            onPressed: onPressed,
+            child: label,
+          );
   }
 
   Widget? _gallerySubtitle(BuildContext context, StoredPicture picture) {
@@ -577,6 +644,17 @@ class _DiscardSection extends StatelessWidget {
 
 /// Sends the stored PDF by e-mail, by hand: a button, then a state in words
 /// (no spinner that never stops). Shown once the PDF is stored.
+/// The mail section (and the Send button of the frame) is there once the PDF is
+/// stored and the flow has handed over: not while the flow still works.
+bool _mailSectionVisible(ScanFlowCubit cubit) =>
+    cubit.state.pdfStored &&
+    cubit.state.discard != DiscardPhase.done &&
+    switch (cubit.state.flow) {
+      FlowAwaitingDecision() || FlowFinished() => true,
+      FlowCancelled(:final pdf) => pdf != null,
+      _ => false,
+    };
+
 class _MailSection extends StatelessWidget {
   const _MailSection();
 
@@ -586,16 +664,7 @@ class _MailSection extends StatelessWidget {
     final theme = Theme.of(context);
     // Not while the flow is still working (sending, opening the e-mail app):
     // the flow says that, and this section takes over when it has ended.
-    final saved = context.select<ScanFlowCubit, bool>(
-      (cubit) =>
-          cubit.state.pdfStored &&
-          cubit.state.discard != DiscardPhase.done &&
-          switch (cubit.state.flow) {
-            FlowAwaitingDecision() || FlowFinished() => true,
-            FlowCancelled(:final pdf) => pdf != null,
-            _ => false,
-          },
-    );
+    final saved = context.select<ScanFlowCubit, bool>(_mailSectionVisible);
     if (!saved) return const SizedBox.shrink();
     final settings = context.watch<SettingsCubit>().state;
     return BlocBuilder<MailSendCubit, MailSendState>(
@@ -620,22 +689,7 @@ class _MailSection extends StatelessWidget {
                     : strings.mailSendTo(destination),
               ),
             );
-            children.add(const SizedBox(height: 12));
-            children.add(
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  key: ScanKeys.mailSend,
-                  icon: Icon(
-                    sharing ? Icons.open_in_new_rounded : Icons.send_rounded,
-                  ),
-                  label: Text(
-                    sharing ? strings.mailShareButton : strings.mailSendButton,
-                  ),
-                  onPressed: cubit.send,
-                ),
-              ),
-            );
+          // The Send button itself is in the fixed frame of the screen.
           case MailPhase.sending:
             children.addAll([
               Text(key: ScanKeys.mailStatus, strings.mailSending),

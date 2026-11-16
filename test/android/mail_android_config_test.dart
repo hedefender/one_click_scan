@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// The Android side of the mail layer, read from the sources: the password
 /// must not travel in a backup (ADR-021), the share intent has to carry what the
-/// tests of the integration folder expect, and the two copies of the Kotlin
-/// handler must be the same file.
+/// tests of the integration folder expect, and the app asks for no permission it
+/// does not use (ADR-035).
 void main() {
   final root = Directory.current.path;
   String read(String path) => File('$root/$path').readAsStringSync();
@@ -63,7 +63,13 @@ void main() {
 
     test('INTERNET is asked for, and nothing else about the network', () {
       expect(manifest, contains('android.permission.INTERNET'));
-      expect(manifest, isNot(contains('ACCESS_NETWORK_STATE')));
+      expect(
+        manifest,
+        contains(
+          '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" '
+          'tools:node="remove" />',
+        ),
+      );
     });
   });
 
@@ -158,19 +164,43 @@ void main() {
       expect(kotlin, contains('Never leave a half entry in the Gallery'));
     });
 
-    test('no new permission for Phase 5: the storage permission is the one '
-        'that was already declared, for Android 10 and older', () {
+    test('the source manifest asks for the camera and the network only; '
+        'what plugins add and the app never uses is removed (ADR-035)', () {
       final manifest = read('android/app/src/main/AndroidManifest.xml');
-      final permissions = RegExp(r'<uses-permission[^>]*android:name="([^"]+)"')
+      final tags = RegExp(r'<uses-permission[^>]*/>')
           .allMatches(manifest)
-          .map((m) => m.group(1))
-          .toSet();
-      expect(permissions, {
+          .map((m) => m.group(0)!)
+          .toList();
+      String name(String tag) =>
+          RegExp(r'android:name="([^"]+)"').firstMatch(tag)!.group(1)!;
+      final asked = {
+        for (final tag in tags)
+          if (!tag.contains('tools:node="remove"')) name(tag),
+      };
+      final removed = {
+        for (final tag in tags)
+          if (tag.contains('tools:node="remove"')) name(tag),
+      };
+      expect(asked, {
         'android.permission.CAMERA',
         'android.permission.INTERNET',
-        'android.permission.WRITE_EXTERNAL_STORAGE',
       });
+      expect(removed, {
+        'android.permission.RECORD_AUDIO',
+        'android.permission.ACCESS_NETWORK_STATE',
+        'android.permission.WRITE_EXTERNAL_STORAGE',
+        'android.permission.READ_EXTERNAL_STORAGE',
+      });
+      expect(manifest, isNot(contains('requestLegacyExternalStorage')));
     });
+
+    test(
+      'the app needs Android 10 or newer, with no branch for older ones',
+      () {
+        expect(read('android/app/build.gradle.kts'), contains('minSdk = 29'));
+        expect(kotlin, isNot(contains('Build.VERSION')));
+      },
+    );
 
     test('a link opens only if it is https, as a browsable view', () {
       expect(kotlin, contains('uri.scheme != "https"'));

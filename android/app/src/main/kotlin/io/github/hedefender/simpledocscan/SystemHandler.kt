@@ -1,5 +1,6 @@
 package io.github.hedefender.simpledocscan
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraCharacteristics
@@ -7,6 +8,7 @@ import android.hardware.camera2.CameraManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.view.WindowManager
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 
@@ -21,6 +23,10 @@ class SystemHandler(private val context: Context, messenger: BinaryMessenger) {
                 "openAppSettings" -> openAppSettings(result)
                 "hasFlashUnit" -> result.success(hasBackFlash())
                 "appInfo" -> result.success(appInfo())
+                "keepScreenOn" -> {
+                    keepScreenOn(call.argument<Boolean>("on") == true)
+                    result.success(null)
+                }
                 "composeMail" -> composeMail(
                     call.argument<String>("to"),
                     call.argument<String>("subject"),
@@ -47,13 +53,28 @@ class SystemHandler(private val context: Context, messenger: BinaryMessenger) {
     }
 
     /**
+     * Keeps the screen on (`FLAG_KEEP_SCREEN_ON` of the window of the activity)
+     * while the app works for the user, or gives the normal timeout back. A
+     * flag of the window: it needs no permission and ends with the window.
+     */
+    private fun keepScreenOn(on: Boolean) {
+        val activity = context as? Activity ?: return
+        activity.runOnUiThread {
+            if (on) {
+                activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+    }
+
+    /**
      * The version of this app and of Android, nothing else (the About screen
      * and the technical lines of the feedback e-mail). No plugin is needed.
      */
     private fun appInfo(): Map<String, String> {
         val info = context.packageManager.getPackageInfo(context.packageName, 0)
-        @Suppress("DEPRECATION")
-        val build = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+        val build = info.longVersionCode
         return mapOf(
             "versionName" to (info.versionName ?: ""),
             "buildNumber" to build.toString(),

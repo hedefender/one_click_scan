@@ -4,21 +4,26 @@
     <!-- Phase 4: the SMTP send of the mail layer (lib/services/mail/) is the only
          use of the network. The OCR code has none (test/services/ocr/no_network_test.dart).
          No network-state permission is needed: a failed connection is an outcome. -->
+    <!-- The permissions the app needs are exactly the ones in
+         tool/allowed_permissions.txt, which tool/check_permissions.sh compares
+         with the merged manifest of the release (ADR-035). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Camera is not mandatory for installing; the app explains when missing. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <!-- Only for the optional Gallery copy on Android 10 and older (gal plugin).
-         The camera plugin declares maxSdkVersion 28; gal needs 29, so we override. -->
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="29"
-        tools:replace="android:maxSdkVersion" />
+    <!-- Permissions that plugins add and the app never uses (audit A1-003, ADR-035).
+         The camera is opened with enableAudio: false, so no microphone; the Gallery
+         copy is written to MediaStore by the app itself (Android 10+, minSdk 29),
+         which needs no storage permission; a failed connection is an outcome, so no
+         network state is read. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
     <application
         android:label="One Click Scan"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:requestLegacyExternalStorage="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

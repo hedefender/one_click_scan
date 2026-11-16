@@ -68,7 +68,7 @@ The MIT text of ONNX Runtime is `assets/licenses/onnxruntime_LICENSE.txt`.
 features is used, they are part of the package and appear on Flutter's licence
 page. The Apache-2.0 text is shown there as well.
 
-Packages of the earlier phases (`camera`, `gal`, `flutter_bloc`, `get_it`,
+Packages of the earlier phases (`camera`, `flutter_bloc`, `get_it`,
 `go_router`, `shared_preferences`, `path_provider`, `equatable`) keep their own
 licences; they appear on Flutter's licence page.
 
@@ -86,4 +86,4 @@ hidden words (`lib/domain/pdf/`) and the PDF code in `lib/services/pdf/` are
 written for this project; nothing is imported from `spikes/`. The tests use
 invented documents only.
 
-Phase 5: `gal` is no longer used to write the Gallery copy (that is native MediaStore code in `ScanFilesHandler.kt`, which returns the URI a discard needs). It is kept only for the storage permission that Android 9 and older ask before a write.
+Phase 5: `gal` no longer wrote the Gallery copy (that is native MediaStore code in `ScanFilesHandler.kt`, which returns the URI a discard needs). Phase 6.7: with `minSdk` 29 even its last use, the storage permission of Android 9 and older, is gone, and the package was removed from `pubspec.yaml`.

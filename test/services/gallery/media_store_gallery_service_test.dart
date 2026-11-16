@@ -7,10 +7,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const channel = MethodChannel(MediaStoreGalleryService.channelName);
-  const galChannel = MethodChannel('gal');
   final calls = <MethodCall>[];
-  var hasAccess = true;
-  var accessAfterRequest = true;
 
   void reply(Object? Function(MethodCall call) handler) {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -20,24 +17,10 @@ void main() {
         });
   }
 
-  setUp(() {
-    calls.clear();
-    hasAccess = true;
-    accessAfterRequest = true;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(galChannel, (call) async {
-          return switch (call.method) {
-            'hasAccess' => hasAccess,
-            'requestAccess' => accessAfterRequest,
-            _ => null,
-          };
-        });
-  });
+  setUp(calls.clear);
   tearDown(() {
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(channel, null);
-    messenger.setMockMethodCallHandler(galChannel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null);
   });
 
   test('uses the channel of ScanFilesHandler.kt', () {
@@ -66,32 +49,6 @@ void main() {
         });
       },
     );
-
-    test('asks for the permission only when it is missing, and writes nothing '
-        'if it is refused', () async {
-      reply((_) => 'content://media/external/images/media/1');
-      hasAccess = false;
-      accessAfterRequest = false;
-
-      await expectLater(
-        MediaStoreGalleryService().saveImage('cache/1.jpg', fileName: 'a.jpg'),
-        throwsA(isA<GalleryException>()),
-      );
-      expect(calls, isEmpty);
-    });
-
-    test('a granted permission after the question lets it go on', () async {
-      reply((_) => 'content://media/external/images/media/1');
-      hasAccess = false;
-      accessAfterRequest = true;
-
-      final uri = await MediaStoreGalleryService().saveImage(
-        'cache/1.jpg',
-        fileName: 'a.jpg',
-      );
-
-      expect(uri, isNotEmpty);
-    });
 
     test('a native error is a GalleryException with the code only', () async {
       reply((_) => throw PlatformException(code: 'write_failed', message: 'x'));

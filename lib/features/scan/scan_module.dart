@@ -12,6 +12,7 @@ import '../../domain/usecases/load_settings.dart';
 import '../../domain/usecases/recognize_pages.dart';
 import '../../domain/ports/open_pdf.dart';
 import '../../domain/ports/scan_file_store.dart';
+import '../../domain/ports/screen_awake.dart';
 import '../../domain/usecases/store_scan_pages.dart';
 import '../../domain/usecases/discard_scan.dart';
 import '../../domain/usecases/scan_and_send.dart';
@@ -90,8 +91,11 @@ List<RouteBase> scanRoutes(GetIt sl) {
           state.extra is ScanResultArgs ? null : RoutePaths.home,
       builder: (context, state) {
         final args = state.extra! as ScanResultArgs;
-        return RepositoryProvider<ScanTempStore>.value(
-          value: sl<ScanTempStore>(),
+        return MultiRepositoryProvider(
+          providers: [
+            RepositoryProvider<ScanTempStore>.value(value: sl<ScanTempStore>()),
+            RepositoryProvider<ScreenAwake>.value(value: sl<ScreenAwake>()),
+          ],
           child: MultiBlocProvider(
             providers: [
               BlocProvider<ScanFlowCubit>(

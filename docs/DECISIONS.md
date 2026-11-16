@@ -287,6 +287,8 @@ If a photo's working copy could not be made (unreadable file, over 400 MP) there
 is no picture for that page and the PDF is not made; the message says so and the
 photos are saved.
 
+> Note (6.7, A1-005): the working copy made by the Dart path (photos up to 8 MP) kept the EXIF of the camera (model, time, GPS) until Phase 6.7; it is cleaned now, and a test starts from a photo with EXIF. The native path never wrote EXIF.
+
 ## ADR-018 No picture of the user stays in the cache
 The working copies live in the app cache (`ocr_work/`) and the PDF in
 `pdf_work/` only as long as they are needed:
@@ -410,6 +412,8 @@ value), behind the port `MailCredentialStore` and the adapter
   until Save writes it; Save clears it. "Delete the stored password" removes it.
 - The permission is `INTERNET`, and no network-state permission: the only code
   that uses the network is `lib/services/mail/` (a test reads the sources).
+
+> Note (6.7, ADR-035): the merged manifest also contained `RECORD_AUDIO` and `ACCESS_NETWORK_STATE` from plugins; they are removed now, and `tool/check_permissions.sh` checks the release APK against a list.
 
 ## ADR-022 Two ways to send: `sendNow` and `shareDraft`
 `MailSendMode.sendNow` (default) sends from the app over SMTP. `shareDraft` opens
@@ -1101,6 +1105,8 @@ nothing was changed. Whether the phone is faster is for the phone check.
   Discard, the torch).
 - The real values of the margin and of the fallback page size wait for real shots.
 
+> Note (6.7, A1-002): the stop "is decided on the real sum so far" holds when the preparation of the pages keeps up with the shots. The size of a page is known only after its preparation, and the preparation waits while two prepared pages wait for the OCR; a page not measured yet counts as the average. A better estimate waits for a measurement on the phone (`AUDIT_A1.md`).
+
 ## ADR-033 The central theme: light and dark from the system, system colours with fallback palettes, Noto Sans, one set of shapes (Phase 6.4)
 
 **Why.** The back end is mature and the front end was a default Material 3 theme from one seed
@@ -1190,4 +1196,14 @@ author. The seed id `com.example.one_click_scan` was a placeholder.
   (`tool/run_ocr_release_smoke.sh`) passes with the new id.
 
 > The text of the older ADRs and phase documents keeps the old id where it was true at the time.
+
+## ADR-035 minSdk 29 (Android 10 and newer) and a list of the permissions the app may ask for (Phase 6.7)
+
+**Decision of the user (2026-11-15):** the app supports Android 10 and newer (API 29); `minSdk` was 24.
+
+- **Why.** StatCounter (web traffic, **not** the installed base of the Play Store): October 2026, Greece, Android 11 to 16 = 89.1% (16: 37.69%, 15: 16.87%, 14: 13%, 13: 10.55%, 12: 6.02%, 11: 4.97%); the remaining 10.9% holds Android 10 and every older version, so Android 9 and older is clearly under 10%. World, September 2026: Android 11 to 16 = 91.16%. The code for old versions had a cost: a storage permission, a plugin for one permission request, and branches that no test ran on a real old phone.
+- **What was removed.** `requestLegacyExternalStorage`; `WRITE_EXTERNAL_STORAGE` and `READ_EXTERNAL_STORAGE` (MediaStore writes and deletes the app's own entries with no permission from Android 10); the two `Build.VERSION` branches of `saveToGallery` and the one of `appInfo`; the package `gal`, whose only use was the storage permission request of Android 9 and older (`hasAccess` is true from API 29 for a copy with no album).
+- **Permissions that plugins add and the app never uses** are removed with `tools:node="remove"`: `RECORD_AUDIO` (the camera is opened with `enableAudio: false`) and `ACCESS_NETWORK_STATE`. They were in the release APK.
+- **The list.** `tool/allowed_permissions.txt` holds exactly the permissions the release APK may ask for, each with the reason: `CAMERA`, `INTERNET` (the mail send only), and the signature permission `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` that androidx adds. `tool/check_permissions.sh` reads the **APK** (`aapt2 dump permissions`), not the source manifest, and fails with the names of any permission not on the list or missing. `tool/run_ocr_release_smoke.sh` calls it, so `tool/run_all_integration.sh` runs it. A new permission needs a line with its reason first.
+- **Not changed:** the text of ADR-021 (one note added there).
 

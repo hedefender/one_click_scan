@@ -9,7 +9,9 @@
 # server in the same process), opens and closes the real camera, uses
 # shared_preferences, and prints one OCRSMOKE line), installs it
 # on the emulator, starts it and waits for the line in logcat. It also checks
-# that R8 really ran and kept the ONNX Runtime classes. Refuses to touch any
+# that R8 really ran and kept the ONNX Runtime classes, and that the release APK
+# asks for no permission outside tool/allowed_permissions.txt
+# (tool/check_permissions.sh). Refuses to touch any
 # device that is not the Claude Code emulator.
 set -u
 
@@ -37,6 +39,9 @@ esac
 
 flutter build apk --release --target-platform "$PLATFORM" \
   -t tool/ocr_release_smoke_main.dart || exit 5
+
+# The permissions of the product against tool/allowed_permissions.txt (ADR-035).
+bash tool/check_permissions.sh build/app/outputs/flutter-apk/app-release.apk || exit 7
 
 MAPPING="build/app/outputs/mapping/release/mapping.txt"
 if [ -f "$MAPPING" ]; then

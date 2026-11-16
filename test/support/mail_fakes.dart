@@ -180,6 +180,9 @@ class FakeDraftSharer implements DraftSharer {
   /// The routes asked for, in order.
   final List<DraftShareRoute> routes = [];
 
+  /// When set, [share] waits for it (the e-mail app is slow to open).
+  Completer<void>? hold;
+
   @override
   Future<DraftShareResult> share({
     required DraftShareRoute route,
@@ -197,6 +200,7 @@ class FakeDraftSharer implements DraftSharer {
       'uri': documentUri,
       'mimeType': mimeType,
     });
+    await hold?.future;
     return result;
   }
 }

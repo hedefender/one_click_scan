@@ -17,7 +17,9 @@ import '../domain/ports/open_pdf.dart';
 import '../domain/ports/pdf_builder.dart';
 import '../domain/usecases/load_settings.dart';
 import '../domain/usecases/store_scan_pdf.dart';
+import '../domain/ports/screen_awake.dart';
 import '../services/about/about_services.dart';
+import '../services/system/screen_awake.dart';
 import '../services/pdf/pdf_services.dart';
 import '../domain/ports/app_info_source.dart';
 import '../domain/ports/feedback_composer.dart';
@@ -73,6 +75,7 @@ Future<GetIt> buildContainer({
   PdfServices pdf = const PdfServices.unsupported(),
   MailServices mail = const MailServices.unsupported(),
   AboutServices about = const AboutServices.unsupported(),
+  ScreenAwake screenAwake = const UnsupportedScreenAwake(),
   OcrLanguagePackRegistry? ocrPackRegistry,
   DateTime Function() clock = DateTime.now,
 }) async {
@@ -101,6 +104,7 @@ Future<GetIt> buildContainer({
   sl.registerSingleton<MailProviderRegistry>(mail.providers);
   sl.registerSingleton<AppInfoSource>(about.info);
   sl.registerSingleton<FeedbackComposer>(about.feedback);
+  sl.registerSingleton<ScreenAwake>(screenAwake);
 
   // Data.
   sl.registerLazySingleton<FlashPreferenceStore>(
